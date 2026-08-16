@@ -5,8 +5,9 @@ n8n. Crea el endpoint:
 
 Si solo necesitas reemplazar el nodo NocoDB, puedes importar
 [`sv_complete_update_node.json`](./sv_complete_update_node.json). Debe recibir
-un item con `Id` (la clave técnica de NocoDB) y `completed_at`; el nodo envía
-explícitamente `status=completed` y `completed_at`.
+un item con `Id` (la clave técnica de NocoDB), `status` y `completed_at`. Para
+reactivar una publicación, `status` será `available` y `completed_at` será
+`null`.
 
 ```text
 POST https://tasks.nukeador.com/webhook/segundavida/complete
@@ -15,10 +16,16 @@ POST https://tasks.nukeador.com/webhook/segundavida/complete
 El workflow usa la credencial existente `NocoDB Token account`, busca la fila
 en la tabla `Segunda Vida`, comprueba la firma de `Telegram.WebApp.initData` y
 solo permite cambiar la publicación si `owner_telegram_id` coincide con la
-persona autenticada. Al completar escribe:
+persona autenticada. La acción recibida puede ser `complete` o `reopen`. Al
+completar escribe:
 
 - `status = completed`
 - `completed_at =` fecha actual generada por n8n
+
+Al reabrir escribe:
+
+- `status = available`
+- `completed_at = null`
 
 El nodo de validación contiene la constante `BOT_TOKEN`. Pega ahí el mismo
 token privado que ya tienes en el nodo Code de `/whoami`; no lo pegues en el
@@ -42,9 +49,13 @@ El frontend ya envía este cuerpo:
 ```json
 {
   "initData": "<Telegram.WebApp.initData>",
-  "item_id": "sv-k8Qm2LxP"
+  "item_id": "sv-k8Qm2LxP",
+  "action": "complete"
 }
 ```
+
+Para marcarla de nuevo como disponible, el frontend envía la misma petición
+con `"action": "reopen"`.
 
 Respuesta correcta:
 

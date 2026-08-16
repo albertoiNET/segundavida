@@ -28,8 +28,8 @@
         "fieldsMapper": {
           "mappingMode": "defineBelow",
           "value": {
-            "status": "completed",
-            "completed_at": "={{ $json.completed_at }}"
+            "status": "={{ $json.status ?? 'completed' }}",
+            "completed_at": "={{ $json.completed_at ?? null }}"
           },
           "matchingColumns": [],
           "schema": [

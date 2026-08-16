@@ -458,6 +458,41 @@ h2 {
   margin-top: 1.5rem;
 }
 
+.posts-tabs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.25rem;
+  margin-top: 1.5rem;
+  padding: 0.25rem;
+  border: 1px solid var(--border-light);
+  border-radius: 0.85rem;
+  background: var(--bg-card-hover);
+}
+
+.posts-tab {
+  min-height: 2.55rem;
+  padding: 0.55rem 0.7rem;
+  border: 0;
+  border-radius: 0.65rem;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 750;
+}
+
+.posts-tab span {
+  margin-left: 0.2rem;
+  opacity: 0.72;
+}
+
+.posts-tab.is-active {
+  background: var(--bg-card);
+  color: var(--color-primary-dark);
+  box-shadow: var(--shadow-soft);
+}
+
 .owned-item-card {
   display: grid;
   gap: 0.7rem;

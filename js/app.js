@@ -18,6 +18,7 @@ const state = {
   offerFiles: [],
   telegramUser: null,
   myItems: [],
+  postsFilter: "active",
 };
 
 const runtimeName = document.querySelector("#runtime-name");
@@ -77,6 +78,11 @@ const offerFormState = document.querySelector("#offer-form-state");
 const offerConsent = document.querySelector("#offer-consent");
 const postsList = document.querySelector("#posts-list");
 const postsEmptyState = document.querySelector("#posts-empty-state");
+const postsEmptyTitle = document.querySelector("#posts-empty-title");
+const postsEmptyCopy = document.querySelector("#posts-empty-copy");
+const postsTabs = [...document.querySelectorAll(".posts-tab")];
+const postsActiveCount = document.querySelector("#posts-active-count");
+const postsCompletedCount = document.querySelector("#posts-completed-count");
 const navItems = [...document.querySelectorAll(".nav-item")];
 
 const categorySymbols = {
@@ -276,8 +282,9 @@ function createOwnedItemCard(item) {
   const deliveredButton = document.createElement("button");
   deliveredButton.className = "secondary-button secondary-button--compact";
   deliveredButton.type = "button";
-  deliveredButton.disabled = item.status === "completed";
-  deliveredButton.textContent = item.status === "completed" ? "Entregado" : "Marcar entregado";
+  deliveredButton.textContent = item.status === "completed"
+    ? "Marcar como no entregado"
+    : "Marcar como entregado";
   const actionState = createTextElement("p", "owned-item-card__state", "");
   deliveredButton.addEventListener("click", () => completeItem(item, deliveredButton, actionState));
   actions.append(deliveredButton);
@@ -300,8 +307,26 @@ function renderMyItems() {
   if (changed) saveOwnItems();
 
   const items = state.myItems.filter(isOwnItem);
-  postsList.replaceChildren(...items.map(createOwnedItemCard));
-  postsEmptyState.hidden = items.length > 0;
+  const activeItems = items.filter((item) => item.status !== "completed");
+  const completedItems = items.filter((item) => item.status === "completed");
+  const visibleItems = state.postsFilter === "completed" ? completedItems : activeItems;
+
+  postsActiveCount.textContent = String(activeItems.length);
+  postsCompletedCount.textContent = String(completedItems.length);
+  postsTabs.forEach((tab) => {
+    const selected = tab.dataset.postsFilter === state.postsFilter;
+    tab.classList.toggle("is-active", selected);
+    tab.setAttribute("aria-selected", String(selected));
+  });
+
+  postsList.replaceChildren(...visibleItems.map(createOwnedItemCard));
+  postsEmptyState.hidden = visibleItems.length > 0;
+  postsEmptyTitle.textContent = state.postsFilter === "completed"
+    ? "Aún no has entregado publicaciones"
+    : "Aún no tienes publicaciones activas";
+  postsEmptyCopy.textContent = state.postsFilter === "completed"
+    ? "Cuando marques una publicación como entregada, aparecerá aquí."
+    : "Cuando ofrezcas algo, aparecerá en esta sección.";
 }
 
 function renderDetail(item) {
@@ -324,9 +349,11 @@ function renderDetail(item) {
     detailMedia.append(placeholder);
   }
 
-  detailAvailability.textContent = item.expiresAt
-    ? `Disponible hasta ${formatDate(item.expiresAt)}`
-    : "Disponible";
+  detailAvailability.textContent = item.status === "completed"
+    ? "Entregado"
+    : item.expiresAt
+      ? `Disponible hasta ${formatDate(item.expiresAt)}`
+      : "Disponible";
   detailTitle.textContent = item.title;
   detailCategory.textContent = `${categorySymbols[item.category] ?? "♻"} ${item.category}`;
   detailDescription.textContent = item.description || "La persona que lo ofrece todavía no ha añadido una descripción.";
@@ -351,12 +378,12 @@ function renderDetail(item) {
   detailActionState.dataset.state = ownItem || ownerUsername ? "" : "error";
 
   detailOwnerActions.hidden = !ownItem;
-  markDeliveredButton.disabled = item.status === "completed";
+  markDeliveredButton.disabled = false;
   markDeliveredButton.textContent = item.status === "completed"
-    ? "Ya está marcado como entregado"
+    ? "Marcar como no entregado"
     : "Marcar como entregado";
   detailOwnerActionState.textContent = item.status === "completed"
-    ? "Esta publicación ya no aparece entre los objetos disponibles."
+    ? "Si vuelve a estar disponible, puedes reactivar esta publicación."
     : "Cuando se lo entregues a otra persona, márcalo aquí.";
   detailOwnerActionState.dataset.state = "";
 }
@@ -489,7 +516,8 @@ function openItemFromHash() {
     return;
   }
 
-  const item = state.items.find((candidate) => candidate.id === itemId);
+  const item = state.items.find((candidate) => candidate.id === itemId)
+    ?? state.myItems.find((candidate) => candidate.id === itemId && isOwnItem(candidate));
   if (item) showDetail(item);
 }
 
@@ -507,6 +535,7 @@ async function checkIdentity() {
       state.telegramUser = result;
       configureOfferAuth(result);
       renderMyItems();
+      openItemFromHash();
       const firstName = result.first_name ? `Hola ${result.first_name}` : "Telegram";
       identityStatus.querySelector("span:nth-child(2)").textContent = firstName;
       setServiceState(identityStatus, identityStatusLabel, "connected", "Verificada ✓");
@@ -719,7 +748,7 @@ function showPublishSuccess(item) {
 }
 
 async function completeItem(item, triggerButton = markDeliveredButton, feedbackElement = detailOwnerActionState) {
-  if (!item?.id || item.status === "completed") return;
+  if (!item?.id) return;
 
   if (!auth?.hasInitData()) {
     feedbackElement.textContent = "Abre la Mini App desde Telegram para gestionar esta publicación.";
@@ -741,22 +770,28 @@ async function completeItem(item, triggerButton = markDeliveredButton, feedbackE
     const result = await api.completeItem({
       initData: auth.getInitData(),
       item_id: item.id,
+      action: item.status === "completed" ? "reopen" : "complete",
     });
 
     if (!result.ok) {
       throw new Error(result.error || "No se ha podido actualizar la publicación.");
     }
 
-    const completedItem = {
+    const nextStatus = result.status || (item.status === "completed" ? "available" : "completed");
+    const updatedItem = {
       ...item,
-      status: "completed",
-      expiresAt: null,
-      completedAt: result.completed_at || new Date().toISOString(),
+      status: nextStatus,
+      expiresAt: result.expires_at ?? item.expiresAt ?? null,
+      completedAt: nextStatus === "completed"
+        ? result.completed_at || new Date().toISOString()
+        : null,
     };
-    rememberOwnItem(completedItem);
-    state.items = state.items.filter((candidate) => candidate.id !== item.id);
+    rememberOwnItem(updatedItem);
+    state.items = nextStatus === "available"
+      ? [...state.items.filter((candidate) => candidate.id !== item.id), updatedItem]
+      : state.items.filter((candidate) => candidate.id !== item.id);
     renderItems();
-    renderDetail(completedItem);
+    renderDetail(updatedItem);
   } catch (error) {
     triggerButton.disabled = false;
     triggerButton.textContent = previousLabel;
@@ -847,6 +882,12 @@ viewPublishedButton.addEventListener("click", () => {
   if (item) showDetail(item);
 });
 goPostsButton.addEventListener("click", () => setView("posts"));
+postsTabs.forEach((tab) => {
+  tab.addEventListener("click", () => {
+    state.postsFilter = tab.dataset.postsFilter;
+    renderMyItems();
+  });
+});
 
 state.myItems = readOwnItems();
 window.SecondaVidaAnalytics?.trackPageView();
