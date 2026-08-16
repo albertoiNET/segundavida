@@ -9,6 +9,7 @@
     />
     <title>SegundaVida · Aldea Pucela</title>
     <link rel="stylesheet" href="./css/app.css" />
+    <script src="https://telegram.org/js/telegram-web-app.js?63"></script>
   </head>
   <body>
     <main class="site-shell">
@@ -21,11 +22,16 @@
       </header>
 
       <section class="status-page" aria-labelledby="page-title">
-        <p class="eyebrow">HITO 1 · PRIMERA PÁGINA</p>
+        <p class="eyebrow">HITO 3 · MINI APP MÍNIMA</p>
         <h1 id="page-title">Mini App en construcción</h1>
         <p class="intro">
           La base pública de SegundaVida ya está preparada para crecer dentro
           del ecosistema de Aldea Pucela.
+        </p>
+
+        <p class="environment-line" aria-live="polite">
+          Entorno: <strong id="runtime-name">navegador</strong>
+          <span id="telegram-sdk-state" hidden></span>
         </p>
 
         <div class="system-status" aria-label="Estado de los servicios">
@@ -38,9 +44,9 @@
           </div>
           <div class="status-row">
             <span class="status-label">Telegram</span>
-            <span class="status-value status-value--pending">
+            <span class="status-value status-value--pending" id="telegram-status">
               <span class="status-dot" aria-hidden="true"></span>
-              Sin comprobar
+              <span id="telegram-status-label">Sin comprobar</span>
             </span>
           </div>
           <div class="status-row">
@@ -56,6 +62,7 @@
       <footer class="site-footer">Valladolid · Aldea Pucela</footer>
     </main>
 
+    <script src="./js/telegram.js"></script>
     <script src="./js/app.js"></script>
   </body>
 </html>

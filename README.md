@@ -5,13 +5,14 @@ que objetos que ya no se necesitan puedan tener una segunda vida.
 
 ## Estado
 
-Proyecto en **HITO 1 — Primera página** del plan técnico incremental.
+Proyecto en **HITO 3 — Mini App mínima** del plan técnico incremental.
 
 La estructura inicial contiene:
 
 - `index.html`: primera página técnica del frontend.
 - `css/app.css`: estilos base, tokens visuales iniciales y responsive.
-- `js/app.js`: punto de entrada JavaScript.
+- `js/app.js`: punto de entrada JavaScript y actualización de estados.
+- `js/telegram.js`: detección mínima del entorno Telegram Mini App.
 
 ## Desarrollo local
 
@@ -26,5 +27,5 @@ Después, abrir `http://localhost:8000/` en el navegador.
 
 ## Próximo hito
 
-Tras validar esta página, el HITO 2 comprobará la publicación mediante GitHub
-Pages y su dominio personalizado.
+El HITO 4 añadirá el primer ping entre la Mini App y n8n. No se realiza todavía
+autenticación ni ninguna llamada a backend.

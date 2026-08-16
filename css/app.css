@@ -108,6 +108,22 @@ h1 {
   line-height: 1.6;
 }
 
+.environment-line {
+  margin: 1.75rem 0 0;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+.environment-line strong {
+  color: var(--text-main);
+  font-weight: 650;
+}
+
+#telegram-sdk-state {
+  color: var(--color-secondary);
+  font-weight: 650;
+}
+
 .system-status {
   margin-top: 3rem;
   border-top: 1px solid var(--border-light);
@@ -147,6 +163,10 @@ h1 {
 }
 
 .status-value--ok {
+  color: var(--color-secondary);
+}
+
+.status-value--connected {
   color: var(--color-secondary);
 }
 
