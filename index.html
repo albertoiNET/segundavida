@@ -9,8 +9,15 @@
     />
     <title>SegundaVida · Aldea Pucela</title>
     <!-- Bump this version whenever static assets change to bypass Mini App caches. -->
-    <link rel="stylesheet" href="./css/tokens.css?v=sv-20260816-5" />
-    <link rel="stylesheet" href="./css/app.css?v=sv-20260816-5" />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@7.3.1/css/all.min.css"
+      crossorigin="anonymous"
+      onerror="document.documentElement.classList.add('icons-fallback')"
+    />
+    <link rel="stylesheet" href="./css/icon-fallback.css?v=sv-20260816-7" />
+    <link rel="stylesheet" href="./css/tokens.css?v=sv-20260816-7" />
+    <link rel="stylesheet" href="./css/app.css?v=sv-20260816-7" />
     <script src="https://telegram.org/js/telegram-web-app.js?63"></script>
   </head>
   <body>
@@ -18,14 +25,14 @@
       <header class="app-header" aria-label="SegundaVida">
         <div class="app-header__nav" aria-label="Navegación del contenido">
           <button class="header-nav-button" id="app-back-button" type="button" aria-label="Volver" title="Volver" disabled>
-            ←
+            <i class="fa-solid fa-arrow-left fa-icon" data-fallback="←" aria-hidden="true"></i>
           </button>
           <button class="header-nav-button" id="app-forward-button" type="button" aria-label="Avanzar" title="Avanzar" disabled>
-            →
+            <i class="fa-solid fa-arrow-right fa-icon" data-fallback="→" aria-hidden="true"></i>
           </button>
         </div>
         <div class="brand-lockup">
-          <span class="brand-mark" aria-hidden="true">♻</span>
+          <span class="brand-mark" aria-hidden="true"><i class="fa-solid fa-recycle fa-icon" data-fallback="♻"></i></span>
           <p class="brand-name">SegundaVida</p>
         </div>
         <span class="runtime-badge" aria-live="polite">
@@ -41,7 +48,7 @@
 
       <section class="catalog-tools" aria-label="Buscar y filtrar objetos">
         <label class="search-field">
-          <span class="search-icon" aria-hidden="true">⌕</span>
+          <span class="search-icon" aria-hidden="true"><i class="fa-solid fa-magnifying-glass fa-icon" data-fallback="⌕"></i></span>
           <span class="sr-only">Buscar objetos</span>
           <input id="search-input" type="search" placeholder="Buscar objetos" autocomplete="off" />
         </label>
@@ -62,9 +69,9 @@
 
       <section class="detail-view" id="detail-view" hidden aria-labelledby="detail-title">
         <div class="detail-topbar">
-          <button class="text-button" id="detail-back" type="button">← <span>Explorar</span></button>
+          <button class="text-button" id="detail-back" type="button"><i class="fa-solid fa-arrow-left fa-icon" data-fallback="←" aria-hidden="true"></i> <span>Explorar</span></button>
           <span class="detail-context">Objeto</span>
-          <button class="icon-button" id="detail-share" type="button" aria-label="Compartir objeto">↗</button>
+          <button class="icon-button" id="detail-share" type="button" aria-label="Compartir objeto" title="Compartir objeto"><i class="fa-solid fa-share-nodes fa-icon" data-fallback="↗" aria-hidden="true"></i></button>
         </div>
         <div class="detail-media" id="detail-media"></div>
         <div class="detail-content">
@@ -93,7 +100,7 @@
       </section>
 
       <section class="success-view" id="publish-success-view" hidden aria-labelledby="publish-success-title">
-        <div class="success-mark" aria-hidden="true">✓</div>
+        <div class="success-mark" aria-hidden="true"><i class="fa-solid fa-circle-check fa-icon" data-fallback="✓"></i></div>
         <span class="eyebrow">SegundaVida</span>
         <h1 id="publish-success-title">Se ha publicado</h1>
         <p class="view-copy">Tu objeto ya está disponible para la comunidad.</p>
@@ -273,7 +280,7 @@
           <div class="form-field">
             <span class="field-label">Fotos <small>hasta 2</small></span>
             <label class="photo-picker" for="offer-images">
-              <span class="photo-picker__icon" aria-hidden="true">＋</span>
+              <span class="photo-picker__icon" aria-hidden="true"><i class="fa-solid fa-plus fa-icon" data-fallback="+"></i></span>
               <span><strong>Añadir fotos</strong><small>La primera será la portada</small></span>
               <input id="offer-images" name="images" type="file" accept="image/jpeg,image/png,image/webp" multiple />
             </label>
@@ -305,7 +312,7 @@
             <span class="eyebrow">Telegram</span>
             <h2 id="telegram-username-dialog-title">Necesitas un username</h2>
           </div>
-          <button class="icon-button" id="telegram-username-dialog-close" type="button" aria-label="Cerrar">×</button>
+          <button class="icon-button" id="telegram-username-dialog-close" type="button" aria-label="Cerrar" title="Cerrar"><i class="fa-solid fa-xmark fa-icon" data-fallback="×" aria-hidden="true"></i></button>
         </div>
         <p>Para que otras personas puedan ponerse en contacto contigo, SegundaVida necesita un nombre de usuario público.</p>
         <ol>
@@ -333,7 +340,7 @@
         </div>
         <div class="posts-list" id="posts-list" aria-live="polite"></div>
         <div class="empty-state" id="posts-empty-state">
-          <span class="empty-state__icon" aria-hidden="true">⌂</span>
+          <span class="empty-state__icon" aria-hidden="true"><i class="fa-solid fa-box-open fa-icon" data-fallback="⌂"></i></span>
           <strong id="posts-empty-title">Aún no tienes publicaciones activas</strong>
           <p id="posts-empty-copy">Cuando ofrezcas algo, aparecerá en esta sección.</p>
         </div>
@@ -367,24 +374,28 @@
 
       <nav class="bottom-nav" aria-label="Navegación principal">
         <button class="nav-item" type="button" data-view="explore" aria-current="page">
-          <span class="nav-item__icon" aria-hidden="true">⌕</span>
+          <span class="nav-item__icon" aria-hidden="true"><i class="fa-solid fa-magnifying-glass fa-icon" data-fallback="⌕"></i></span>
           <span>Explorar</span>
         </button>
         <button class="nav-item nav-item--action" type="button" data-view="offer">
-          <span class="nav-item__icon" aria-hidden="true">＋</span>
+          <span class="nav-item__icon" aria-hidden="true"><i class="fa-solid fa-plus fa-icon" data-fallback="+"></i></span>
           <span>Ofrecer</span>
         </button>
         <button class="nav-item" type="button" data-view="posts">
-          <span class="nav-item__icon" aria-hidden="true">♙</span>
+          <span class="nav-item__icon" aria-hidden="true"><i class="fa-solid fa-box-archive fa-icon" data-fallback="♙"></i></span>
           <span>Mis publicaciones</span>
         </button>
       </nav>
+
+      <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Cambiar tema" title="Cambiar tema">
+        <i class="fa-solid fa-circle-half-stroke fa-icon" id="theme-toggle-icon" data-fallback="◐" aria-hidden="true"></i>
+      </button>
     </main>
 
-    <script src="./js/telegram.js?v=sv-20260816-5"></script>
-    <script src="./js/auth.js?v=sv-20260816-5"></script>
-    <script src="./js/api.js?v=sv-20260816-5"></script>
-    <script src="./js/analytics.js?v=sv-20260816-5"></script>
-    <script src="./js/app.js?v=sv-20260816-5"></script>
+    <script src="./js/telegram.js?v=sv-20260816-7"></script>
+    <script src="./js/auth.js?v=sv-20260816-7"></script>
+    <script src="./js/api.js?v=sv-20260816-7"></script>
+    <script src="./js/analytics.js?v=sv-20260816-7"></script>
+    <script src="./js/app.js?v=sv-20260816-7"></script>
   </body>
 </html>

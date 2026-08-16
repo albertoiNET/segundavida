@@ -1,0 +1,8 @@
+/* Minimal glyph fallback when the Font Awesome CDN is unavailable. */
+.icons-fallback .fa-icon::before {
+  content: attr(data-fallback);
+  font-family: var(--font-sans) !important;
+  font-size: 1em;
+  font-weight: 700;
+  line-height: 1;
+}

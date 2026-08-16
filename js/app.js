@@ -11,6 +11,7 @@ const api = window.SecondaVidaApi;
 const CONSENT_VERSION = "sv-publish-2026-08-16-v1";
 const MAX_OFFER_PHOTOS = 2;
 const OWN_ITEMS_STORAGE_KEY = "segundavida:my-items:v1";
+const THEME_STORAGE_KEY = "segundavida:theme:v1";
 const state = {
   items: [],
   category: "Todo",
@@ -89,20 +90,78 @@ const postsActiveCount = document.querySelector("#posts-active-count");
 const postsCompletedCount = document.querySelector("#posts-completed-count");
 const appBackButton = document.querySelector("#app-back-button");
 const appForwardButton = document.querySelector("#app-forward-button");
+const themeToggle = document.querySelector("#theme-toggle");
+const themeToggleIcon = document.querySelector("#theme-toggle-icon");
 const navItems = [...document.querySelectorAll(".nav-item")];
 
-const categorySymbols = {
-  Hogar: "⌂",
-  Infantil: "☺",
-  Libros: "▤",
-  Tecnología: "⌘",
-  Ropa: "◌",
-  Otros: "♻",
+const categoryIcons = {
+  Hogar: ["fa-house", "⌂"],
+  Infantil: ["fa-child", "☺"],
+  Libros: ["fa-book-open", "▤"],
+  Tecnología: ["fa-laptop", "⌘"],
+  Ropa: ["fa-shirt", "◌"],
+  Otros: ["fa-recycle", "♻"],
+};
+
+const themeOptions = ["system", "light", "dark"];
+const themeLabels = {
+  system: "sistema",
+  light: "claro",
+  dark: "oscuro",
+};
+const themeIcons = {
+  system: ["fa-circle-half-stroke", "◐"],
+  light: ["fa-sun", "☀"],
+  dark: ["fa-moon", "☾"],
 };
 
 function setServiceState(element, label, stateName, text) {
   element.dataset.state = stateName;
   label.textContent = text;
+}
+
+function createIconElement(iconName, fallback, className = "") {
+  const icon = document.createElement("i");
+  icon.className = `fa-solid ${iconName} fa-icon${className ? ` ${className}` : ""}`;
+  icon.dataset.fallback = fallback;
+  icon.setAttribute("aria-hidden", "true");
+  return icon;
+}
+
+function createCategoryIcon(category, className = "") {
+  const [iconName, fallback] = categoryIcons[category] ?? categoryIcons.Otros;
+  return createIconElement(iconName, fallback, className);
+}
+
+function readThemePreference() {
+  try {
+    const stored = window.localStorage.getItem(THEME_STORAGE_KEY);
+    return themeOptions.includes(stored) ? stored : "system";
+  } catch {
+    return "system";
+  }
+}
+
+function applyTheme(preference, persist = true) {
+  const theme = themeOptions.includes(preference) ? preference : "system";
+  const nextTheme = themeOptions[(themeOptions.indexOf(theme) + 1) % themeOptions.length];
+  const [iconName, fallback] = themeIcons[theme];
+
+  document.documentElement.dataset.theme = theme;
+  if (themeToggle && themeToggleIcon) {
+    themeToggleIcon.className = `fa-solid ${iconName} fa-icon`;
+    themeToggleIcon.dataset.fallback = fallback;
+    themeToggle.title = `Tema ${themeLabels[theme]}. Cambiar a ${themeLabels[nextTheme]}`;
+    themeToggle.setAttribute("aria-label", themeToggle.title);
+  }
+
+  if (persist) {
+    try {
+      window.localStorage.setItem(THEME_STORAGE_KEY, theme);
+    } catch {
+      // El tema sigue aplicado durante esta sesión aunque el almacenamiento esté bloqueado.
+    }
+  }
 }
 
 function getHistoryIndex(historyState = window.history.state) {
@@ -316,11 +375,9 @@ function createItemCard(item, index) {
     image.loading = "lazy";
     card.append(image);
   } else {
-    const placeholder = createTextElement(
-      "div",
-      "item-card__placeholder",
-      categorySymbols[item.category] ?? categorySymbols.Otros,
-    );
+    const placeholder = document.createElement("div");
+    placeholder.className = "item-card__placeholder";
+    placeholder.append(createCategoryIcon(item.category));
     placeholder.setAttribute("aria-hidden", "true");
     card.append(placeholder);
   }
@@ -333,11 +390,13 @@ function createItemCard(item, index) {
   meta.className = "item-card__meta";
   const category = document.createElement("span");
   category.className = "item-card__category";
-  category.textContent = `${categorySymbols[item.category] ?? "♻"} ${item.category}`;
+  category.append(createCategoryIcon(item.category), document.createTextNode(` ${item.category}`));
   meta.append(category);
 
   if (item.zone) {
-    meta.append(createTextElement("span", "", `⌖ ${item.zone}`));
+    const zone = document.createElement("span");
+    zone.append(createIconElement("fa-location-dot", "⌖"), document.createTextNode(` ${item.zone}`));
+    meta.append(zone);
   }
   body.append(meta);
 
@@ -347,7 +406,7 @@ function createItemCard(item, index) {
     ? `Disponible hasta ${formatDate(item.expiresAt)}`
     : "Disponible";
   footer.append(createTextElement("span", "availability", availability));
-  footer.append(createTextElement("span", "item-card__arrow", "→"));
+  footer.append(createIconElement("fa-arrow-right", "→", "item-card__arrow"));
   body.append(footer);
 
   card.append(body);
@@ -447,11 +506,9 @@ function renderDetail(item) {
     image.alt = item.title;
     detailMedia.append(image);
   } else {
-    const placeholder = createTextElement(
-      "div",
-      "detail-media__placeholder",
-      categorySymbols[item.category] ?? categorySymbols.Otros,
-    );
+    const placeholder = document.createElement("div");
+    placeholder.className = "detail-media__placeholder";
+    placeholder.append(createCategoryIcon(item.category));
     placeholder.setAttribute("aria-hidden", "true");
     detailMedia.append(placeholder);
   }
@@ -462,7 +519,7 @@ function renderDetail(item) {
       ? `Disponible hasta ${formatDate(item.expiresAt)}`
       : "Disponible";
   detailTitle.textContent = item.title;
-  detailCategory.textContent = `${categorySymbols[item.category] ?? "♻"} ${item.category}`;
+  detailCategory.replaceChildren(createCategoryIcon(item.category), document.createTextNode(` ${item.category}`));
   detailDescription.textContent = item.description || "La persona que lo ofrece todavía no ha añadido una descripción.";
   detailZone.textContent = item.zone || "Valladolid";
   detailOwner.textContent = item.ownerDisplayName || "Vecindad";
@@ -1024,6 +1081,16 @@ searchInput.addEventListener("input", (event) => {
 navItems.forEach((button) => {
   button.addEventListener("click", () => setView(button.dataset.view));
 });
+
+if (themeToggle) {
+  themeToggle.addEventListener("click", () => {
+    const currentTheme = readThemePreference();
+    const nextTheme = themeOptions[(themeOptions.indexOf(currentTheme) + 1) % themeOptions.length];
+    applyTheme(nextTheme);
+  });
+}
+
+applyTheme(readThemePreference(), false);
 
 detailBack.addEventListener("click", goBack);
 detailShare.addEventListener("click", shareSelectedItem);

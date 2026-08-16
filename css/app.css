@@ -1238,6 +1238,39 @@ h2 {
   font-size: 1.75rem;
 }
 
+.theme-toggle {
+  position: fixed;
+  z-index: 6;
+  right: max(0.75rem, calc((100vw - 42rem) / 2 + 0.75rem));
+  bottom: calc(4.75rem + env(safe-area-inset-bottom));
+  display: grid;
+  width: 2.25rem;
+  height: 2.25rem;
+  padding: 0;
+  place-items: center;
+  border: 1px solid var(--border-light);
+  border-radius: 50%;
+  background: var(--bg-container);
+  color: var(--color-primary-dark);
+  box-shadow: var(--shadow-soft);
+  cursor: pointer;
+  transition: background 180ms ease, color 180ms ease, transform 180ms ease;
+}
+
+.theme-toggle:hover {
+  background: var(--bg-card-hover);
+  transform: translateY(-1px);
+}
+
+.theme-toggle:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--color-primary) 45%, transparent);
+  outline-offset: 2px;
+}
+
+.theme-toggle .fa-icon {
+  font-size: 0.9rem;
+}
+
 @media (hover: hover) and (pointer: fine) {
   .item-card:hover {
     border-color: var(--border-strong);
