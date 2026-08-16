@@ -12,23 +12,17 @@
       },
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2.1,
-      "position": [
-        0,
-        0
-      ],
+      "position": [0, 0],
       "id": "0f9b6a19-1c72-4de0-aab0-9e87d8ce9c11",
       "name": "Webhook"
     },
     {
       "parameters": {
-        "jsCode": "const crypto = require('crypto');\n\n// Usa la misma variable privada que el webhook /whoami.\nconst botToken = typeof $env !== 'undefined' ? $env.TELEGRAM_BOT_TOKEN : '';\n\nfunction result(json) {\n  return [{ json }];\n}\n\nfunction invalid(error) {\n  return result({ ok: false, valid: false, error });\n}\n\nfunction parseQueryString(value) {\n  const fields = {};\n\n  try {\n    for (const part of String(value).split('&')) {\n      const separator = part.indexOf('=');\n      if (separator < 0) continue;\n      const key = decodeURIComponent(part.slice(0, separator).replace(/\\+/g, ' '));\n      const fieldValue = decodeURIComponent(part.slice(separator + 1).replace(/\\+/g, ' '));\n      fields[key] = fieldValue;\n    }\n  } catch {\n    return null;\n  }\n\n  return fields;\n}\n\nif (!botToken) throw new Error('Falta TELEGRAM_BOT_TOKEN en n8n.');\n\nconst input = $input.first()?.json ?? {};\nlet body = input.body ?? input;\nif (typeof body === 'string') {\n  try {\n    body = JSON.parse(body);\n  } catch {\n    return invalid('invalid_json');\n  }\n}\n\nconst initData = typeof body.initData === 'string' ? body.initData.trim() : '';\nconst itemId = typeof body.item_id === 'string' ? body.item_id.trim() : '';\nif (!initData) return invalid('telegram_init_data_missing');\nif (!itemId || itemId.length > 120) return invalid('item_id_invalid');\n\nconst fields = parseQueryString(initData);\nif (!fields) return invalid('telegram_init_data_malformed');\n\nconst receivedHash = fields.hash ?? '';\nconst authDate = Number(fields.auth_date);\nif (!/^[a-f0-9]{64}$/i.test(receivedHash) || !Number.isInteger(authDate)) {\n  return invalid('telegram_init_data_invalid');\n}\n\nconst now = Math.floor(Date.now() / 1000);\nif (authDate > now + 60 || now - authDate > 600) return invalid('telegram_init_data_expired');\n\nconst dataCheckString = Object.keys(fields)\n  .filter((key) => key !== 'hash')\n  .sort()\n  .map((key) => `${key}=${fields[key]}`)\n  .join('\\n');\n\nconst secretKey = crypto.createHmac('sha256', 'WebAppData').update(botToken).digest();\nconst expectedHash = crypto.createHmac('sha256', secretKey).update(dataCheckString).digest('hex');\nconst received = Buffer.from(receivedHash, 'hex');\nconst expected = Buffer.from(expectedHash, 'hex');\nif (received.length !== expected.length || !crypto.timingSafeEqual(received, expected)) {\n  return invalid('telegram_identity_invalid');\n}\n\nlet user;\ntry {\n  user = JSON.parse(fields.user ?? '{}');\n} catch {\n  return invalid('telegram_user_invalid');\n}\n\nif (!user || !Number.isSafeInteger(user.id)) return invalid('telegram_user_invalid');\n\nreturn result({\n  ok: true,\n  valid: true,\n  item_id: itemId,\n  telegram_id: String(user.id),\n});"
+        "jsCode": "const crypto = require('crypto');\n\n// Pega aquí el mismo token privado que ya usa tu nodo /whoami.\n// No lo guardes en GitHub ni lo envíes al navegador.\nconst BOT_TOKEN = 'PEGA_AQUI_EL_TOKEN_REAL_DE_PUCELO_BOT';\n\nfunction invalid(error) {\n  return [{ json: { ok: false, valid: false, error } }];\n}\n\nfunction parseQueryString(value) {\n  const fields = {};\n  try {\n    for (const part of String(value).split('&')) {\n      const separator = part.indexOf('=');\n      if (separator < 0) continue;\n      const key = decodeURIComponent(part.slice(0, separator).replace(/\\+/g, ' '));\n      const fieldValue = decodeURIComponent(part.slice(separator + 1).replace(/\\+/g, ' '));\n      fields[key] = fieldValue;\n    }\n  } catch {\n    return null;\n  }\n  return fields;\n}\n\nif (!BOT_TOKEN || BOT_TOKEN.startsWith('PEGA_AQUI')) {\n  throw new Error('Pega el token privado de Pucelo Bot en este nodo.');\n}\n\nconst input = $input.first()?.json ?? {};\nlet body = input.body ?? input;\nif (typeof body === 'string') {\n  try { body = JSON.parse(body); } catch { return invalid('invalid_json'); }\n}\n\nconst initData = typeof body.initData === 'string' ? body.initData.trim() : '';\nconst itemId = typeof body.item_id === 'string' ? body.item_id.trim() : '';\nif (!initData) return invalid('telegram_init_data_missing');\nif (!itemId || itemId.length > 120) return invalid('item_id_invalid');\n\nconst fields = parseQueryString(initData);\nif (!fields) return invalid('telegram_init_data_malformed');\nconst receivedHash = fields.hash ?? '';\nconst authDate = Number(fields.auth_date);\nif (!/^[a-f0-9]{64}$/i.test(receivedHash) || !Number.isInteger(authDate)) {\n  return invalid('telegram_init_data_invalid');\n}\n\nconst now = Math.floor(Date.now() / 1000);\nif (authDate > now + 60 || now - authDate > 600) return invalid('telegram_init_data_expired');\n\nconst dataCheckString = Object.keys(fields)\n  .filter((key) => key !== 'hash')\n  .sort()\n  .map((key) => `${key}=${fields[key]}`)\n  .join('\\n');\nconst secretKey = crypto.createHmac('sha256', 'WebAppData').update(BOT_TOKEN).digest();\nconst expectedHash = crypto.createHmac('sha256', secretKey).update(dataCheckString).digest('hex');\nconst received = Buffer.from(receivedHash, 'hex');\nconst expected = Buffer.from(expectedHash, 'hex');\nif (received.length !== expected.length || !crypto.timingSafeEqual(received, expected)) {\n  return invalid('telegram_identity_invalid');\n}\n\nlet user;\ntry { user = JSON.parse(fields.user ?? '{}'); } catch { return invalid('telegram_user_invalid'); }\nif (!user || !Number.isSafeInteger(user.id)) return invalid('telegram_user_invalid');\n\nreturn [{ json: { ok: true, valid: true, item_id: itemId, telegram_id: String(user.id) } }];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [
-        224,
-        0
-      ],
+      "position": [224, 0],
       "id": "ac2d4c62-2c41-42a4-a68e-7a51d8f5c9b2",
       "name": "Validate Telegram initData"
     },
@@ -46,10 +40,7 @@
       },
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
-      "position": [
-        448,
-        0
-      ],
+      "position": [448, 0],
       "id": "7b1f0b0b-50f8-4bb4-9f85-82e14d7bdc0d",
       "name": "Identity valid?"
     },
@@ -83,10 +74,7 @@
       },
       "type": "n8n-nodes-base.nocoDb",
       "typeVersion": 4,
-      "position": [
-        672,
-        -96
-      ],
+      "position": [672, -96],
       "id": "3c0ab7d8-7ce2-42e3-b5f5-efc0c6bc6e17",
       "name": "Search rows",
       "alwaysOutputData": true,
@@ -99,14 +87,11 @@
     },
     {
       "parameters": {
-        "jsCode": "const auth = $('Validate Telegram initData').first()?.json ?? {};\nconst rows = $input.all();\n\nif (auth.valid !== true) {\n  return [{ json: auth }];\n}\n\nconst found = rows\n  .map(({ json }) => {\n    const fields = json.fields ?? json;\n    return { json, fields };\n  })\n  .find(({ fields }) => String(fields['item-id'] ?? '') === String(auth.item_id));\n\nif (!found) {\n  return [{ json: { ok: false, valid: false, error: 'item_not_found' } }];\n}\n\nconst fields = found.fields;\nconst ownerTelegramId = String(fields.owner_telegram_id ?? '');\nif (!ownerTelegramId || ownerTelegramId !== String(auth.telegram_id)) {\n  return [{ json: { ok: false, valid: false, error: 'not_owner' } }];\n}\n\nif (fields.status === 'completed') {\n  return [{ json: { ok: false, valid: false, error: 'item_already_completed' } }];\n}\n\nif (fields.status !== 'available') {\n  return [{ json: { ok: false, valid: false, error: 'item_not_available' } }];\n}\n\nconst rowId = fields.Id ?? found.json.Id ?? found.json.id ?? null;\nif (rowId === null || rowId === undefined || rowId === '') {\n  return [{ json: { ok: false, valid: false, error: 'nocodb_row_id_missing' } }];\n}\n\nreturn [{\n  json: {\n    ok: true,\n    valid: true,\n    Id: rowId,\n    item_id: auth.item_id,\n    completed_at: new Date().toISOString(),\n    title: fields.title ?? '',\n  },\n}];"
+        "jsCode": "const auth = $('Validate Telegram initData').first()?.json ?? {};\nconst rows = $input.all();\nif (auth.valid !== true) return [{ json: auth }];\n\nconst found = rows\n  .map(({ json }) => ({ json, fields: json.fields ?? json }))\n  .find(({ fields }) => String(fields['item-id'] ?? '') === String(auth.item_id));\nif (!found) return [{ json: { ok: false, valid: false, error: 'item_not_found' } }];\n\nconst fields = found.fields;\nif (String(fields.owner_telegram_id ?? '') !== String(auth.telegram_id)) {\n  return [{ json: { ok: false, valid: false, error: 'not_owner' } }];\n}\nif (fields.status === 'completed') {\n  return [{ json: { ok: false, valid: false, error: 'item_already_completed' } }];\n}\nif (fields.status !== 'available') {\n  return [{ json: { ok: false, valid: false, error: 'item_not_available' } }];\n}\n\nconst rowId = fields.Id ?? found.json.Id ?? found.json.id ?? null;\nif (rowId === null || rowId === undefined || rowId === '') {\n  return [{ json: { ok: false, valid: false, error: 'nocodb_row_id_missing' } }];\n}\n\nreturn [{ json: {\n  ok: true,\n  valid: true,\n  Id: rowId,\n  item_id: auth.item_id,\n  completed_at: new Date().toISOString(),\n  title: fields.title ?? '',\n} }];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [
-        896,
-        -96
-      ],
+      "position": [896, -96],
       "id": "5ad7ed3b-00a9-45ae-aef8-5c80d5e7cfbd",
       "name": "Verify owner and item"
     },
@@ -124,10 +109,7 @@
       },
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
-      "position": [
-        1120,
-        -96
-      ],
+      "position": [1120, -96],
       "id": "b1a2c9ee-8a0f-4e42-a3a0-69f12bc98e45",
       "name": "Can complete?"
     },
@@ -172,10 +154,7 @@
       },
       "type": "n8n-nodes-base.nocoDb",
       "typeVersion": 4,
-      "position": [
-        1344,
-        -192
-      ],
+      "position": [1344, -192],
       "id": "c85a70a7-4095-4970-a819-7cba0db3a9df",
       "name": "Update NocoDB row",
       "credentials": {
@@ -187,14 +166,11 @@
     },
     {
       "parameters": {
-        "jsCode": "const input = $('Verify owner and item').first()?.json ?? {};\nreturn [{\n  json: {\n    ok: true,\n    item_id: input.item_id ?? '',\n    title: input.title ?? '',\n    status: 'completed',\n    completed_at: input.completed_at ?? new Date().toISOString(),\n    message: 'Marcado como entregado',\n  },\n}];"
+        "jsCode": "const input = $('Verify owner and item').first()?.json ?? {};\nreturn [{ json: {\n  ok: true,\n  item_id: input.item_id ?? '',\n  title: input.title ?? '',\n  status: 'completed',\n  completed_at: input.completed_at ?? new Date().toISOString(),\n  message: 'Marcado como entregado',\n} }];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [
-        1568,
-        -192
-      ],
+      "position": [1568, -192],
       "id": "ddac9377-cfec-439f-81c8-49cb15b2da2c",
       "name": "Build success response"
     },
@@ -206,116 +182,41 @@
       },
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.5,
-      "position": [
-        1792,
-        0
-      ],
+      "position": [1792, 0],
       "id": "f6ccda22-0f0c-48dc-9a1f-6b9cb50b64ea",
       "name": "Respond to Webhook"
     }
   ],
   "connections": {
     "Webhook": {
-      "main": [
-        [
-          {
-            "node": "Validate Telegram initData",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
+      "main": [[{"node": "Validate Telegram initData", "type": "main", "index": 0}]]
     },
     "Validate Telegram initData": {
-      "main": [
-        [
-          {
-            "node": "Identity valid?",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
+      "main": [[{"node": "Identity valid?", "type": "main", "index": 0}]]
     },
     "Identity valid?": {
       "main": [
-        [
-          {
-            "node": "Search rows",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Respond to Webhook",
-            "type": "main",
-            "index": 0
-          }
-        ]
+        [{"node": "Search rows", "type": "main", "index": 0}],
+        [{"node": "Respond to Webhook", "type": "main", "index": 0}]
       ]
     },
     "Search rows": {
-      "main": [
-        [
-          {
-            "node": "Verify owner and item",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
+      "main": [[{"node": "Verify owner and item", "type": "main", "index": 0}]]
     },
     "Verify owner and item": {
-      "main": [
-        [
-          {
-            "node": "Can complete?",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
+      "main": [[{"node": "Can complete?", "type": "main", "index": 0}]]
     },
     "Can complete?": {
       "main": [
-        [
-          {
-            "node": "Update NocoDB row",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Respond to Webhook",
-            "type": "main",
-            "index": 0
-          }
-        ]
+        [{"node": "Update NocoDB row", "type": "main", "index": 0}],
+        [{"node": "Respond to Webhook", "type": "main", "index": 0}]
       ]
     },
     "Update NocoDB row": {
-      "main": [
-        [
-          {
-            "node": "Build success response",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
+      "main": [[{"node": "Build success response", "type": "main", "index": 0}]]
     },
     "Build success response": {
-      "main": [
-        [
-          {
-            "node": "Respond to Webhook",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
+      "main": [[{"node": "Respond to Webhook", "type": "main", "index": 0}]]
     }
   },
   "pinData": {},

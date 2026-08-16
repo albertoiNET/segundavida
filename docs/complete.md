@@ -15,18 +15,22 @@ persona autenticada. Al completar escribe:
 - `status = completed`
 - `completed_at =` fecha actual generada por n8n
 
-El nodo de validación usa la misma variable privada que el webhook `/whoami`:
-`TELEGRAM_BOT_TOKEN`. En tu instalación ya debe estar disponible porque el
-webhook de identidad está funcionando. Como el nodo Code necesita HMAC, n8n
-también debe arrancar con `NODE_FUNCTION_ALLOW_BUILTIN=crypto`.
+El nodo de validación contiene la constante `BOT_TOKEN`. Pega ahí el mismo
+token privado que ya tienes en el nodo Code de `/whoami`; no lo pegues en el
+repositorio ni en el navegador. La credencial `Pucelo Bot` no se puede leer
+desde un nodo Code de n8n, por lo que no puede recuperarse automáticamente
+desde esa credencial. Como el nodo Code necesita HMAC, n8n también debe tener
+permitido el módulo `crypto` con `NODE_FUNCTION_ALLOW_BUILTIN=crypto`.
 
 Después de importar:
 
-1. Comprueba que la credencial del nodo `Search rows` y `Update NocoDB row` es
+1. Abre `Validate Telegram initData` y sustituye
+   `PEGA_AQUI_EL_TOKEN_REAL_DE_PUCELO_BOT` por el token privado de `Pucelo Bot`.
+2. Comprueba que la credencial del nodo `Search rows` y `Update NocoDB row` es
    `NocoDB Token account`.
-2. Comprueba que la tabla seleccionada es `Segunda Vida` y que contiene los
+3. Comprueba que la tabla seleccionada es `Segunda Vida` y que contiene los
    campos `Id`, `item-id`, `owner_telegram_id`, `status` y `completed_at`.
-3. Activa el workflow.
+4. Activa el workflow.
 
 El frontend ya envía este cuerpo:
 
@@ -48,4 +52,3 @@ Respuesta correcta:
   "message": "Marcado como entregado"
 }
 ```
-
