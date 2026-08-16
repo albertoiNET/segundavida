@@ -37,7 +37,7 @@ El frontend ya envía este cuerpo:
 ```json
 {
   "initData": "<Telegram.WebApp.initData>",
-  "item_id": "sv-123456789-..."
+  "item_id": "sv-k8Qm2LxP"
 }
 ```
 
@@ -46,7 +46,7 @@ Respuesta correcta:
 ```json
 {
   "ok": true,
-  "item_id": "sv-123456789-...",
+  "item_id": "sv-k8Qm2LxP",
   "status": "completed",
   "completed_at": "2026-08-16T12:00:00.000Z",
   "message": "Marcado como entregado"

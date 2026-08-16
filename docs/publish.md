@@ -55,6 +55,15 @@ NocoDB y no se devuelve al catálogo público.
 El workflow también exige el consentimiento explícito, comprueba su versión y
 genera `consent_at` en n8n. La fecha no se acepta desde el navegador.
 
+El identificador público se genera en un nodo separado con bytes aleatorios:
+`sv-${crypto.randomBytes(6).toString('base64url')}`. Nunca se construye a partir
+del Telegram user ID.
+
+Las filas antiguas que tengan un `item-id` como
+`sv-2191395-1786900112374` deben editarse una vez en NocoDB y recibir un valor
+opaco, por ejemplo `sv-k8Qm2LxP`. La URL antigua dejará de funcionar; así no se
+mantiene publicado el identificador sensible.
+
 ## Respuestas
 
 Éxito:
@@ -62,7 +71,7 @@ genera `consent_at` en n8n. La fecha no se acepta desde el navegador.
 ```json
 {
   "ok": true,
-  "item_id": "sv-123456789-...",
+  "item_id": "sv-k8Qm2LxP",
   "status": "available",
   "message": "Publicado correctamente"
 }

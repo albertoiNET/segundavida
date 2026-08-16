@@ -34,6 +34,19 @@
     },
     {
       "parameters": {
+        "jsCode": "const crypto = require('crypto');\nconst input = $input.first()?.json ?? {};\nif (input.valid !== true) return [{ json: input }];\n\n// Identificador público opaco: nunca incluye el Telegram user ID.\nconst publicItemId = `sv-${crypto.randomBytes(6).toString('base64url')}`;\nreturn [{ json: { ...input, item_id: publicItemId } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        336,
+        0
+      ],
+      "id": "b72dcd4d-5484-4b4a-986a-44f4a80aa09b",
+      "name": "Generate opaque public item id"
+    },
+    {
+      "parameters": {
         "jsCode": "const validated = $input.first()?.json ?? {};\nif (validated.valid !== true) return [{ json: validated }];\n\nconst webhook = $('Webhook').first()?.json ?? {};\nlet body = webhook.body ?? webhook;\nif (typeof body === 'string') {\n  try { body = JSON.parse(body); } catch { return [{ json: { ok: false, valid: false, error: 'invalid_json' } }]; }\n}\n\nconst consent = body.consent && typeof body.consent === 'object' ? body.consent : {};\nconst consentVersion = typeof consent.version === 'string' ? consent.version.trim() : '';\nif (consent.accepted !== true) return [{ json: { ok: false, valid: false, error: 'consent_required' } }];\nif (consentVersion !== 'sv-publish-2026-08-16-v1') return [{ json: { ok: false, valid: false, error: 'consent_version_invalid' } }];\n\nreturn [{ json: { ...validated, consent_accepted: true, consent_version: consentVersion, consent_at: new Date().toISOString() } }];"
       },
       "type": "n8n-nodes-base.code",
@@ -210,6 +223,17 @@
       ]
     },
     "Validate Telegram and item": {
+      "main": [
+        [
+          {
+            "node": "Generate opaque public item id",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate opaque public item id": {
       "main": [
         [
           {

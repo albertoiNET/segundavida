@@ -14,7 +14,7 @@ público.
 | `Id` | System field, primary key | Automático | Identificador técnico interno de NocoDB |
 | `CreatedAt` | System DateTime | Automático | Fecha de creación de NocoDB |
 | `UpdatedAt` | System DateTime | Automático | Última modificación en NocoDB |
-| `item-id` | SingleLineText | Sí | Identificador estable de negocio generado por n8n |
+| `item-id` | SingleLineText | Sí | Identificador público opaco y aleatorio generado por n8n; nunca contiene el Telegram user ID |
 | `title` | SingleLineText | Sí | Título visible |
 | `description` | LongText | Sí | Descripción del objeto |
 | `category` | SingleSelect | Sí | `Hogar`, `Infantil`, `Libros`, `Tecnología`, `Ropa`, `Otros` |
@@ -148,8 +148,9 @@ La conexión final debe quedar:
 Webhook -> Search rows -> Code (public catalog) -> Respond to Webhook
 ```
 
-La respuesta no debe devolver Telegram IDs, chats, hilos ni mensajes. El nombre
-interno de NocoDB (`item-id`) se transforma en `id` en la API pública. Contrato
+La respuesta no debe devolver Telegram IDs, chats, hilos ni mensajes. El
+identificador de negocio (`item-id`) es público, opaco y aleatorio; no contiene
+el Telegram user ID. Se transforma en `id` en la API pública. Contrato
 inicial de cada objeto:
 
 ```json
