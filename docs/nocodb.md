@@ -81,6 +81,65 @@ Webhook
   -> Respond to Webhook
 ```
 
+### Ajuste del workflow actual
+
+Tu flujo actual ya tiene `Webhook -> Search rows -> Respond to Webhook`. Inserta
+un nodo `Code` entre `Search rows` y `Respond to Webhook` con modo **Run Once
+for All Items** y este código:
+
+```javascript
+function timestamp(value) {
+  if (!value) return null;
+  const date = new Date(String(value).replace(" ", "T"));
+  return Number.isNaN(date.getTime()) ? null : date.getTime();
+}
+
+const publicItems = $input.all()
+  .map(({ json }) => {
+    const fields = json.fields ?? json;
+    return {
+      id: fields["item-id"] ?? null,
+      title: fields.title ?? "",
+      description: fields.description ?? "",
+      category: fields.category ?? "Otros",
+      zone: fields.zone ?? "Valladolid",
+      status: fields.status ?? "hidden",
+      created_at: fields.CreatedAt ?? fields.created_at ?? null,
+      updated_at: fields.UpdatedAt ?? fields.updated_at ?? null,
+      expires_at: fields.expires_at ?? null,
+      image_url: fields.image_url || null,
+      owner_display_name: fields.owner_display_name ?? "Vecindad",
+      interest_count: Number(fields.interest_count ?? 0),
+    };
+  })
+  .filter((item) => (
+    item.id &&
+    item.status === "available" &&
+    (!item.expires_at || timestamp(item.expires_at) >= Date.now())
+  ));
+
+return [{
+  json: {
+    ok: true,
+    items: publicItems,
+    total: publicItems.length,
+  },
+}];
+```
+
+En `Respond to Webhook`, cambia `Respond With` de `All Incoming Items` a
+`JSON` y pon como `Response Body`:
+
+```text
+={{ $json }}
+```
+
+La conexión final debe quedar:
+
+```text
+Webhook -> Search rows -> Code (public catalog) -> Respond to Webhook
+```
+
 La respuesta no debe devolver Telegram IDs, chats, hilos ni mensajes. El nombre
 interno de NocoDB (`item-id`) se transforma en `id` en la API pública. Contrato
 inicial de cada objeto:
