@@ -13,6 +13,7 @@ La estructura inicial contiene:
 - `css/app.css`: estilos base, tokens visuales iniciales y responsive.
 - `js/app.js`: punto de entrada JavaScript y actualización de estados.
 - `js/telegram.js`: detección mínima del entorno Telegram Mini App.
+- `js/api.js`: cliente mínimo para el ping de n8n.
 
 ## Desarrollo local
 
@@ -27,5 +28,6 @@ Después, abrir `http://localhost:8000/` en el navegador.
 
 ## Próximo hito
 
-El HITO 4 añadirá el primer ping entre la Mini App y n8n. No se realiza todavía
-autenticación ni ninguna llamada a backend.
+El HITO 4 añadirá el primer ping entre la Mini App y n8n. La URL se dejará en
+`js/api.js` únicamente después de crear y activar el workflow `SV · Ping`.
+No se realiza todavía autenticación ni ninguna otra llamada a backend.

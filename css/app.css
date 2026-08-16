@@ -170,6 +170,10 @@ h1 {
   color: var(--color-secondary);
 }
 
+.status-value--error {
+  color: #b45309;
+}
+
 .status-value--pending {
   color: var(--text-muted);
 }
