@@ -455,19 +455,24 @@ function isNotExpired(item) {
 
 async function loadCatalog() {
   if (!api?.isDataConfigured) {
+    setServiceState(n8nStatus, n8nStatusLabel, "error", "No configurado");
     itemsState.textContent = "El catálogo todavía no está configurado.";
     itemsState.dataset.state = "error";
     return;
   }
 
+  n8nStatusLabel.textContent = "Comprobando...";
+
   try {
     const records = await api.listItems();
+    setServiceState(n8nStatus, n8nStatusLabel, "connected", "Conectado ✓");
     state.items = records.filter((item) => item.status === "available" && isNotExpired(item));
     renderCategories();
     renderItems();
     renderMyItems();
     openItemFromHash();
   } catch {
+    setServiceState(n8nStatus, n8nStatusLabel, "error", "No disponible");
     itemsState.textContent = "No hemos podido cargar los objetos. Inténtalo de nuevo en unos instantes.";
     itemsState.dataset.state = "error";
     itemsCount.textContent = "Sin datos";
@@ -815,21 +820,6 @@ if (telegramRuntime.isTelegram) {
     : " · SDK no disponible";
   telegramSdkState.hidden = false;
   setServiceState(telegramStatus, telegramStatusLabel, "connected", "Conectado ✓");
-}
-
-if (api?.isConfigured) {
-  n8nStatusLabel.textContent = "Comprobando...";
-
-  api.ping().then((result) => {
-    if (result.ok && result.service === "SegundaVida") {
-      setServiceState(n8nStatus, n8nStatusLabel, "connected", "Conectado ✓");
-      return;
-    }
-
-    setServiceState(n8nStatus, n8nStatusLabel, "error", "Respuesta no válida");
-  }).catch(() => {
-    setServiceState(n8nStatus, n8nStatusLabel, "error", "No disponible");
-  });
 }
 
 searchInput.addEventListener("input", (event) => {

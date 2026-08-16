@@ -16,7 +16,7 @@ La estructura inicial contiene:
 - `js/app.js`: punto de entrada JavaScript y actualización de estados.
 - `js/telegram.js`: detección mínima del entorno Telegram Mini App.
 - `js/auth.js`: envío controlado de `Telegram.WebApp.initData` al endpoint de identidad.
-- `js/api.js`: cliente del ping y del catálogo de n8n.
+- `js/api.js`: cliente del catálogo y de los webhooks de n8n.
 - `js/analytics.js`: wrapper de Matomo, inactivo hasta asignar un Site ID.
 - `css/tokens.css`: tokens compartidos de color, tipografía, geometría y tema.
 - `docs/design-system.md`: auditoría visual y reglas de uso.
@@ -41,7 +41,7 @@ Después, abrir `http://localhost:8000/` en el navegador.
 
 ## Integración n8n
 
-`js/api.js` consulta los workflows públicos de catálogo y ping. La llamada de
+`js/api.js` consulta el catálogo público mediante `/data`. La llamada de
 identidad solo se realiza dentro de Telegram cuando existe `initData`; el
 backend `SV · Validate Telegram User` todavía debe crearse y activarse en n8n.
 
