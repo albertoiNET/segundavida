@@ -67,12 +67,13 @@ Webhook
   -> Respond to Webhook
 ```
 
-La respuesta no debe devolver Telegram IDs, chats, hilos ni mensajes. Contrato
+La respuesta no debe devolver Telegram IDs, chats, hilos ni mensajes. El nombre
+interno de NocoDB (`item-id`) se transforma en `id` en la API pública. Contrato
 inicial de cada objeto:
 
 ```json
 {
-  "item-id": "sv-...",
+  "id": "sv-...",
   "title": "Silla de escritorio",
   "description": "Silla giratoria en buen estado.",
   "category": "Hogar",
@@ -99,10 +100,22 @@ La respuesta completa del endpoint puede ser:
 Los datos privados solo se usarán dentro de n8n para publicar en Telegram,
 gestionar intereses y resolver acciones del propietario.
 
-En expresiones de n8n, acceder a este campo así:
+En el nodo Code de n8n, acceder al campo de NocoDB y normalizarlo así:
 
 ```javascript
-row["item-id"]
+{
+  id: row["item-id"],
+  title: row.title,
+  description: row.description,
+  category: row.category,
+  zone: row.zone,
+  status: row.status,
+  created_at: row.created_at,
+  expires_at: row.expires_at,
+  image_url: row.image_url || null,
+  owner_display_name: row.owner_display_name,
+  interest_count: Number(row.interest_count || 0),
+}
 ```
 
 No usar `row.item-id`, porque JavaScript lo interpretaría como una resta.
