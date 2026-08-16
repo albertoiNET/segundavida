@@ -12,6 +12,8 @@ const state = {
   items: [],
   category: "Todo",
   query: "",
+  selectedItem: null,
+  offerFiles: [],
 };
 
 const runtimeName = document.querySelector("#runtime-name");
@@ -32,6 +34,22 @@ const catalogTools = document.querySelector(".catalog-tools");
 const catalogSection = document.querySelector(".catalog-section");
 const offerView = document.querySelector("#offer-view");
 const postsView = document.querySelector("#posts-view");
+const detailView = document.querySelector("#detail-view");
+const detailBack = document.querySelector("#detail-back");
+const detailShare = document.querySelector("#detail-share");
+const detailMedia = document.querySelector("#detail-media");
+const detailAvailability = document.querySelector("#detail-availability");
+const detailTitle = document.querySelector("#detail-title");
+const detailCategory = document.querySelector("#detail-category");
+const detailDescription = document.querySelector("#detail-description");
+const detailZone = document.querySelector("#detail-zone");
+const detailOwner = document.querySelector("#detail-owner");
+const interestButton = document.querySelector("#interest-button");
+const detailActionState = document.querySelector("#detail-action-state");
+const offerForm = document.querySelector("#offer-form");
+const offerImages = document.querySelector("#offer-images");
+const offerPreview = document.querySelector("#offer-preview");
+const offerFormState = document.querySelector("#offer-form-state");
 const navItems = [...document.querySelectorAll(".nav-item")];
 
 const categorySymbols = {
@@ -68,9 +86,17 @@ function createTextElement(tagName, className, text) {
   return element;
 }
 
+function normalizeTelegramUsername(value) {
+  const username = String(value ?? "").trim().replace(/^@/, "");
+  return /^[A-Za-z][A-Za-z0-9_]{4,31}$/.test(username) ? username : "";
+}
+
 function createItemCard(item, index) {
   const card = document.createElement("article");
   card.className = "item-card";
+  card.tabIndex = 0;
+  card.setAttribute("role", "button");
+  card.setAttribute("aria-label", `Ver ${item.title}`);
   card.style.animationDelay = `${Math.min(index * 60, 240)}ms`;
   card.dataset.itemId = item.id;
 
@@ -117,19 +143,80 @@ function createItemCard(item, index) {
   body.append(footer);
 
   card.append(body);
+  card.addEventListener("click", () => showDetail(item));
+  card.addEventListener("keydown", (event) => {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      showDetail(item);
+    }
+  });
   return card;
+}
+
+function renderDetail(item) {
+  state.selectedItem = item;
+  detailMedia.replaceChildren();
+
+  if (item.imageUrl) {
+    const image = document.createElement("img");
+    image.className = "detail-media__image";
+    image.src = item.imageUrl;
+    image.alt = item.title;
+    detailMedia.append(image);
+  } else {
+    const placeholder = createTextElement(
+      "div",
+      "detail-media__placeholder",
+      categorySymbols[item.category] ?? categorySymbols.Otros,
+    );
+    placeholder.setAttribute("aria-hidden", "true");
+    detailMedia.append(placeholder);
+  }
+
+  detailAvailability.textContent = item.expiresAt
+    ? `Disponible hasta ${formatDate(item.expiresAt)}`
+    : "Disponible";
+  detailTitle.textContent = item.title;
+  detailCategory.textContent = `${categorySymbols[item.category] ?? "♻"} ${item.category}`;
+  detailDescription.textContent = item.description || "La persona que lo ofrece todavía no ha añadido una descripción.";
+  detailZone.textContent = item.zone || "Valladolid";
+  detailOwner.textContent = item.ownerDisplayName || "Vecindad";
+  const ownerUsername = normalizeTelegramUsername(item.ownerUsername);
+  interestButton.disabled = !ownerUsername;
+  interestButton.textContent = "Me interesa";
+  interestButton.setAttribute(
+    "aria-label",
+    ownerUsername ? `Contactar con ${item.ownerDisplayName || "la persona anunciante"} por Telegram` : "Contacto no disponible",
+  );
+  detailActionState.textContent = ownerUsername
+    ? "Se abrirá el chat de Telegram de quien lo ofrece."
+    : "El anunciante todavía no ha añadido un usuario público de Telegram.";
+  detailActionState.dataset.state = ownerUsername ? "" : "error";
+}
+
+function showDetail(item) {
+  renderDetail(item);
+  setView("detail");
+  window.history.pushState({}, "", `#item=${encodeURIComponent(item.id)}`);
+  window.SecondaVidaAnalytics?.trackEvent("catalog", "open-item", item.id);
 }
 
 function setView(viewName) {
   const isExplore = viewName === "explore";
   const isOffer = viewName === "offer";
   const isPosts = viewName === "posts";
+  const isDetail = viewName === "detail";
 
   catalogIntro.hidden = !isExplore;
   catalogTools.hidden = !isExplore;
   catalogSection.hidden = !isExplore;
   offerView.hidden = !isOffer;
   postsView.hidden = !isPosts;
+  detailView.hidden = !isDetail;
+
+  if (!isDetail && window.location.hash.startsWith("#item=")) {
+    window.history.replaceState({}, "", window.location.pathname + window.location.search);
+  }
 
   navItems.forEach((button) => {
     const selected = button.dataset.view === viewName;
@@ -206,11 +293,26 @@ async function loadCatalog() {
     state.items = records.filter((item) => item.status === "available" && isNotExpired(item));
     renderCategories();
     renderItems();
+    openItemFromHash();
   } catch {
     itemsState.textContent = "No hemos podido cargar los objetos. Inténtalo de nuevo en unos instantes.";
     itemsState.dataset.state = "error";
     itemsCount.textContent = "Sin datos";
   }
+}
+
+function openItemFromHash() {
+  if (!window.location.hash.startsWith("#item=")) return;
+
+  let itemId = "";
+  try {
+    itemId = decodeURIComponent(window.location.hash.slice("#item=".length));
+  } catch {
+    return;
+  }
+
+  const item = state.items.find((candidate) => candidate.id === itemId);
+  if (item) showDetail(item);
 }
 
 async function checkIdentity() {
@@ -233,6 +335,107 @@ async function checkIdentity() {
     setServiceState(identityStatus, identityStatusLabel, "error", "No verificada");
   } catch {
     setServiceState(identityStatus, identityStatusLabel, "error", "No disponible");
+  }
+}
+
+function setFormState(message, stateName = "") {
+  offerFormState.textContent = message;
+  offerFormState.dataset.state = stateName;
+}
+
+function renderPhotoPreview(files) {
+  offerPreview.replaceChildren();
+
+  files.forEach((file) => {
+    const preview = document.createElement("div");
+    preview.className = "photo-preview__item";
+    const image = document.createElement("img");
+    image.src = URL.createObjectURL(file);
+    image.alt = file.name;
+    preview.append(image);
+    offerPreview.append(preview);
+  });
+}
+
+function handlePhotoSelection(event) {
+  const files = [...event.target.files];
+  const validFiles = files.filter((file) => file.type.startsWith("image/") && file.size <= 5 * 1024 * 1024);
+
+  state.offerFiles = validFiles.slice(0, 5);
+  renderPhotoPreview(state.offerFiles);
+
+  if (files.length > 5) {
+    setFormState("Puedes añadir hasta 5 fotos.", "error");
+    return;
+  }
+
+  if (validFiles.length !== files.length) {
+    setFormState("Cada foto debe ser JPG, PNG o WebP y pesar menos de 5 MB.", "error");
+    return;
+  }
+
+  setFormState("");
+}
+
+function handleOfferSubmit(event) {
+  event.preventDefault();
+
+  if (!offerForm.reportValidity()) {
+    setFormState("Revisa los campos obligatorios.", "error");
+    return;
+  }
+
+  if (!auth?.hasInitData()) {
+    setFormState("Abre la mini app desde Telegram para poder publicar.", "error");
+    return;
+  }
+
+  setFormState(
+    "El formulario está listo. Falta conectar el webhook seguro de publicación en n8n.",
+    "pending",
+  );
+}
+
+function handleInterest() {
+  const username = normalizeTelegramUsername(state.selectedItem?.ownerUsername);
+  if (!username) {
+    detailActionState.textContent = "El anunciante todavía no tiene un contacto público disponible.";
+    detailActionState.dataset.state = "error";
+    return;
+  }
+
+  const telegramUrl = `https://t.me/${username}`;
+  const webApp = window.Telegram?.WebApp;
+
+  if (typeof webApp?.openTelegramLink === "function") {
+    webApp.openTelegramLink(telegramUrl);
+    return;
+  }
+
+  window.open(telegramUrl, "_blank", "noopener,noreferrer");
+}
+
+async function shareSelectedItem() {
+  if (!state.selectedItem) return;
+
+  const shareData = {
+    title: state.selectedItem.title,
+    text: `${state.selectedItem.title} · SegundaVida`,
+    url: window.location.href,
+  };
+
+  try {
+    if (navigator.share) {
+      await navigator.share(shareData);
+      return;
+    }
+
+    await navigator.clipboard.writeText(window.location.href);
+    detailActionState.textContent = "Enlace copiado.";
+    detailActionState.dataset.state = "connected";
+  } catch {
+    detailActionState.textContent = "No se ha podido compartir ahora.";
+    detailActionState.dataset.state = "error";
   }
 }
 
@@ -268,6 +471,12 @@ searchInput.addEventListener("input", (event) => {
 navItems.forEach((button) => {
   button.addEventListener("click", () => setView(button.dataset.view));
 });
+
+detailBack.addEventListener("click", () => setView("explore"));
+detailShare.addEventListener("click", shareSelectedItem);
+interestButton.addEventListener("click", handleInterest);
+offerImages.addEventListener("change", handlePhotoSelection);
+offerForm.addEventListener("submit", handleOfferSubmit);
 
 window.SecondaVidaAnalytics?.trackPageView();
 checkIdentity();

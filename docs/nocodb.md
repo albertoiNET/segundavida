@@ -35,8 +35,10 @@ NocoDB ya aporta `CreatedAt` y `UpdatedAt`; no hay que crearlos ni rellenarlos
 desde el CSV. n8n los expondrá como `created_at` y `updated_at` en la respuesta
 pública. Telegram IDs se guardan como texto para evitar problemas de precisión o
 limitaciones de tamaño en campos numéricos. No se crea todavía el estado
-`reserved` ni la tabla de intereses; esta última llegará cuando implementemos
-`Me interesa`.
+`reserved` ni la tabla de intereses. Mientras cada anunciante tenga un
+`owner_username` público, `Me interesa` abre directamente su chat de Telegram;
+la tabla de intereses quedará para una segunda fase si necesitamos métricas o
+notificaciones.
 
 ## Importación en NocoDB
 
@@ -103,6 +105,7 @@ const publicItems = $input.all()
       expires_at: fields.expires_at ?? null,
       image_url: fields.image_url || null,
       owner_display_name: fields.owner_display_name ?? "Vecindad",
+      owner_username: fields.owner_username || null,
       interest_count: Number(fields.interest_count ?? 0),
     };
   })
@@ -150,6 +153,7 @@ inicial de cada objeto:
   "expires_at": "2026-09-15T23:59:00+02:00",
   "image_url": null,
   "owner_display_name": "Pepe",
+  "owner_username": "pepe_demo",
   "interest_count": 0
 }
 ```
@@ -182,6 +186,7 @@ En el nodo Code de n8n, acceder al campo de NocoDB y normalizarlo así:
   expires_at: row.expires_at,
   image_url: row.image_url || null,
   owner_display_name: row.owner_display_name,
+  owner_username: row.owner_username || null,
   interest_count: Number(row.interest_count || 0),
 }
 ```

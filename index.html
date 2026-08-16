@@ -51,14 +51,91 @@
         <div id="items-grid" class="items-grid" aria-live="polite"></div>
       </section>
 
+      <section class="detail-view" id="detail-view" hidden aria-labelledby="detail-title">
+        <div class="detail-topbar">
+          <button class="text-button" id="detail-back" type="button">← <span>Explorar</span></button>
+          <span class="detail-context">Objeto</span>
+          <button class="icon-button" id="detail-share" type="button" aria-label="Compartir objeto">↗</button>
+        </div>
+        <div class="detail-media" id="detail-media"></div>
+        <div class="detail-content">
+          <div class="detail-availability" id="detail-availability">Disponible</div>
+          <h1 id="detail-title">Objeto</h1>
+          <p class="detail-category" id="detail-category"></p>
+          <p class="detail-description" id="detail-description"></p>
+          <dl class="detail-facts">
+            <div>
+              <dt>Zona</dt>
+              <dd id="detail-zone">—</dd>
+            </div>
+            <div>
+              <dt>Publicado por</dt>
+              <dd id="detail-owner">Vecindad</dd>
+            </div>
+          </dl>
+          <button class="primary-button" id="interest-button" type="button">Me interesa</button>
+          <p class="action-state" id="detail-action-state" aria-live="polite"></p>
+        </div>
+      </section>
+
       <section class="secondary-view" id="offer-view" hidden aria-labelledby="offer-title">
         <h1 id="offer-title">Ofrecer algo</h1>
         <p class="view-copy">Publica un objeto que ya no necesitas y dale otra oportunidad.</p>
-        <div class="empty-state">
-          <span class="empty-state__icon" aria-hidden="true">＋</span>
-          <strong>La publicación se abrirá aquí</strong>
-          <p>Estamos conectando el formulario con Telegram y NocoDB.</p>
-        </div>
+        <form class="offer-form" id="offer-form" novalidate>
+          <label class="form-field">
+            <span>Título</span>
+            <input id="offer-title-input" name="title" type="text" maxlength="80" placeholder="Ej. Silla de escritorio" required />
+          </label>
+          <div class="form-row">
+            <label class="form-field">
+              <span>Categoría</span>
+              <select id="offer-category" name="category" required>
+                <option value="">Elige una</option>
+                <option>Hogar</option>
+                <option>Infantil</option>
+                <option>Libros</option>
+                <option>Tecnología</option>
+                <option>Ropa</option>
+                <option>Otros</option>
+              </select>
+            </label>
+            <label class="form-field">
+              <span>Zona aproximada</span>
+              <select id="offer-zone" name="zone" required>
+                <option value="">Elige una</option>
+                <option>Centro</option>
+                <option>Delicias</option>
+                <option>Parquesol</option>
+                <option>Rondilla</option>
+                <option>Otro barrio</option>
+              </select>
+            </label>
+          </div>
+          <label class="form-field">
+            <span>Descripción <small>opcional</small></span>
+            <textarea id="offer-description" name="description" maxlength="600" rows="4" placeholder="Cuenta lo esencial: estado, medidas o algo que deba saber quien lo reciba."></textarea>
+          </label>
+          <fieldset class="form-field duration-field">
+            <legend>Disponible durante</legend>
+            <div class="duration-options">
+              <label><input type="radio" name="duration" value="7" /> <span>7 días</span></label>
+              <label><input type="radio" name="duration" value="14" checked /> <span>14 días</span></label>
+              <label><input type="radio" name="duration" value="30" /> <span>30 días</span></label>
+            </div>
+          </fieldset>
+          <div class="form-field">
+            <span class="field-label">Fotos <small>hasta 5</small></span>
+            <label class="photo-picker" for="offer-images">
+              <span class="photo-picker__icon" aria-hidden="true">＋</span>
+              <span><strong>Añadir fotos</strong><small>La primera será la portada</small></span>
+              <input id="offer-images" name="images" type="file" accept="image/jpeg,image/png,image/webp" multiple />
+            </label>
+            <div class="photo-preview" id="offer-preview" aria-live="polite"></div>
+          </div>
+          <button class="primary-button" type="submit">Publicar</button>
+          <p class="form-state" id="offer-form-state" aria-live="polite"></p>
+          <p class="form-note">Tu publicación se asociará a tu identidad de Telegram. No mostramos tu ubicación exacta.</p>
+        </form>
       </section>
 
       <section class="secondary-view" id="posts-view" hidden aria-labelledby="posts-title">

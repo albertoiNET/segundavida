@@ -29,6 +29,10 @@ function normalizeItem(record) {
     category: fields.category ?? "Otros",
     zone: fields.zone ?? "Valladolid",
     ownerDisplayName: fields.owner_display_name ?? "Vecindad",
+    ownerUsername: fields.owner_username
+      ?? fields.owner_telegram_username
+      ?? fields.telegram_username
+      ?? "",
     status: fields.status ?? "hidden",
     createdAt: fields.created_at ?? fields.CreatedAt ?? null,
     expiresAt: fields.expires_at ?? null,
