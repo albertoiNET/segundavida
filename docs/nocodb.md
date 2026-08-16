@@ -39,8 +39,9 @@ desde el CSV. n8n los expondrá como `created_at` y `updated_at` en la respuesta
 pública. Telegram IDs se guardan como texto para evitar problemas de precisión o
 limitaciones de tamaño en campos numéricos. No se crea todavía el estado
 `reserved` ni la tabla de intereses. Cuando haya un `owner_username` público,
-`Me interesa` abre directamente el chat del vecino o la vecina. Por eso el
-formulario exige configurar un username público antes de publicar. Las
+`Me interesa` abre directamente el chat del vecino o la vecina con un mensaje
+preparado y el enlace a la ficha concreta. Por eso el formulario exige
+configurar un username público antes de publicar. Las
 publicaciones antiguas sin username se mantienen visibles, pero no ofrecen un
 canal de contacto. La tabla de intereses queda para una segunda fase si
 necesitamos métricas o notificaciones más detalladas.

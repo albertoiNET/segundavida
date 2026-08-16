@@ -161,6 +161,17 @@ function getItemStatusLabel(item) {
   return "Disponible ahora";
 }
 
+function getItemUrl(item) {
+  const url = new URL(window.location.href);
+  url.search = "";
+  url.hash = `item=${encodeURIComponent(item.id)}`;
+  return url.toString();
+}
+
+function getInterestMessage(item) {
+  return `Hola, he visto que has publicado «${item.title}» en SegundaVida y estoy interesado/a en él.\n\n${getItemUrl(item)}`;
+}
+
 function createItemCard(item, index) {
   const card = document.createElement("article");
   card.className = "item-card";
@@ -739,15 +750,19 @@ function handleInterest() {
     return;
   }
 
-  const telegramUrl = `https://t.me/${username}`;
+  const telegramUrl = `https://t.me/${username}?text=${encodeURIComponent(getInterestMessage(item))}`;
   const webApp = window.Telegram?.WebApp;
 
   if (typeof webApp?.openTelegramLink === "function") {
     webApp.openTelegramLink(telegramUrl);
+    detailActionState.textContent = "Hemos preparado un mensaje con el enlace de esta publicación.";
+    detailActionState.dataset.state = "connected";
     return;
   }
 
   window.open(telegramUrl, "_blank", "noopener,noreferrer");
+  detailActionState.textContent = "Hemos preparado un mensaje con el enlace de esta publicación.";
+  detailActionState.dataset.state = "connected";
 }
 
 async function shareSelectedItem() {
