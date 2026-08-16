@@ -1431,6 +1431,21 @@ h2 {
   font-weight: 750;
 }
 
+.telegram-auth-card__actions {
+  display: grid;
+  justify-items: start;
+  gap: 0.6rem;
+}
+
+.telegram-download-link {
+  width: fit-content;
+  color: var(--color-primary-dark);
+  font-size: 0.78rem;
+  font-weight: 750;
+  text-decoration: underline;
+  text-underline-offset: 0.18rem;
+}
+
 .telegram-auth-card[data-state="connected"] .telegram-auth-card__badge {
   background: var(--color-secondary-soft);
   color: var(--color-primary-dark);

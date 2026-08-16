@@ -24,6 +24,9 @@ La estructura inicial contiene:
 - `data/sv_items.csv`: CSV listo para importar la tabla inicial de NocoDB.
 - `docs/nocodb.md`: campos, tipos y contrato público de n8n.
 - `docs/auth.md`: contrato, validaciones y reglas de seguridad de Telegram.
+- `docs/sv_complete_item.workflow.json`: workflow importable para marcar objetos
+  como entregados desde `Mis publicaciones`.
+- `docs/complete.md`: configuración del webhook `POST /segundavida/complete`.
 
 ## Desarrollo local
 

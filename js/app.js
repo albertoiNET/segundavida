@@ -59,10 +59,13 @@ const successItemStatus = document.querySelector("#success-item-status");
 const viewPublishedButton = document.querySelector("#view-published-button");
 const goPostsButton = document.querySelector("#go-posts-button");
 const telegramAuthCard = document.querySelector("#telegram-auth-card");
+const telegramAuthTitle = document.querySelector("#telegram-auth-title");
 const telegramAuthBadge = document.querySelector("#telegram-auth-badge");
 const telegramAuthMessage = document.querySelector("#telegram-auth-message");
+const telegramDownloadLink = document.querySelector("#telegram-download-link");
 const telegramOpenLink = document.querySelector("#telegram-open-link");
 const telegramUsernameHelp = document.querySelector("#telegram-username-help");
+const telegramIdentityField = document.querySelector("#telegram-identity-field");
 const telegramUsernameDialog = document.querySelector("#telegram-username-dialog");
 const telegramUsernameDialogClose = document.querySelector("#telegram-username-dialog-close");
 const telegramUsernameRetry = document.querySelector("#telegram-username-retry");
@@ -520,18 +523,24 @@ function configureOfferAuth(user = state.telegramUser) {
   const username = normalizeTelegramUsername(user?.username);
 
   telegramAuthCard.dataset.state = verified && username ? "connected" : verified ? "warning" : "error";
-  telegramAuthBadge.textContent = verified && username ? "Verificada" : verified ? "Username necesario" : "Solo Telegram";
+  telegramAuthTitle.textContent = verified && !username
+    ? "Necesitas un username público"
+    : "Para publicar necesitas Telegram";
+  telegramAuthBadge.textContent = verified && username ? "Lista" : "Username necesario";
+  telegramAuthBadge.hidden = !verified;
+  telegramDownloadLink.hidden = verified;
   telegramOpenLink.hidden = verified;
+  telegramIdentityField.hidden = !verified;
   telegramUsernameHelp.hidden = !verified || Boolean(username);
 
   if (verified) {
     offerTelegramUsername.value = username ? `@${username}` : "Sin usuario público";
     offerTelegramUsername.readOnly = true;
     if (username) {
-      telegramAuthMessage.textContent = "Identidad verificada. Este usuario se asociará a la publicación.";
+      telegramAuthMessage.textContent = `Publicando como @${username}.`;
       setOfferFormEnabled(true);
     } else {
-      telegramAuthMessage.textContent = "Para publicar y recibir solicitudes necesitas configurar un nombre de usuario público en Telegram.";
+      telegramAuthMessage.textContent = "Configúralo en Telegram para publicar y recibir contactos.";
       setOfferFormEnabled(false);
     }
     return;
@@ -539,9 +548,7 @@ function configureOfferAuth(user = state.telegramUser) {
 
   offerTelegramUsername.value = "";
   offerTelegramUsername.readOnly = true;
-  telegramAuthMessage.textContent = auth?.hasInitData()
-    ? "No hemos podido verificar tu identidad. Vuelve a abrir la Mini App desde Telegram."
-    : "Este formulario solo está disponible dentro de la Mini App de Telegram.";
+  telegramAuthMessage.textContent = "Para publicar, abre esta aplicación desde Telegram.";
   setOfferFormEnabled(false);
 }
 

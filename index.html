@@ -105,19 +105,23 @@
         <section class="telegram-auth-card" id="telegram-auth-card" data-state="checking" aria-labelledby="telegram-auth-title">
           <div class="telegram-auth-card__topline">
             <div>
-              <span class="eyebrow">Publicar</span>
-              <h2 id="telegram-auth-title">Tu identidad en Telegram</h2>
+              <h2 id="telegram-auth-title">Para publicar necesitas Telegram</h2>
             </div>
             <span class="telegram-auth-card__badge" id="telegram-auth-badge">Comprobando</span>
           </div>
-          <p id="telegram-auth-message">Comprobando si has abierto SegundaVida desde Telegram…</p>
-          <a class="telegram-open-link" id="telegram-open-link" href="https://t.me/pucelobot?startapp=segundavida" target="_blank" rel="noopener" hidden>
-            📲 Abrir SegundaVida en Telegram
-          </a>
+          <p id="telegram-auth-message">Abre esta aplicación desde Telegram para poder enviar el formulario.</p>
+          <div class="telegram-auth-card__actions">
+            <a class="telegram-download-link" id="telegram-download-link" href="https://telegram.org/dl" target="_blank" rel="noopener" hidden>
+              ¿Aún no tienes Telegram? Descargarlo
+            </a>
+            <a class="telegram-open-link" id="telegram-open-link" href="https://t.me/pucelobot?startapp=segundavida" target="_blank" rel="noopener" hidden>
+              Abrir aplicación en Telegram
+            </a>
+          </div>
           <button class="telegram-help-link" id="telegram-username-help" type="button" hidden>
             Cómo configurar un username
           </button>
-          <label class="form-field telegram-identity-field" for="offer-telegram-username">
+          <label class="form-field telegram-identity-field" id="telegram-identity-field" for="offer-telegram-username" hidden>
             <span>Usuario que se asociará</span>
             <input id="offer-telegram-username" type="text" readonly placeholder="@usuario" aria-describedby="telegram-auth-message" />
           </label>
