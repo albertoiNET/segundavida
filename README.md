@@ -5,7 +5,7 @@ que objetos que ya no se necesitan puedan tener una segunda vida.
 
 ## Estado
 
-Proyecto en **HITO 3 — Mini App mínima** del plan técnico incremental.
+Proyecto en **HITO 4 — Ping real con n8n** del plan técnico incremental.
 
 La estructura inicial contiene:
 
@@ -26,8 +26,12 @@ python3 -m http.server 8000
 
 Después, abrir `http://localhost:8000/` en el navegador.
 
-## Próximo hito
+## Integración n8n
 
-El HITO 4 añadirá el primer ping entre la Mini App y n8n. La URL se dejará en
-`js/api.js` únicamente después de crear y activar el workflow `SV · Ping`.
-No se realiza todavía autenticación ni ninguna otra llamada a backend.
+`js/api.js` consulta el workflow `SV · Ping` en producción y espera una
+respuesta JSON con `ok: true` y `service: "SegundaVida"`. No se realiza todavía
+autenticación ni ninguna otra llamada a backend.
+
+El siguiente paso manual es abrir la Mini App desde Pucelobot y confirmar que
+el estado aparece como `n8n: Conectado ✓`. La base de datos NocoDB se incorporará
+en el hito de modelo de datos, con un CSV preparado para importar.

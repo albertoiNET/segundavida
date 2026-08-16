@@ -1,6 +1,5 @@
-// URL pública del endpoint de prueba de n8n.
-// Se completará cuando el workflow SV · Ping esté creado y activo.
-const N8N_PING_URL = "";
+// Endpoint de producción del workflow SV · Ping en n8n.
+const N8N_PING_URL = "https://tasks.nukeador.com/webhook/segundavida/ping";
 
 async function ping() {
   if (!N8N_PING_URL) {
