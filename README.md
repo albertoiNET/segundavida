@@ -5,7 +5,9 @@ que objetos que ya no se necesitan puedan tener una segunda vida.
 
 ## Estado
 
-Proyecto en **HITO 10 — Catálogo público real** del plan técnico incremental.
+Proyecto en **HITO 8 — Autenticación Telegram** del plan técnico incremental.
+El catálogo público ya está conectado al workflow de n8n y la siguiente
+dependencia es validar la identidad antes de habilitar publicaciones.
 
 La estructura inicial contiene:
 
@@ -13,6 +15,7 @@ La estructura inicial contiene:
 - `css/app.css`: estilos base, tokens visuales iniciales y responsive.
 - `js/app.js`: punto de entrada JavaScript y actualización de estados.
 - `js/telegram.js`: detección mínima del entorno Telegram Mini App.
+- `js/auth.js`: envío controlado de `Telegram.WebApp.initData` al endpoint de identidad.
 - `js/api.js`: cliente del ping y del catálogo de n8n.
 - `js/analytics.js`: wrapper de Matomo, inactivo hasta asignar un Site ID.
 - `css/tokens.css`: tokens compartidos de color, tipografía, geometría y tema.
@@ -20,6 +23,7 @@ La estructura inicial contiene:
 - `docs/analytics.md`: decisión y activación pendiente de Matomo.
 - `data/sv_items.csv`: CSV listo para importar la tabla inicial de NocoDB.
 - `docs/nocodb.md`: campos, tipos y contrato público de n8n.
+- `docs/auth.md`: contrato, validaciones y reglas de seguridad de Telegram.
 
 ## Desarrollo local
 
@@ -34,12 +38,12 @@ Después, abrir `http://localhost:8000/` en el navegador.
 
 ## Integración n8n
 
-`js/api.js` consulta el workflow `SV · Ping` en producción y espera una
-respuesta JSON con `ok: true` y `service: "SegundaVida"`. No se realiza todavía
-autenticación ni ninguna otra llamada a backend.
+`js/api.js` consulta los workflows públicos de catálogo y ping. La llamada de
+identidad solo se realiza dentro de Telegram cuando existe `initData`; el
+backend `SV · Validate Telegram User` todavía debe crearse y activarse en n8n.
 
-La base de datos NocoDB se incorporará en el hito de modelo de datos, con un
-CSV preparado para importar.
+La tabla `sv_items` ya está creada en NocoDB a partir del CSV y el endpoint
+público de n8n proyecta solo los campos seguros del catálogo.
 
 ## Analítica
 

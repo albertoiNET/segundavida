@@ -6,6 +6,7 @@ const telegramRuntime = window.SecondaVidaTelegram ?? {
   sdkAvailable: false,
 };
 
+const auth = window.SecondaVidaAuth;
 const api = window.SecondaVidaApi;
 const state = {
   items: [],
@@ -19,6 +20,8 @@ const telegramStatus = document.querySelector("#telegram-status");
 const telegramStatusLabel = document.querySelector("#telegram-status-label");
 const n8nStatus = document.querySelector("#n8n-status");
 const n8nStatusLabel = document.querySelector("#n8n-status-label");
+const identityStatus = document.querySelector("#identity-status");
+const identityStatusLabel = document.querySelector("#identity-status-label");
 const searchInput = document.querySelector("#search-input");
 const categoryFilters = document.querySelector("#category-filters");
 const itemsCount = document.querySelector("#items-count");
@@ -187,6 +190,29 @@ async function loadCatalog() {
   }
 }
 
+async function checkIdentity() {
+  if (!auth?.hasInitData()) {
+    return;
+  }
+
+  setServiceState(identityStatus, identityStatusLabel, "checking", "Comprobando...");
+
+  try {
+    const result = await auth.whoAmI();
+
+    if (result.valid) {
+      const firstName = result.first_name ? `Hola ${result.first_name}` : "Telegram";
+      identityStatus.querySelector("span:nth-child(2)").textContent = firstName;
+      setServiceState(identityStatus, identityStatusLabel, "connected", "Verificada ✓");
+      return;
+    }
+
+    setServiceState(identityStatus, identityStatusLabel, "error", "No verificada");
+  } catch {
+    setServiceState(identityStatus, identityStatusLabel, "error", "No disponible");
+  }
+}
+
 if (telegramRuntime.isTelegram) {
   runtimeName.textContent = "Telegram";
   telegramSdkState.textContent = telegramRuntime.sdkAvailable
@@ -217,4 +243,5 @@ searchInput.addEventListener("input", (event) => {
 });
 
 window.SecondaVidaAnalytics?.trackPageView();
+checkIdentity();
 loadCatalog();

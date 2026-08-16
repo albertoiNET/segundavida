@@ -382,7 +382,7 @@ h2 {
 
 .service-strip {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.5rem;
   margin-top: auto;
   padding-top: 3rem;
@@ -480,6 +480,10 @@ h2 {
 
   .items-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .service-strip {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 }
 

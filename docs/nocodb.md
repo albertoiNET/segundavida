@@ -55,21 +55,15 @@ Después de probar el flujo, puedes eliminar los dos registros `sv-demo-001` y
 
 ## Contrato público de n8n
 
-El endpoint provisional que ya está conectado es:
+El endpoint que ya está conectado es:
 
 ```text
 GET /webhook/segundavida/data
 ```
 
-Ahora mismo devuelve el formato crudo de NocoDB (`id` interno + `fields`). El
-frontend lo normaliza para poder probar el catálogo, pero antes de introducir
-datos reales hay que hacer que n8n proyecte solo los campos públicos.
-
-El contrato final recomendado será:
-
-```text
-GET /webhook/segundavida/items
-```
+Devuelve una envoltura JSON con `ok`, `items` y `total`. n8n proyecta solo los
+campos públicos antes de responder; los campos privados de Telegram no salen al
+navegador.
 
 Flujo previsto:
 
@@ -81,11 +75,11 @@ Webhook
   -> Respond to Webhook
 ```
 
-### Ajuste del workflow actual
+### Workflow actual
 
-Tu flujo actual ya tiene `Webhook -> Search rows -> Respond to Webhook`. Inserta
-un nodo `Code` entre `Search rows` y `Respond to Webhook` con modo **Run Once
-for All Items** y este código:
+El flujo activo tiene `Webhook -> Search rows -> Code -> Respond to Webhook`. El
+nodo `Code` está en modo **Run Once for All Items** y proyecta el resultado con
+este código:
 
 ```javascript
 function timestamp(value) {
