@@ -95,6 +95,10 @@ input[type="search"] {
   opacity: 0.35;
 }
 
+.header-share-button {
+  flex: 0 0 auto;
+}
+
 .brand-lockup {
   min-width: 0;
   flex: 1 1 auto;
@@ -1304,13 +1308,6 @@ h2 {
 .detail-view {
   margin-top: 0.35rem;
   animation: fade-up 280ms ease both;
-}
-
-.detail-topbar {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  min-height: 2.75rem;
 }
 
 .text-button,

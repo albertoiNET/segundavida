@@ -581,6 +581,7 @@ function setView(viewName, { syncHistory = true, itemId = "" } = {}) {
   postsView.hidden = !isPosts;
   detailView.hidden = !isDetail;
   publishSuccessView.hidden = !isSuccess;
+  detailShare.hidden = !isDetail;
 
   if (isOffer) configureOfferAuth();
   if (isPosts) renderMyItems();

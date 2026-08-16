@@ -15,9 +15,9 @@
       crossorigin="anonymous"
       onerror="document.documentElement.classList.add('icons-fallback')"
     />
-    <link rel="stylesheet" href="./css/icon-fallback.css?v=sv-20260816-8" />
-    <link rel="stylesheet" href="./css/tokens.css?v=sv-20260816-8" />
-    <link rel="stylesheet" href="./css/app.css?v=sv-20260816-8" />
+    <link rel="stylesheet" href="./css/icon-fallback.css?v=sv-20260816-9" />
+    <link rel="stylesheet" href="./css/tokens.css?v=sv-20260816-9" />
+    <link rel="stylesheet" href="./css/app.css?v=sv-20260816-9" />
     <script src="https://telegram.org/js/telegram-web-app.js?63"></script>
   </head>
   <body>
@@ -40,6 +40,9 @@
           <span id="runtime-name">navegador</span>
           <span id="telegram-sdk-state" hidden></span>
         </span>
+        <button class="icon-button header-share-button" id="detail-share" type="button" aria-label="Compartir publicación" title="Compartir publicación" hidden>
+          <i class="fa-solid fa-share-nodes fa-icon" data-fallback="↗" aria-hidden="true"></i>
+        </button>
       </header>
 
       <section class="catalog-intro" aria-labelledby="page-title">
@@ -68,9 +71,6 @@
       </section>
 
       <section class="detail-view" id="detail-view" hidden aria-labelledby="detail-title">
-        <div class="detail-topbar">
-          <button class="icon-button" id="detail-share" type="button" aria-label="Compartir objeto" title="Compartir objeto"><i class="fa-solid fa-share-nodes fa-icon" data-fallback="↗" aria-hidden="true"></i></button>
-        </div>
         <div class="detail-media" id="detail-media"></div>
         <div class="detail-content">
           <div class="detail-availability" id="detail-availability">Disponible</div>
@@ -394,10 +394,10 @@
       </button>
     </main>
 
-    <script src="./js/telegram.js?v=sv-20260816-8"></script>
-    <script src="./js/auth.js?v=sv-20260816-8"></script>
-    <script src="./js/api.js?v=sv-20260816-8"></script>
-    <script src="./js/analytics.js?v=sv-20260816-8"></script>
-    <script src="./js/app.js?v=sv-20260816-8"></script>
+    <script src="./js/telegram.js?v=sv-20260816-9"></script>
+    <script src="./js/auth.js?v=sv-20260816-9"></script>
+    <script src="./js/api.js?v=sv-20260816-9"></script>
+    <script src="./js/analytics.js?v=sv-20260816-9"></script>
+    <script src="./js/app.js?v=sv-20260816-9"></script>
   </body>
 </html>
