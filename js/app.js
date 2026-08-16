@@ -152,7 +152,18 @@ function rememberOwnItem(item) {
 function isOwnItem(item) {
   if (!item?.id) return false;
 
-  if (state.myItems.some((candidate) => candidate.id === item.id)) return true;
+  const authenticatedTelegramId = String(
+    state.telegramUser?.telegram_id ?? state.telegramUser?.id ?? "",
+  ).trim();
+  const isVerified = Boolean(
+    authenticatedTelegramId &&
+    state.telegramUser?.valid === true &&
+    auth?.hasInitData(),
+  );
+  if (!isVerified) return false;
+
+  const ownerTelegramId = String(item.ownerTelegramId ?? "").trim();
+  if (ownerTelegramId) return ownerTelegramId === authenticatedTelegramId;
 
   const currentUsername = normalizeTelegramUsername(state.telegramUser?.username);
   return Boolean(currentUsername && currentUsername === normalizeTelegramUsername(item.ownerUsername));
@@ -288,7 +299,7 @@ function renderMyItems() {
   });
   if (changed) saveOwnItems();
 
-  const items = state.myItems;
+  const items = state.myItems.filter(isOwnItem);
   postsList.replaceChildren(...items.map(createOwnedItemCard));
   postsEmptyState.hidden = items.length > 0;
 }
@@ -675,6 +686,7 @@ async function handleOfferSubmit(event) {
       expiresAt,
       ownerDisplayName: state.telegramUser?.first_name || "Tú",
       ownerUsername: state.telegramUser?.username || "",
+      ownerTelegramId: String(state.telegramUser?.telegram_id ?? state.telegramUser?.id ?? ""),
       imageUrl: null,
       interestCount: 0,
     };

@@ -35,6 +35,7 @@ function normalizeItem(record) {
       ?? fields.owner_telegram_username
       ?? fields.telegram_username
       ?? "",
+    ownerTelegramId: fields.owner_telegram_id ?? "",
     status: fields.status ?? "hidden",
     createdAt: fields.created_at ?? fields.CreatedAt ?? null,
     expiresAt: fields.expires_at ?? null,
