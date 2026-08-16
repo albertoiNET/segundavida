@@ -539,10 +539,12 @@ function configureOfferAuth(user = state.telegramUser) {
   const username = normalizeTelegramUsername(user?.username);
 
   telegramAuthCard.dataset.state = verified && username ? "connected" : verified ? "warning" : "error";
-  telegramAuthTitle.textContent = verified && !username
-    ? "Necesitas un username público"
-    : "Para publicar necesitas Telegram";
-  telegramAuthBadge.textContent = verified && username ? "Lista" : "Username necesario";
+  telegramAuthTitle.textContent = verified && username
+    ? `Publicar como @${username}`
+    : verified
+      ? "Necesitas un username público"
+      : "Para publicar necesitas Telegram";
+  telegramAuthBadge.textContent = verified && username ? "Detectado" : "Username necesario";
   telegramAuthBadge.hidden = !verified;
   telegramDownloadLink.hidden = verified;
   telegramOpenLink.hidden = verified;
@@ -553,7 +555,7 @@ function configureOfferAuth(user = state.telegramUser) {
     offerTelegramUsername.value = username ? `@${username}` : "Sin usuario público";
     offerTelegramUsername.readOnly = true;
     if (username) {
-      telegramAuthMessage.textContent = `Publicando como @${username}.`;
+      telegramAuthMessage.textContent = "Tu usuario de Telegram se ha detectado y se asociará a esta publicación para que puedan contactarte.";
       setOfferFormEnabled(true);
     } else {
       telegramAuthMessage.textContent = "Configúralo en Telegram para publicar y recibir contactos.";
