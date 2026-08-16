@@ -20,6 +20,9 @@ const state = {
   telegramUser: null,
   myItems: [],
   postsFilter: "active",
+  currentView: "explore",
+  currentItemId: "",
+  historyMaxIndex: 0,
 };
 
 const runtimeName = document.querySelector("#runtime-name");
@@ -84,6 +87,8 @@ const postsEmptyCopy = document.querySelector("#posts-empty-copy");
 const postsTabs = [...document.querySelectorAll(".posts-tab")];
 const postsActiveCount = document.querySelector("#posts-active-count");
 const postsCompletedCount = document.querySelector("#posts-completed-count");
+const appBackButton = document.querySelector("#app-back-button");
+const appForwardButton = document.querySelector("#app-forward-button");
 const navItems = [...document.querySelectorAll(".nav-item")];
 
 const categorySymbols = {
@@ -98,6 +103,107 @@ const categorySymbols = {
 function setServiceState(element, label, stateName, text) {
   element.dataset.state = stateName;
   label.textContent = text;
+}
+
+function getHistoryIndex(historyState = window.history.state) {
+  return Number.isInteger(historyState?.svIndex) ? historyState.svIndex : 0;
+}
+
+function updateNavigationControls() {
+  const currentIndex = getHistoryIndex();
+  const canGoBack = Boolean(window.history.state?.svApp && currentIndex > 0);
+  const canGoForward = Boolean(window.history.state?.svApp && currentIndex < state.historyMaxIndex);
+
+  appBackButton.disabled = !canGoBack;
+  appForwardButton.disabled = !canGoForward;
+
+  const telegramBackButton = window.Telegram?.WebApp?.BackButton;
+  if (telegramBackButton) {
+    if (canGoBack && typeof telegramBackButton.show === "function") {
+      telegramBackButton.show();
+    } else if (!canGoBack && typeof telegramBackButton.hide === "function") {
+      telegramBackButton.hide();
+    }
+  }
+}
+
+function pushViewHistory(viewName, itemId = "") {
+  const currentState = window.history.state ?? {};
+  const nextIndex = getHistoryIndex(currentState) + 1;
+  const url = new URL(window.location.href);
+  url.hash = itemId ? `item=${encodeURIComponent(itemId)}` : "";
+
+  window.history.pushState({
+    ...currentState,
+    svApp: true,
+    svView: viewName,
+    svItemId: itemId || null,
+    svIndex: nextIndex,
+  }, "", url);
+  state.historyMaxIndex = nextIndex;
+}
+
+function goBack() {
+  if (window.history.state?.svApp && getHistoryIndex() > 0) {
+    window.history.back();
+    return;
+  }
+
+  if (state.currentView !== "explore") {
+    setView("explore");
+  }
+}
+
+function goForward() {
+  if (window.history.state?.svApp && getHistoryIndex() < state.historyMaxIndex) {
+    window.history.forward();
+  }
+}
+
+function prepareHistoryState() {
+  const currentState = window.history.state ?? {};
+  let itemId = "";
+  if (window.location.hash.startsWith("#item=")) {
+    try {
+      itemId = decodeURIComponent(window.location.hash.slice("#item=".length));
+    } catch {
+      itemId = "";
+    }
+  }
+  const view = itemId ? "detail" : "explore";
+  const index = getHistoryIndex(currentState);
+
+  if (itemId && !currentState.svApp) {
+    const rootUrl = new URL(window.location.href);
+    rootUrl.hash = "";
+    window.history.replaceState({
+      ...currentState,
+      svApp: true,
+      svView: "explore",
+      svItemId: null,
+      svIndex: 0,
+    }, "", rootUrl);
+    state.currentView = "explore";
+    state.currentItemId = "";
+    state.historyMaxIndex = 0;
+    pushViewHistory("detail", itemId);
+    state.currentView = "detail";
+    state.currentItemId = itemId;
+    updateNavigationControls();
+    return;
+  }
+
+  window.history.replaceState({
+    ...currentState,
+    svApp: true,
+    svView: view,
+    svItemId: itemId || null,
+    svIndex: index,
+  }, "", window.location.href);
+  state.currentView = view;
+  state.currentItemId = itemId;
+  state.historyMaxIndex = index;
+  updateNavigationControls();
 }
 
 function formatDate(value) {
@@ -389,14 +495,21 @@ function renderDetail(item) {
   detailOwnerActionState.dataset.state = "";
 }
 
-function showDetail(item) {
+function showDetail(item, { syncHistory = true } = {}) {
   renderDetail(item);
-  setView("detail");
-  window.history.pushState({}, "", `#item=${encodeURIComponent(item.id)}`);
+  setView("detail", { syncHistory, itemId: item.id });
   window.SecondaVidaAnalytics?.trackEvent("catalog", "open-item", item.id);
 }
 
-function setView(viewName) {
+function setView(viewName, { syncHistory = true, itemId = "" } = {}) {
+  const shouldPushHistory = syncHistory && (
+    state.currentView !== viewName ||
+    (viewName === "detail" && state.currentItemId !== itemId)
+  );
+  if (shouldPushHistory) pushViewHistory(viewName, itemId);
+
+  state.currentView = viewName;
+  state.currentItemId = itemId || "";
   const isExplore = viewName === "explore";
   const isOffer = viewName === "offer";
   const isPosts = viewName === "posts";
@@ -415,7 +528,13 @@ function setView(viewName) {
   if (isPosts) renderMyItems();
 
   if (!isDetail && window.location.hash.startsWith("#item=")) {
-    window.history.replaceState({}, "", window.location.pathname + window.location.search);
+    const url = new URL(window.location.href);
+    url.hash = "";
+    window.history.replaceState({
+      ...window.history.state,
+      svView: viewName,
+      svItemId: null,
+    }, "", url);
   }
 
   navItems.forEach((button) => {
@@ -426,6 +545,7 @@ function setView(viewName) {
 
   window.SecondaVidaAnalytics?.trackPageView(`#${viewName}`);
   window.scrollTo({ top: 0, behavior: "smooth" });
+  updateNavigationControls();
 }
 
 function renderCategories() {
@@ -519,7 +639,24 @@ function openItemFromHash() {
 
   const item = state.items.find((candidate) => candidate.id === itemId)
     ?? state.myItems.find((candidate) => candidate.id === itemId && isOwnItem(candidate));
-  if (item) showDetail(item);
+  if (item) showDetail(item, { syncHistory: false });
+}
+
+function handleHistoryChange(event) {
+  const nextState = event.state;
+  const nextView = nextState?.svApp ? nextState.svView : "explore";
+  const nextItemId = nextState?.svApp ? nextState.svItemId : "";
+
+  if (nextView === "detail" && nextItemId) {
+    const item = state.items.find((candidate) => candidate.id === nextItemId)
+      ?? state.myItems.find((candidate) => candidate.id === nextItemId && isOwnItem(candidate));
+    if (item) {
+      showDetail(item, { syncHistory: false });
+      return;
+    }
+  }
+
+  setView(nextView, { syncHistory: false, itemId: nextItemId });
 }
 
 async function checkIdentity() {
@@ -801,6 +938,22 @@ async function completeItem(item, triggerButton = markDeliveredButton, feedbackE
   }
 }
 
+function showInterestFeedback(url, opened) {
+  detailActionState.replaceChildren();
+  detailActionState.append(document.createTextNode(
+    opened ? "Hemos abierto el chat de Telegram. " : "Abre el chat de Telegram para contactar. ",
+  ));
+
+  const link = document.createElement("a");
+  link.className = "inline-action-link";
+  link.href = url;
+  link.target = "_blank";
+  link.rel = "noopener noreferrer";
+  link.textContent = opened ? "Abrir chat de nuevo" : "Abrir chat";
+  detailActionState.append(link);
+  detailActionState.dataset.state = "connected";
+}
+
 function handleInterest() {
   const item = state.selectedItem;
   if (!item || isOwnItem(item)) return;
@@ -814,17 +967,20 @@ function handleInterest() {
 
   const telegramUrl = `https://t.me/${username}?text=${encodeURIComponent(getInterestMessage(item))}`;
   const webApp = window.Telegram?.WebApp;
+  let opened = false;
 
   if (typeof webApp?.openTelegramLink === "function") {
-    webApp.openTelegramLink(telegramUrl);
-    detailActionState.textContent = "Hemos preparado un mensaje con el enlace de esta publicación.";
-    detailActionState.dataset.state = "connected";
-    return;
+    try {
+      webApp.openTelegramLink(telegramUrl);
+      opened = true;
+    } catch {
+      opened = false;
+    }
+  } else {
+    opened = Boolean(window.open(telegramUrl, "_blank", "noopener,noreferrer"));
   }
 
-  window.open(telegramUrl, "_blank", "noopener,noreferrer");
-  detailActionState.textContent = "Hemos preparado un mensaje con el enlace de esta publicación.";
-  detailActionState.dataset.state = "connected";
+  showInterestFeedback(telegramUrl, opened);
 }
 
 async function shareSelectedItem() {
@@ -869,7 +1025,7 @@ navItems.forEach((button) => {
   button.addEventListener("click", () => setView(button.dataset.view));
 });
 
-detailBack.addEventListener("click", () => setView("explore"));
+detailBack.addEventListener("click", goBack);
 detailShare.addEventListener("click", shareSelectedItem);
 interestButton.addEventListener("click", handleInterest);
 markDeliveredButton.addEventListener("click", () => completeItem(state.selectedItem));
@@ -889,8 +1045,17 @@ postsTabs.forEach((tab) => {
     renderMyItems();
   });
 });
+appBackButton.addEventListener("click", goBack);
+appForwardButton.addEventListener("click", goForward);
+window.addEventListener("popstate", handleHistoryChange);
+
+const telegramBackButton = window.Telegram?.WebApp?.BackButton;
+if (telegramBackButton && typeof telegramBackButton.onClick === "function") {
+  telegramBackButton.onClick(goBack);
+}
 
 state.myItems = readOwnItems();
+prepareHistoryState();
 window.SecondaVidaAnalytics?.trackPageView();
 configureOfferAuth();
 checkIdentity();
