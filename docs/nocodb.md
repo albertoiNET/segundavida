@@ -11,7 +11,7 @@ público.
 
 | Campo | Tipo NocoDB | Requerido | Uso |
 | --- | --- | --- | --- |
-| `id` | SingleLineText, primary key | Sí | Identificador estable generado por n8n |
+| `item-id` | SingleLineText, primary key | Sí | Identificador estable generado por n8n |
 | `title` | SingleLineText | Sí | Título visible |
 | `description` | LongText | Sí | Descripción del objeto |
 | `category` | SingleSelect | Sí | `Hogar`, `Infantil`, `Libros`, `Tecnología`, `Ropa`, `Otros` |
@@ -42,7 +42,7 @@ limitaciones de tamaño en campos numéricos. No se crea todavía el estado
 3. Nombrar la tabla `sv_items`.
 4. Revisar los tipos según la tabla anterior, especialmente `DateTime`,
    `SingleSelect`, `URL` y `Number`.
-5. Marcar `id` como primary key y crear una vista `Public catalog`.
+5. Marcar `item-id` como primary key y crear una vista `Public catalog`.
 6. En esa vista filtrar `status = available` y ordenar por `created_at`
    descendente.
 
@@ -72,7 +72,7 @@ inicial de cada objeto:
 
 ```json
 {
-  "id": "sv-...",
+  "item-id": "sv-...",
   "title": "Silla de escritorio",
   "description": "Silla giratoria en buen estado.",
   "category": "Hogar",
@@ -98,3 +98,11 @@ La respuesta completa del endpoint puede ser:
 
 Los datos privados solo se usarán dentro de n8n para publicar en Telegram,
 gestionar intereses y resolver acciones del propietario.
+
+En expresiones de n8n, acceder a este campo así:
+
+```javascript
+row["item-id"]
+```
+
+No usar `row.item-id`, porque JavaScript lo interpretaría como una resta.
