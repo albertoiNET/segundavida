@@ -38,10 +38,11 @@ NocoDB ya aporta `CreatedAt` y `UpdatedAt`; no hay que crearlos ni rellenarlos
 desde el CSV. n8n los expondrá como `created_at` y `updated_at` en la respuesta
 pública. Telegram IDs se guardan como texto para evitar problemas de precisión o
 limitaciones de tamaño en campos numéricos. No se crea todavía el estado
-`reserved` ni la tabla de intereses. Mientras cada anunciante tenga un
-`owner_username` público, `Me interesa` abre directamente su chat de Telegram;
-la tabla de intereses quedará para una segunda fase si necesitamos métricas o
-notificaciones.
+`reserved` ni la tabla de intereses. Cuando haya un `owner_username` público,
+`Me interesa` abre directamente el chat del vecino o la vecina; si no lo hay,
+la app usará un webhook autenticado para enviarle un aviso mediante Telegram.
+La tabla de intereses quedará para una segunda fase si necesitamos métricas o
+notificaciones más detalladas.
 
 ## Importación en NocoDB
 

@@ -306,18 +306,20 @@ function renderDetail(item) {
   const ownItem = isOwnItem(item);
   const ownerUsername = normalizeTelegramUsername(item.ownerUsername);
   interestButton.hidden = ownItem;
-  interestButton.disabled = ownItem || !ownerUsername;
+  interestButton.disabled = ownItem;
   interestButton.textContent = "Me interesa";
   interestButton.setAttribute(
     "aria-label",
-    ownerUsername ? `Contactar con ${item.ownerDisplayName || "la persona anunciante"} por Telegram` : "Contacto no disponible",
+    ownerUsername
+      ? `Contactar con ${item.ownerDisplayName || "el vecino o la vecina"} por Telegram`
+      : "Mostrar interés por este objeto",
   );
   detailActionState.textContent = ownItem
     ? "Gestiona el estado de tu publicación desde aquí."
     : ownerUsername
     ? "Se abrirá el chat de Telegram de quien lo ofrece."
-    : "El anunciante todavía no ha añadido un usuario público de Telegram.";
-  detailActionState.dataset.state = ownItem || ownerUsername ? "" : "error";
+    : "Avisaremos al vecino o la vecina que ofrece este objeto.";
+  detailActionState.dataset.state = "";
 
   detailOwnerActions.hidden = !ownItem;
   markDeliveredButton.disabled = item.status === "completed";
@@ -693,23 +695,58 @@ async function completeItem(item, triggerButton = markDeliveredButton, feedbackE
   }
 }
 
-function handleInterest() {
+async function handleInterest() {
+  const item = state.selectedItem;
+  if (!item || isOwnItem(item)) return;
+
   const username = normalizeTelegramUsername(state.selectedItem?.ownerUsername);
-  if (!username) {
-    detailActionState.textContent = "El anunciante todavía no tiene un contacto público disponible.";
+  if (username) {
+    const telegramUrl = `https://t.me/${username}`;
+    const webApp = window.Telegram?.WebApp;
+
+    if (typeof webApp?.openTelegramLink === "function") {
+      webApp.openTelegramLink(telegramUrl);
+      return;
+    }
+
+    window.open(telegramUrl, "_blank", "noopener,noreferrer");
+    return;
+  }
+
+  if (!auth?.hasInitData()) {
+    detailActionState.textContent = "Abre la Mini App desde Telegram para avisar al vecino o la vecina.";
     detailActionState.dataset.state = "error";
     return;
   }
 
-  const telegramUrl = `https://t.me/${username}`;
-  const webApp = window.Telegram?.WebApp;
-
-  if (typeof webApp?.openTelegramLink === "function") {
-    webApp.openTelegramLink(telegramUrl);
+  if (!api?.isInterestConfigured || typeof api.interestItem !== "function") {
+    detailActionState.textContent = "La opción de interés todavía no está conectada en n8n.";
+    detailActionState.dataset.state = "error";
     return;
   }
 
-  window.open(telegramUrl, "_blank", "noopener,noreferrer");
+  interestButton.disabled = true;
+  interestButton.textContent = "Enviando…";
+
+  try {
+    const result = await api.interestItem({
+      initData: auth.getInitData(),
+      item_id: item.id,
+    });
+
+    if (!result.ok) {
+      throw new Error(result.error || "No se ha podido enviar el interés.");
+    }
+
+    interestButton.textContent = "Interés enviado";
+    detailActionState.textContent = `Hemos avisado al vecino o la vecina que ofrece “${item.title}”.`;
+    detailActionState.dataset.state = "connected";
+  } catch (error) {
+    interestButton.disabled = false;
+    interestButton.textContent = "Me interesa";
+    detailActionState.textContent = error.message || "No se ha podido enviar el interés.";
+    detailActionState.dataset.state = "error";
+  }
 }
 
 async function shareSelectedItem() {
