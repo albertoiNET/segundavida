@@ -395,19 +395,16 @@ function createItemCard(item, index) {
 
   if (item.zone) {
     const zone = document.createElement("span");
+    zone.className = "item-card__zone";
     zone.append(createIconElement("fa-location-dot", "⌖"), document.createTextNode(` ${item.zone}`));
     meta.append(zone);
   }
-  body.append(meta);
-
-  const footer = document.createElement("div");
-  footer.className = "item-card__footer";
   const availability = item.expiresAt
-    ? `Disponible hasta ${formatDate(item.expiresAt)}`
+    ? `Hasta ${formatDate(item.expiresAt)}`
     : "Disponible";
-  footer.append(createTextElement("span", "availability", availability));
-  footer.append(createIconElement("fa-arrow-right", "→", "item-card__arrow"));
-  body.append(footer);
+  meta.append(createTextElement("span", "availability", availability));
+  meta.append(createIconElement("fa-arrow-right", "→", "item-card__arrow"));
+  body.append(meta);
 
   card.append(body);
   card.addEventListener("click", () => showDetail(item));
