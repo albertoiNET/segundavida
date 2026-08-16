@@ -5,7 +5,7 @@ que objetos que ya no se necesitan puedan tener una segunda vida.
 
 ## Estado
 
-Proyecto en **HITO 6 — Matomo básico** del plan técnico incremental.
+Proyecto en **HITO 10 — Catálogo público real** del plan técnico incremental.
 
 La estructura inicial contiene:
 
@@ -13,7 +13,7 @@ La estructura inicial contiene:
 - `css/app.css`: estilos base, tokens visuales iniciales y responsive.
 - `js/app.js`: punto de entrada JavaScript y actualización de estados.
 - `js/telegram.js`: detección mínima del entorno Telegram Mini App.
-- `js/api.js`: cliente mínimo para el ping de n8n.
+- `js/api.js`: cliente del ping y del catálogo de n8n.
 - `js/analytics.js`: wrapper de Matomo, inactivo hasta asignar un Site ID.
 - `css/tokens.css`: tokens compartidos de color, tipografía, geometría y tema.
 - `docs/design-system.md`: auditoría visual y reglas de uso.

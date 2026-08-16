@@ -13,50 +13,67 @@
     <script src="https://telegram.org/js/telegram-web-app.js?63"></script>
   </head>
   <body>
-    <main class="site-shell">
-      <header class="brand-lockup" aria-label="SegundaVida por Aldea Pucela">
-        <span class="brand-mark" aria-hidden="true">♻️</span>
-        <div>
-          <p class="brand-name">SegundaVida</p>
-          <p class="brand-owner">Aldea Pucela</p>
+    <main class="app-shell">
+      <header class="app-header" aria-label="SegundaVida por Aldea Pucela">
+        <div class="brand-lockup">
+          <span class="brand-mark" aria-hidden="true">♻</span>
+          <div>
+            <p class="brand-name">SegundaVida</p>
+            <p class="brand-owner">por Aldea Pucela</p>
+          </div>
         </div>
+        <span class="runtime-badge" aria-live="polite">
+          <span class="status-dot" aria-hidden="true"></span>
+          <span id="runtime-name">navegador</span>
+          <span id="telegram-sdk-state" hidden></span>
+        </span>
       </header>
 
-      <section class="status-page" aria-labelledby="page-title">
-        <p class="eyebrow">HITO 5 · IDENTIDAD ALDEA PUCELA</p>
-        <h1 id="page-title">Mini App en construcción</h1>
+      <section class="catalog-intro" aria-labelledby="page-title">
+        <p class="eyebrow">EXPLORAR · ALDEA PUCELA</p>
+        <h1 id="page-title">Lo que ya no necesitas puede tener una segunda vida.</h1>
         <p class="intro">
-          La base pública de SegundaVida ya está preparada para crecer dentro
-          del ecosistema de Aldea Pucela.
+          Encuentra objetos que otras personas del barrio quieren compartir.
         </p>
+      </section>
 
-        <p class="environment-line" aria-live="polite">
-          Entorno: <strong id="runtime-name">navegador</strong>
-          <span id="telegram-sdk-state" hidden></span>
-        </p>
+      <section class="catalog-tools" aria-label="Buscar y filtrar objetos">
+        <label class="search-field">
+          <span class="search-icon" aria-hidden="true">⌕</span>
+          <span class="sr-only">Buscar objetos</span>
+          <input id="search-input" type="search" placeholder="Buscar objetos" autocomplete="off" />
+        </label>
+        <div id="category-filters" class="filter-list" role="tablist" aria-label="Categorías"></div>
+      </section>
 
-        <div class="system-status" aria-label="Estado de los servicios">
-          <div class="status-row">
-            <span class="status-label">Web</span>
-            <span class="status-value status-value--ok" id="web-status">
-              <span class="status-dot" aria-hidden="true"></span>
-              OK
-            </span>
+      <section class="catalog-section" aria-labelledby="catalog-title">
+        <div class="catalog-heading">
+          <div>
+            <p class="section-kicker">CATÁLOGO VECINAL</p>
+            <h2 id="catalog-title">Cosas disponibles</h2>
           </div>
-          <div class="status-row">
-            <span class="status-label">Telegram</span>
-            <span class="status-value status-value--pending" id="telegram-status">
-              <span class="status-dot" aria-hidden="true"></span>
-              <span id="telegram-status-label">Sin comprobar</span>
-            </span>
-          </div>
-          <div class="status-row">
-            <span class="status-label">n8n</span>
-            <span class="status-value status-value--pending" id="n8n-status">
-              <span class="status-dot" aria-hidden="true"></span>
-              <span id="n8n-status-label">Sin comprobar</span>
-            </span>
-          </div>
+          <span id="items-count" class="items-count" aria-live="polite">Comprobando...</span>
+        </div>
+
+        <div id="items-state" class="items-state" aria-live="polite">Cargando objetos...</div>
+        <div id="items-grid" class="items-grid" aria-live="polite"></div>
+      </section>
+
+      <section class="service-strip" aria-label="Estado de los servicios">
+        <div class="service-status">
+          <span class="status-dot" aria-hidden="true"></span>
+          <span>Web</span>
+          <strong>OK</strong>
+        </div>
+        <div class="service-status" id="telegram-status">
+          <span class="status-dot" aria-hidden="true"></span>
+          <span>Telegram</span>
+          <strong id="telegram-status-label">Sin comprobar</strong>
+        </div>
+        <div class="service-status" id="n8n-status">
+          <span class="status-dot" aria-hidden="true"></span>
+          <span>n8n</span>
+          <strong id="n8n-status-label">Sin comprobar</strong>
         </div>
       </section>
 

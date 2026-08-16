@@ -51,7 +51,17 @@ Después de probar el flujo, puedes eliminar los dos registros `sv-demo-001` y
 
 ## Contrato público de n8n
 
-El siguiente webhook será:
+El endpoint provisional que ya está conectado es:
+
+```text
+GET /webhook/segundavida/data
+```
+
+Ahora mismo devuelve el formato crudo de NocoDB (`id` interno + `fields`). El
+frontend lo normaliza para poder probar el catálogo, pero antes de introducir
+datos reales hay que hacer que n8n proyecte solo los campos públicos.
+
+El contrato final recomendado será:
 
 ```text
 GET /webhook/segundavida/items
