@@ -27,6 +27,12 @@ const categoryFilters = document.querySelector("#category-filters");
 const itemsCount = document.querySelector("#items-count");
 const itemsState = document.querySelector("#items-state");
 const itemsGrid = document.querySelector("#items-grid");
+const catalogIntro = document.querySelector(".catalog-intro");
+const catalogTools = document.querySelector(".catalog-tools");
+const catalogSection = document.querySelector(".catalog-section");
+const offerView = document.querySelector("#offer-view");
+const postsView = document.querySelector("#posts-view");
+const navItems = [...document.querySelectorAll(".nav-item")];
 
 const categorySymbols = {
   Hogar: "⌂",
@@ -89,10 +95,6 @@ function createItemCard(item, index) {
   body.className = "item-card__body";
   body.append(createTextElement("h3", "item-card__title", item.title));
 
-  if (item.description) {
-    body.append(createTextElement("p", "item-card__description", item.description));
-  }
-
   const meta = document.createElement("div");
   meta.className = "item-card__meta";
   const category = document.createElement("span");
@@ -116,6 +118,27 @@ function createItemCard(item, index) {
 
   card.append(body);
   return card;
+}
+
+function setView(viewName) {
+  const isExplore = viewName === "explore";
+  const isOffer = viewName === "offer";
+  const isPosts = viewName === "posts";
+
+  catalogIntro.hidden = !isExplore;
+  catalogTools.hidden = !isExplore;
+  catalogSection.hidden = !isExplore;
+  offerView.hidden = !isOffer;
+  postsView.hidden = !isPosts;
+
+  navItems.forEach((button) => {
+    const selected = button.dataset.view === viewName;
+    button.toggleAttribute("aria-current", selected);
+    if (!selected) button.removeAttribute("aria-current");
+  });
+
+  window.SecondaVidaAnalytics?.trackPageView(`#${viewName}`);
+  window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
 function renderCategories() {
@@ -240,6 +263,10 @@ if (api?.isConfigured) {
 searchInput.addEventListener("input", (event) => {
   state.query = event.target.value;
   renderItems();
+});
+
+navItems.forEach((button) => {
+  button.addEventListener("click", () => setView(button.dataset.view));
 });
 
 window.SecondaVidaAnalytics?.trackPageView();
