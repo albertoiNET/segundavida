@@ -5,7 +5,7 @@ que objetos que ya no se necesitan puedan tener una segunda vida.
 
 ## Estado
 
-Proyecto en **HITO 5 — Identidad visual de Aldea Pucela** del plan técnico incremental.
+Proyecto en **HITO 6 — Matomo básico** del plan técnico incremental.
 
 La estructura inicial contiene:
 
@@ -14,8 +14,10 @@ La estructura inicial contiene:
 - `js/app.js`: punto de entrada JavaScript y actualización de estados.
 - `js/telegram.js`: detección mínima del entorno Telegram Mini App.
 - `js/api.js`: cliente mínimo para el ping de n8n.
+- `js/analytics.js`: wrapper de Matomo, inactivo hasta asignar un Site ID.
 - `css/tokens.css`: tokens compartidos de color, tipografía, geometría y tema.
 - `docs/design-system.md`: auditoría visual y reglas de uso.
+- `docs/analytics.md`: decisión y activación pendiente de Matomo.
 
 ## Desarrollo local
 
@@ -37,7 +39,8 @@ autenticación ni ninguna otra llamada a backend.
 La base de datos NocoDB se incorporará en el hito de modelo de datos, con un
 CSV preparado para importar.
 
-## Próximo hito
+## Analítica
 
-El HITO 6 integrará Matomo mediante un wrapper propio, sin exponer credenciales
-ni enviar identificadores personales.
+El HITO 6 integra Matomo mediante un wrapper propio, sin exponer credenciales ni
+enviar identificadores personales. Falta crear el Site ID propio de
+SegundaVida y sustituirlo en `js/analytics.js`.

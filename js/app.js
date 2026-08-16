@@ -45,3 +45,5 @@ if (window.SecondaVidaApi?.isConfigured) {
     n8nStatusLabel.textContent = "No disponible";
   });
 }
+
+window.SecondaVidaAnalytics?.trackPageView();
