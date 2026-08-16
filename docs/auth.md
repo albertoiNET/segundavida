@@ -54,6 +54,10 @@ Webhook (POST /segundavida/whoami)
   -> Respond to Webhook
 ```
 
+Puedes importarlo directamente desde
+[`docs/sv_validate_telegram_user.workflow.json`](./sv_validate_telegram_user.workflow.json).
+Después de importarlo, revisa el nombre del webhook y activa el workflow.
+
 El Webhook debe permitir estos orígenes:
 
 ```text
@@ -62,9 +66,11 @@ http://localhost:8000
 http://127.0.0.1:8000
 ```
 
-El token del bot debe existir únicamente como secreto del entorno o credencial
-privada de n8n. Nunca debe pegarse en `index.html`, `js/`, NocoDB, el CSV o el
-repositorio.
+El workflow importable espera el token en la variable privada de entorno
+`TELEGRAM_BOT_TOKEN`. Nunca debe pegarse en `index.html`, `js/`, NocoDB, el CSV
+o el repositorio. El nodo Code usa el módulo nativo `crypto`; si tu instancia
+self-hosted lo bloquea, permite únicamente ese módulo con
+`NODE_FUNCTION_ALLOW_BUILTIN=crypto` y reinicia n8n.
 
 ## Validación obligatoria en n8n
 

@@ -1,0 +1,85 @@
+{
+  "name": "SV · Validate Telegram User",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "segundavida/whoami",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "https://segundavida.aldeapucela.org,http://localhost:8000,http://127.0.0.1:8000"
+        }
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "b7f3c1f2-3da5-4af0-9cd9-7e2c1f91a401",
+      "name": "Webhook"
+    },
+    {
+      "parameters": {
+        "jsCode": "const crypto = require(\"crypto\");\n\nconst body = $json.body ?? $json;\nconst initData = typeof body.initData === \"string\" ? body.initData.trim() : \"\";\nconst botToken = typeof $env !== \"undefined\" ? $env.TELEGRAM_BOT_TOKEN : \"\";\n\nfunction invalid() {\n  return [{\n    json: {\n      valid: false,\n      mode: \"public\",\n    },\n  }];\n}\n\nif (!initData) return invalid();\nif (!botToken) {\n  throw new Error(\"Falta la variable privada TELEGRAM_BOT_TOKEN en n8n.\");\n}\n\nconst params = new URLSearchParams(initData);\nconst receivedHash = params.get(\"hash\") ?? \"\";\nconst authDate = Number(params.get(\"auth_date\"));\n\nif (!receivedHash || !Number.isInteger(authDate)) return invalid();\n\nconst now = Math.floor(Date.now() / 1000);\nconst isFuture = authDate > now + 60;\nconst isExpired = now - authDate > 600;\nif (isFuture || isExpired) return invalid();\n\nconst dataCheckString = [...params.entries()]\n  .filter(([key]) => key !== \"hash\")\n  .sort(([keyA], [keyB]) => keyA.localeCompare(keyB))\n  .map(([key, value]) => `${key}=${value}`)\n  .join(\"\\n\");\n\nconst secretKey = crypto\n  .createHmac(\"sha256\", \"WebAppData\")\n  .update(botToken)\n  .digest();\nconst expectedHash = crypto\n  .createHmac(\"sha256\", secretKey)\n  .update(dataCheckString)\n  .digest(\"hex\");\n\nconst received = Buffer.from(receivedHash, \"hex\");\nconst expected = Buffer.from(expectedHash, \"hex\");\nconst hashesMatch = received.length === expected.length\n  && crypto.timingSafeEqual(received, expected);\n\nif (!hashesMatch) return invalid();\n\nlet user;\ntry {\n  user = JSON.parse(params.get(\"user\") ?? \"{}\");\n} catch {\n  return invalid();\n}\n\nif (!user || !Number.isSafeInteger(user.id)) return invalid();\n\nreturn [{\n  json: {\n    valid: true,\n    telegram_id: String(user.id),\n    first_name: typeof user.first_name === \"string\" ? user.first_name : \"\",\n    username: typeof user.username === \"string\" ? user.username : null,\n  },\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        0
+      ],
+      "id": "8d2f3aa7-0f27-4b91-9bc2-c7c5d5dbf8a2",
+      "name": "Validate Telegram initData"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        448,
+        0
+      ],
+      "id": "c9b82d3d-a36c-4d87-8c83-5f4b6b8b7d63",
+      "name": "Respond to Webhook"
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Validate Telegram initData",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Telegram initData": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "e2c26d8e-4e8b-4eaf-b278-995b9a2f6a11",
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "tags": []
+}
