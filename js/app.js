@@ -377,7 +377,7 @@ function handlePhotoSelection(event) {
   setFormState("");
 }
 
-function handleOfferSubmit(event) {
+async function handleOfferSubmit(event) {
   event.preventDefault();
 
   if (!offerForm.reportValidity()) {
@@ -390,10 +390,41 @@ function handleOfferSubmit(event) {
     return;
   }
 
-  setFormState(
-    "El formulario está listo. Falta conectar el webhook seguro de publicación en n8n.",
-    "pending",
-  );
+  if (!api?.isPublishConfigured || typeof api.publishItem !== "function") {
+    setFormState("El endpoint seguro de publicación todavía no está configurado.", "error");
+    return;
+  }
+
+  const formData = new FormData(offerForm);
+  const payload = {
+    initData: auth.getInitData(),
+    item: {
+      title: String(formData.get("title") ?? "").trim(),
+      category: String(formData.get("category") ?? ""),
+      zone: String(formData.get("zone") ?? ""),
+      description: String(formData.get("description") ?? "").trim(),
+      duration_days: Number(formData.get("duration") ?? 14),
+    },
+  };
+
+  setFormState("Publicando…", "pending");
+
+  try {
+    const result = await api.publishItem(payload);
+
+    if (!result.ok) {
+      setFormState(result.error ?? "No se ha podido publicar.", "error");
+      return;
+    }
+
+    offerForm.reset();
+    state.offerFiles = [];
+    offerPreview.replaceChildren();
+    setFormState("Publicado. Ya aparece en el catálogo.", "connected");
+    await loadCatalog();
+  } catch (error) {
+    setFormState(error.message || "No se ha podido publicar.", "error");
+  }
 }
 
 function handleInterest() {

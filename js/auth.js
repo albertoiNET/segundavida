@@ -43,5 +43,6 @@ window.SecondaVidaAuth = Object.freeze({
   endpoint: N8N_WHOAMI_URL,
   isTelegram: Boolean(getWebApp()),
   hasInitData: () => Boolean(getInitData()),
+  getInitData,
   whoAmI,
 });

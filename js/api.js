@@ -1,6 +1,7 @@
 // Endpoint de producción del workflow SV · Ping en n8n.
 const N8N_PING_URL = "https://tasks.nukeador.com/webhook/segundavida/ping";
 const N8N_DATA_URL = "https://tasks.nukeador.com/webhook/segundavida/data";
+const N8N_PUBLISH_URL = "https://tasks.nukeador.com/webhook/segundavida/publish";
 
 async function ping() {
   if (!N8N_PING_URL) {
@@ -65,9 +66,39 @@ async function listItems() {
   return records.map(normalizeItem);
 }
 
+async function publishItem(payload) {
+  if (!N8N_PUBLISH_URL) {
+    throw new Error("El endpoint de publicación todavía no está configurado.");
+  }
+
+  const response = await fetch(N8N_PUBLISH_URL, {
+    method: "POST",
+    headers: {
+      Accept: "application/json",
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+
+  let result = null;
+  try {
+    result = await response.json();
+  } catch {
+    result = null;
+  }
+
+  if (!response.ok) {
+    throw new Error(result?.error ?? `n8n respondió con HTTP ${response.status}`);
+  }
+
+  return result ?? { ok: false, error: "Respuesta vacía del endpoint de publicación." };
+}
+
 window.SecondaVidaApi = Object.freeze({
   isConfigured: Boolean(N8N_PING_URL),
   isDataConfigured: Boolean(N8N_DATA_URL),
+  isPublishConfigured: Boolean(N8N_PUBLISH_URL),
   ping,
   listItems,
+  publishItem,
 });
