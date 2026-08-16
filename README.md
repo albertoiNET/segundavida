@@ -5,12 +5,12 @@ que objetos que ya no se necesitan puedan tener una segunda vida.
 
 ## Estado
 
-Proyecto en **HITO 0 — Repositorio** del plan técnico incremental.
+Proyecto en **HITO 1 — Primera página** del plan técnico incremental.
 
 La estructura inicial contiene:
 
-- `index.html`: entrada del frontend.
-- `css/app.css`: estilos base y tokens visuales iniciales.
+- `index.html`: primera página técnica del frontend.
+- `css/app.css`: estilos base, tokens visuales iniciales y responsive.
 - `js/app.js`: punto de entrada JavaScript.
 
 ## Desarrollo local
@@ -26,5 +26,5 @@ Después, abrir `http://localhost:8000/` en el navegador.
 
 ## Próximo hito
 
-Tras validar esta base, el HITO 1 añadirá la primera página técnica con el
-estado de conexión de la web, Telegram y n8n.
+Tras validar esta página, el HITO 2 comprobará la publicación mediante GitHub
+Pages y su dominio personalizado.
