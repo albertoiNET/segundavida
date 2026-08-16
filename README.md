@@ -18,6 +18,8 @@ La estructura inicial contiene:
 - `css/tokens.css`: tokens compartidos de color, tipografía, geometría y tema.
 - `docs/design-system.md`: auditoría visual y reglas de uso.
 - `docs/analytics.md`: decisión y activación pendiente de Matomo.
+- `data/sv_items.csv`: CSV listo para importar la tabla inicial de NocoDB.
+- `docs/nocodb.md`: campos, tipos y contrato público de n8n.
 
 ## Desarrollo local
 
