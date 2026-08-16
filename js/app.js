@@ -9,6 +9,7 @@ const telegramRuntime = window.SecondaVidaTelegram ?? {
 const auth = window.SecondaVidaAuth;
 const api = window.SecondaVidaApi;
 const CONSENT_VERSION = "sv-publish-2026-08-16-v1";
+const MAX_OFFER_PHOTOS = 2;
 const OWN_ITEMS_STORAGE_KEY = "segundavida:my-items:v1";
 const state = {
   items: [],
@@ -645,11 +646,11 @@ function handlePhotoSelection(event) {
   const files = [...event.target.files];
   const validFiles = files.filter((file) => file.type.startsWith("image/") && file.size <= 5 * 1024 * 1024);
 
-  state.offerFiles = validFiles.slice(0, 5);
+  state.offerFiles = validFiles.slice(0, MAX_OFFER_PHOTOS);
   renderPhotoPreview(state.offerFiles);
 
-  if (files.length > 5) {
-    setFormState("Puedes añadir hasta 5 fotos.", "error");
+  if (files.length > MAX_OFFER_PHOTOS) {
+    setFormState(`Puedes añadir hasta ${MAX_OFFER_PHOTOS} fotos.`, "error");
     return;
   }
 
