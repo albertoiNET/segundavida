@@ -114,6 +114,9 @@
           <a class="telegram-open-link" id="telegram-open-link" href="https://t.me/pucelobot?startapp=segundavida" target="_blank" rel="noopener" hidden>
             📲 Abrir SegundaVida en Telegram
           </a>
+          <button class="telegram-help-link" id="telegram-username-help" type="button" hidden>
+            Cómo configurar un username
+          </button>
           <label class="form-field telegram-identity-field" for="offer-telegram-username">
             <span>Usuario que se asociará</span>
             <input id="offer-telegram-username" type="text" readonly placeholder="@usuario" aria-describedby="telegram-auth-message" />
@@ -236,6 +239,27 @@
           <p class="form-note">Tu publicación se asociará a tu identidad de Telegram. No mostramos tu ubicación exacta.</p>
         </form>
       </section>
+
+      <dialog class="telegram-username-dialog" id="telegram-username-dialog" aria-labelledby="telegram-username-dialog-title">
+        <div class="telegram-username-dialog__topline">
+          <div>
+            <span class="eyebrow">Telegram</span>
+            <h2 id="telegram-username-dialog-title">Necesitas un username</h2>
+          </div>
+          <button class="icon-button" id="telegram-username-dialog-close" type="button" aria-label="Cerrar">×</button>
+        </div>
+        <p>Para que otras personas puedan ponerse en contacto contigo, SegundaVida necesita un nombre de usuario público.</p>
+        <ol>
+          <li>Abre Telegram y entra en <strong>Ajustes</strong>.</li>
+          <li>Pulsa <strong>Editar</strong> y después <strong>Nombre de usuario</strong>.</li>
+          <li>Elige uno disponible de al menos 5 caracteres y guárdalo.</li>
+          <li>Vuelve a esta Mini App y pulsa el botón de abajo.</li>
+        </ol>
+        <a class="telegram-faq-link" href="https://telegram.org/faq/es" target="_blank" rel="noopener">
+          Más información en Telegram
+        </a>
+        <button class="primary-button" id="telegram-username-retry" type="button">Ya lo he configurado</button>
+      </dialog>
 
       <section class="secondary-view" id="posts-view" hidden aria-labelledby="posts-title">
         <h1 id="posts-title">Mis publicaciones</h1>

@@ -62,6 +62,10 @@ const telegramAuthCard = document.querySelector("#telegram-auth-card");
 const telegramAuthBadge = document.querySelector("#telegram-auth-badge");
 const telegramAuthMessage = document.querySelector("#telegram-auth-message");
 const telegramOpenLink = document.querySelector("#telegram-open-link");
+const telegramUsernameHelp = document.querySelector("#telegram-username-help");
+const telegramUsernameDialog = document.querySelector("#telegram-username-dialog");
+const telegramUsernameDialogClose = document.querySelector("#telegram-username-dialog-close");
+const telegramUsernameRetry = document.querySelector("#telegram-username-retry");
 const offerTelegramUsername = document.querySelector("#offer-telegram-username");
 const offerForm = document.querySelector("#offer-form");
 const offerImages = document.querySelector("#offer-images");
@@ -306,7 +310,7 @@ function renderDetail(item) {
   const ownItem = isOwnItem(item);
   const ownerUsername = normalizeTelegramUsername(item.ownerUsername);
   interestButton.hidden = ownItem;
-  interestButton.disabled = ownItem;
+  interestButton.disabled = ownItem || !ownerUsername;
   interestButton.textContent = "Me interesa";
   interestButton.setAttribute(
     "aria-label",
@@ -318,8 +322,8 @@ function renderDetail(item) {
     ? "Gestiona el estado de tu publicación desde aquí."
     : ownerUsername
     ? "Se abrirá el chat de Telegram de quien lo ofrece."
-    : "Avisaremos al vecino o la vecina que ofrece este objeto.";
-  detailActionState.dataset.state = "";
+    : "Este vecino o vecina no tiene un username público para recibir contactos.";
+  detailActionState.dataset.state = ownItem || ownerUsername ? "" : "error";
 
   detailOwnerActions.hidden = !ownItem;
   markDeliveredButton.disabled = item.status === "completed";
@@ -502,17 +506,23 @@ function configureOfferAuth(user = state.telegramUser) {
   const miniAppUrl = telegramRuntime.miniAppUrl || "https://t.me/pucelobot?startapp=segundavida";
   telegramOpenLink.href = miniAppUrl;
   const verified = Boolean(auth?.hasInitData() && user?.valid);
+  const username = normalizeTelegramUsername(user?.username);
 
-  telegramAuthCard.dataset.state = verified ? "connected" : "error";
-  telegramAuthBadge.textContent = verified ? "Verificada" : "Solo Telegram";
+  telegramAuthCard.dataset.state = verified && username ? "connected" : verified ? "warning" : "error";
+  telegramAuthBadge.textContent = verified && username ? "Verificada" : verified ? "Username necesario" : "Solo Telegram";
   telegramOpenLink.hidden = verified;
+  telegramUsernameHelp.hidden = !verified || Boolean(username);
 
   if (verified) {
-    const username = normalizeTelegramUsername(user.username);
     offerTelegramUsername.value = username ? `@${username}` : "Sin usuario público";
     offerTelegramUsername.readOnly = true;
-    telegramAuthMessage.textContent = "Identidad verificada. Este usuario se asociará a la publicación.";
-    setOfferFormEnabled(true);
+    if (username) {
+      telegramAuthMessage.textContent = "Identidad verificada. Este usuario se asociará a la publicación.";
+      setOfferFormEnabled(true);
+    } else {
+      telegramAuthMessage.textContent = "Para publicar y recibir solicitudes necesitas configurar un nombre de usuario público en Telegram.";
+      setOfferFormEnabled(false);
+    }
     return;
   }
 
@@ -522,6 +532,29 @@ function configureOfferAuth(user = state.telegramUser) {
     ? "No hemos podido verificar tu identidad. Vuelve a abrir la Mini App desde Telegram."
     : "Este formulario solo está disponible dentro de la Mini App de Telegram.";
   setOfferFormEnabled(false);
+}
+
+function openTelegramUsernameDialog() {
+  if (typeof telegramUsernameDialog.showModal === "function") {
+    telegramUsernameDialog.showModal();
+    return;
+  }
+
+  telegramUsernameDialog.setAttribute("open", "");
+}
+
+function closeTelegramUsernameDialog() {
+  if (typeof telegramUsernameDialog.close === "function") {
+    telegramUsernameDialog.close();
+    return;
+  }
+
+  telegramUsernameDialog.removeAttribute("open");
+}
+
+function retryTelegramUsername() {
+  closeTelegramUsernameDialog();
+  window.location.reload();
 }
 
 function setFormState(message, stateName = "") {
@@ -695,58 +728,26 @@ async function completeItem(item, triggerButton = markDeliveredButton, feedbackE
   }
 }
 
-async function handleInterest() {
+function handleInterest() {
   const item = state.selectedItem;
   if (!item || isOwnItem(item)) return;
 
   const username = normalizeTelegramUsername(state.selectedItem?.ownerUsername);
-  if (username) {
-    const telegramUrl = `https://t.me/${username}`;
-    const webApp = window.Telegram?.WebApp;
-
-    if (typeof webApp?.openTelegramLink === "function") {
-      webApp.openTelegramLink(telegramUrl);
-      return;
-    }
-
-    window.open(telegramUrl, "_blank", "noopener,noreferrer");
-    return;
-  }
-
-  if (!auth?.hasInitData()) {
-    detailActionState.textContent = "Abre la Mini App desde Telegram para avisar al vecino o la vecina.";
+  if (!username) {
+    detailActionState.textContent = "Este vecino o vecina no tiene un username público para recibir contactos.";
     detailActionState.dataset.state = "error";
     return;
   }
 
-  if (!api?.isInterestConfigured || typeof api.interestItem !== "function") {
-    detailActionState.textContent = "La opción de interés todavía no está conectada en n8n.";
-    detailActionState.dataset.state = "error";
+  const telegramUrl = `https://t.me/${username}`;
+  const webApp = window.Telegram?.WebApp;
+
+  if (typeof webApp?.openTelegramLink === "function") {
+    webApp.openTelegramLink(telegramUrl);
     return;
   }
 
-  interestButton.disabled = true;
-  interestButton.textContent = "Enviando…";
-
-  try {
-    const result = await api.interestItem({
-      initData: auth.getInitData(),
-      item_id: item.id,
-    });
-
-    if (!result.ok) {
-      throw new Error(result.error || "No se ha podido enviar el interés.");
-    }
-
-    interestButton.textContent = "Interés enviado";
-    detailActionState.textContent = `Hemos avisado al vecino o la vecina que ofrece “${item.title}”.`;
-    detailActionState.dataset.state = "connected";
-  } catch (error) {
-    interestButton.disabled = false;
-    interestButton.textContent = "Me interesa";
-    detailActionState.textContent = error.message || "No se ha podido enviar el interés.";
-    detailActionState.dataset.state = "error";
-  }
+  window.open(telegramUrl, "_blank", "noopener,noreferrer");
 }
 
 async function shareSelectedItem() {
@@ -812,6 +813,9 @@ interestButton.addEventListener("click", handleInterest);
 markDeliveredButton.addEventListener("click", () => completeItem(state.selectedItem));
 offerImages.addEventListener("change", handlePhotoSelection);
 offerForm.addEventListener("submit", handleOfferSubmit);
+telegramUsernameHelp.addEventListener("click", openTelegramUsernameDialog);
+telegramUsernameDialogClose.addEventListener("click", closeTelegramUsernameDialog);
+telegramUsernameRetry.addEventListener("click", retryTelegramUsername);
 viewPublishedButton.addEventListener("click", () => {
   const item = state.myItems[0];
   if (item) showDetail(item);

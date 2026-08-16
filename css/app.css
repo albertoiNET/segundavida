@@ -1392,6 +1392,11 @@ h2 {
   background: color-mix(in srgb, var(--color-secondary-soft) 55%, var(--bg-card));
 }
 
+.telegram-auth-card[data-state="warning"] {
+  border-color: color-mix(in srgb, var(--color-primary) 42%, var(--border-light));
+  background: color-mix(in srgb, var(--color-primary) 8%, var(--bg-card));
+}
+
 .telegram-auth-card[data-state="connected"] {
   border-color: color-mix(in srgb, var(--color-primary) 42%, var(--border-light));
 }
@@ -1443,6 +1448,68 @@ h2 {
   font-size: 0.8rem;
   font-weight: 750;
   text-decoration: none;
+}
+
+.telegram-help-link,
+.telegram-faq-link {
+  width: fit-content;
+  border: 0;
+  background: transparent;
+  color: var(--color-primary-dark);
+  cursor: pointer;
+  font-size: 0.78rem;
+  font-weight: 750;
+  text-decoration: underline;
+  text-underline-offset: 0.18rem;
+}
+
+.telegram-username-dialog {
+  width: min(calc(100% - 2rem), 27rem);
+  padding: 1.2rem;
+  border: 1px solid var(--border-light);
+  border-radius: 1rem;
+  background: var(--bg-container);
+  color: var(--text-main);
+  box-shadow: 0 1rem 3rem rgb(0 0 0 / 22%);
+}
+
+.telegram-username-dialog::backdrop {
+  background: rgb(17 20 18 / 52%);
+  backdrop-filter: blur(3px);
+}
+
+.telegram-username-dialog__topline {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.telegram-username-dialog h2 {
+  margin: 0.2rem 0 0;
+  font-size: 1.2rem;
+}
+
+.telegram-username-dialog p {
+  margin: 1rem 0 0;
+  color: var(--text-secondary);
+  font-size: 0.84rem;
+  line-height: 1.5;
+}
+
+.telegram-username-dialog ol {
+  display: grid;
+  gap: 0.65rem;
+  margin: 1rem 0;
+  padding-left: 1.3rem;
+  color: var(--text-secondary);
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.telegram-username-dialog .telegram-faq-link {
+  display: inline-block;
+  margin-bottom: 1rem;
 }
 
 .telegram-identity-field {

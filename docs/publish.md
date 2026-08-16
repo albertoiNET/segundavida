@@ -81,21 +81,6 @@ Error de validación:
 La configuración actual permite probar desde `localhost:8000` y desde
 `https://segundavida.aldeapucela.org`. La foto no se envía en esta versión.
 
-## Interés sin username público
-
-La app usa el username solo como atajo para abrir directamente un chat. Si el
-vecino o la vecina no tiene username público, el botón llama a:
-
-```text
-POST https://tasks.nukeador.com/webhook/segundavida/interest
-```
-
-Ese workflow debe validar `initData`, buscar `item_id` en NocoDB, recuperar el
-`owner_telegram_id` privado y enviarle un aviso con Pucelo Bot. El ID privado
-nunca se devuelve al navegador. Telegram permite que un bot envíe mensajes a
-una persona cuando ya existe una conversación previa; abrir la Mini App desde
-Pucelo Bot cumple esa condición.
-
 ## Enlace para abrir la Mini App
 
 El botón del formulario usa `https://t.me/pucelobot?startapp=segundavida`,
