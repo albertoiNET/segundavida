@@ -1567,8 +1567,27 @@ h2 {
   gap: 0.75rem;
 }
 
+.telegram-auth-card__identity {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 0.7rem;
+}
+
+.telegram-auth-card__icon {
+  display: grid;
+  flex: 0 0 auto;
+  width: 2.65rem;
+  height: 2.65rem;
+  place-items: center;
+  border-radius: 0.85rem;
+  background: var(--color-secondary-soft);
+  color: var(--color-secondary-dark);
+  font-size: 1.45rem;
+}
+
 .telegram-auth-card h2 {
-  margin: 0.18rem 0 0;
+  margin: 0.16rem 0 0;
   color: var(--text-main);
   font-size: 1rem;
 }
@@ -1597,12 +1616,16 @@ h2 {
 }
 
 .telegram-download-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
   width: fit-content;
+  min-height: 2.35rem;
+  padding: 0.35rem 0.1rem;
   color: var(--color-primary-dark);
   font-size: 0.78rem;
   font-weight: 750;
-  text-decoration: underline;
-  text-underline-offset: 0.18rem;
+  text-decoration: none;
 }
 
 .telegram-auth-card[data-state="connected"] .telegram-auth-card__badge {
@@ -1612,16 +1635,22 @@ h2 {
 
 .telegram-open-link {
   display: inline-flex;
-  width: fit-content;
+  width: 100%;
   align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
   min-height: 2.65rem;
   padding: 0.6rem 0.85rem;
-  border: 1px solid var(--color-primary);
+  border: 0;
   border-radius: 0.75rem;
-  color: var(--color-primary-dark);
+  color: var(--bg-container);
   font-size: 0.8rem;
   font-weight: 750;
   text-decoration: none;
+}
+
+.telegram-open-link:hover {
+  color: var(--bg-container);
 }
 
 .telegram-help-link,

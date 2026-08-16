@@ -766,7 +766,7 @@ function configureOfferAuth(user = state.telegramUser) {
     ? `Publicar como @${username}`
     : verified
       ? "Necesitas un username público"
-      : "Para publicar necesitas Telegram";
+      : "Publica desde Telegram";
   telegramAuthBadge.textContent = verified && username ? "Detectado" : "Username necesario";
   telegramAuthBadge.hidden = !verified;
   telegramDownloadLink.hidden = verified;
@@ -789,7 +789,7 @@ function configureOfferAuth(user = state.telegramUser) {
 
   offerTelegramUsername.value = "";
   offerTelegramUsername.readOnly = true;
-  telegramAuthMessage.textContent = "Para publicar, abre esta aplicación desde Telegram.";
+  telegramAuthMessage.textContent = "Abre esta aplicación dentro de Telegram para continuar.";
   setOfferFormEnabled(false);
 }
 
