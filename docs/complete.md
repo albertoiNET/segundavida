@@ -1,7 +1,7 @@
-# Marcar una publicación como entregada
+# Marcar y reactivar una publicación
 
 Importa [`sv_complete_item.workflow.json`](./sv_complete_item.workflow.json) en
-n8n. Crea el endpoint:
+n8n. El workflow crea un único endpoint para las dos acciones:
 
 Si solo necesitas reemplazar el nodo NocoDB, puedes importar
 [`sv_complete_update_node.json`](./sv_complete_update_node.json). Debe recibir
@@ -16,8 +16,14 @@ POST https://tasks.nukeador.com/webhook/segundavida/complete
 El workflow usa la credencial existente `NocoDB Token account`, busca la fila
 en la tabla `Segunda Vida`, comprueba la firma de `Telegram.WebApp.initData` y
 solo permite cambiar la publicación si `owner_telegram_id` coincide con la
-persona autenticada. La acción recibida puede ser `complete` o `reopen`. Al
-completar escribe:
+persona autenticada. La acción recibida puede ser `complete` o `reopen`. En el
+nodo `Update NocoDB row`, el campo **Row ID Value** debe quedar exactamente así:
+
+```text
+{{ $json.Id }}
+```
+
+Al completar escribe:
 
 - `status = completed`
 - `completed_at =` fecha actual generada por n8n
@@ -42,6 +48,7 @@ Después de importar:
    `NocoDB Token account`.
 3. Comprueba que la tabla seleccionada es `Segunda Vida` y que contiene los
    campos `Id`, `item-id`, `owner_telegram_id`, `status` y `completed_at`.
+   En `Update NocoDB row`, pon `{{ $json.Id }}` en **Row ID Value**.
 4. Activa el workflow.
 
 El frontend ya envía este cuerpo:
@@ -57,7 +64,7 @@ El frontend ya envía este cuerpo:
 Para marcarla de nuevo como disponible, el frontend envía la misma petición
 con `"action": "reopen"`.
 
-Respuesta correcta:
+Respuesta correcta al completar:
 
 ```json
 {
@@ -66,5 +73,17 @@ Respuesta correcta:
   "status": "completed",
   "completed_at": "2026-08-16T12:00:00.000Z",
   "message": "Marcado como entregado"
+}
+```
+
+Respuesta correcta al reactivar:
+
+```json
+{
+  "ok": true,
+  "item_id": "sv-k8Qm2LxP",
+  "status": "available",
+  "completed_at": null,
+  "message": "Publicación reactivada"
 }
 ```

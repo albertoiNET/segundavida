@@ -285,6 +285,19 @@ function createTextElement(tagName, className, text) {
   return element;
 }
 
+function configureDeliveryButton(button, status) {
+  const completed = status === "completed";
+  const actionLabel = completed ? "Volver a publicar" : "Marcar como entregado";
+  const actionIcon = completed ? "fa-rotate-left" : "fa-check";
+  const fallback = completed ? "↶" : "✓";
+
+  button.classList.toggle("secondary-button--complete", !completed);
+  button.classList.toggle("secondary-button--reopen", completed);
+  button.setAttribute("aria-label", actionLabel);
+
+  button.replaceChildren(createIconElement(actionIcon, fallback), document.createTextNode(actionLabel));
+}
+
 function normalizeTelegramUsername(value) {
   const username = String(value ?? "").trim().replace(/^@/, "");
   return /^[A-Za-z][A-Za-z0-9_]{4,31}$/.test(username) ? username : "";
@@ -443,11 +456,9 @@ function createOwnedItemCard(item) {
   actions.append(viewButton);
 
   const deliveredButton = document.createElement("button");
-  deliveredButton.className = "secondary-button secondary-button--compact";
+  deliveredButton.className = "secondary-button secondary-button--compact delivery-action-button";
   deliveredButton.type = "button";
-  deliveredButton.textContent = item.status === "completed"
-    ? "Marcar como no entregado"
-    : "Marcar como entregado";
+  configureDeliveryButton(deliveredButton, item.status);
   const actionState = createTextElement("p", "owned-item-card__state", "");
   deliveredButton.addEventListener("click", () => completeItem(item, deliveredButton, actionState));
   actions.append(deliveredButton);
@@ -541,9 +552,7 @@ function renderDetail(item) {
 
   detailOwnerActions.hidden = !ownItem;
   markDeliveredButton.disabled = false;
-  markDeliveredButton.textContent = item.status === "completed"
-    ? "Marcar como no entregado"
-    : "Marcar como entregado";
+  configureDeliveryButton(markDeliveredButton, item.status);
   detailOwnerActionState.textContent = item.status === "completed"
     ? "Si vuelve a estar disponible, puedes reactivar esta publicación."
     : "Cuando se lo entregues a otra persona, márcalo aquí.";
@@ -957,7 +966,6 @@ async function completeItem(item, triggerButton = markDeliveredButton, feedbackE
   }
 
   triggerButton.disabled = true;
-  const previousLabel = triggerButton.textContent;
   triggerButton.textContent = "Guardando…";
 
   try {
@@ -985,10 +993,11 @@ async function completeItem(item, triggerButton = markDeliveredButton, feedbackE
       ? [...state.items.filter((candidate) => candidate.id !== item.id), updatedItem]
       : state.items.filter((candidate) => candidate.id !== item.id);
     renderItems();
+    renderMyItems();
     renderDetail(updatedItem);
   } catch (error) {
     triggerButton.disabled = false;
-    triggerButton.textContent = previousLabel;
+    configureDeliveryButton(triggerButton, item.status);
     feedbackElement.textContent = error.message || "No se ha podido actualizar la publicación.";
     feedbackElement.dataset.state = "error";
   }

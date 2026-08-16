@@ -4,6 +4,7 @@
       "parameters": {
         "authentication": "nocoDbApiToken",
         "operation": "update",
+        "id": "={{ $json.Id }}",
         "workspaceId": {
           "__rl": true,
           "value": "wfrogvq8",

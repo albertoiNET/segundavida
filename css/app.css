@@ -646,6 +646,33 @@ h2 {
   background: var(--bg-card-hover);
 }
 
+.delivery-action-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+}
+
+.delivery-action-button.secondary-button--complete {
+  border-color: var(--color-secondary);
+  background: var(--color-secondary-soft);
+  color: var(--color-secondary-dark);
+}
+
+.delivery-action-button.secondary-button--complete:hover {
+  background: color-mix(in srgb, var(--color-secondary-soft) 78%, var(--color-secondary));
+}
+
+.delivery-action-button.secondary-button--reopen {
+  border-color: var(--border-strong);
+  background: var(--bg-highlight);
+  color: var(--color-primary-dark);
+}
+
+.delivery-action-button.secondary-button--reopen:hover {
+  background: color-mix(in srgb, var(--bg-highlight) 78%, var(--color-primary));
+}
+
 .secondary-button--compact {
   width: auto;
   min-height: 2.35rem;
