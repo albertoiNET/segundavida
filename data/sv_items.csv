@@ -1,3 +1,3 @@
-item-id,title,description,category,zone,owner_telegram_id,owner_display_name,owner_username,status,created_at,updated_at,expires_at,completed_at,image_url,telegram_chat_id,telegram_thread_id,telegram_message_id,interest_count
-sv-demo-001,"Silla de escritorio","Silla giratoria de escritorio en buen estado. Tiene algunas marcas de uso, pero funciona perfectamente.",Hogar,Delicias,,Pepe,pepe_demo,hidden,2026-08-16T10:00:00+02:00,2026-08-16T10:00:00+02:00,2026-09-15T23:59:00+02:00,,,,,,0
-sv-demo-002,"Lote de libros de inglés","Libros usados para estudiar inglés.",Libros,Centro,,Ana,ana_demo,hidden,2026-08-16T11:00:00+02:00,2026-08-16T11:00:00+02:00,2026-09-12T23:59:00+02:00,,,,,,0
+item-id,title,description,category,zone,owner_telegram_id,owner_display_name,owner_username,status,expires_at,completed_at,image_url,telegram_chat_id,telegram_thread_id,telegram_message_id,interest_count
+sv-demo-001,"Silla de escritorio","Silla giratoria de escritorio en buen estado. Tiene algunas marcas de uso, pero funciona perfectamente.",Hogar,Delicias,,Pepe,pepe_demo,hidden,2026-09-15T23:59:00+02:00,,,,,,0
+sv-demo-002,"Lote de libros de inglés","Libros usados para estudiar inglés.",Libros,Centro,,Ana,ana_demo,hidden,2026-09-12T23:59:00+02:00,,,,,,0

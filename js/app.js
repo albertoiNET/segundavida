@@ -158,6 +158,16 @@ function renderItems() {
     : "Todavía no hay objetos disponibles. Cuando alguien publique algo, aparecerá aquí.";
 }
 
+function isNotExpired(item) {
+  if (!item.expiresAt) return true;
+
+  const normalized = item.expiresAt.includes(" ")
+    ? item.expiresAt.replace(" ", "T")
+    : item.expiresAt;
+  const expiresAt = new Date(normalized);
+  return Number.isNaN(expiresAt.getTime()) || expiresAt.getTime() >= Date.now();
+}
+
 async function loadCatalog() {
   if (!api?.isDataConfigured) {
     itemsState.textContent = "El catálogo todavía no está configurado.";
@@ -167,7 +177,7 @@ async function loadCatalog() {
 
   try {
     const records = await api.listItems();
-    state.items = records.filter((item) => item.status === "available");
+    state.items = records.filter((item) => item.status === "available" && isNotExpired(item));
     renderCategories();
     renderItems();
   } catch {

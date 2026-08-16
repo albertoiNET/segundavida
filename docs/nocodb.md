@@ -11,7 +11,10 @@ público.
 
 | Campo | Tipo NocoDB | Requerido | Uso |
 | --- | --- | --- | --- |
-| `item-id` | SingleLineText, primary key | Sí | Identificador estable generado por n8n |
+| `Id` | System field, primary key | Automático | Identificador técnico interno de NocoDB |
+| `CreatedAt` | System DateTime | Automático | Fecha de creación de NocoDB |
+| `UpdatedAt` | System DateTime | Automático | Última modificación en NocoDB |
+| `item-id` | SingleLineText | Sí | Identificador estable de negocio generado por n8n |
 | `title` | SingleLineText | Sí | Título visible |
 | `description` | LongText | Sí | Descripción del objeto |
 | `category` | SingleSelect | Sí | `Hogar`, `Infantil`, `Libros`, `Tecnología`, `Ropa`, `Otros` |
@@ -20,8 +23,6 @@ público.
 | `owner_display_name` | SingleLineText | Sí | Nombre público mostrado |
 | `owner_username` | SingleLineText | No | Username opcional |
 | `status` | SingleSelect | Sí | `available`, `completed`, `expired`, `hidden` |
-| `created_at` | DateTime | Sí | Fecha de publicación |
-| `updated_at` | DateTime | Sí | Última modificación |
 | `expires_at` | DateTime | Sí | Fin de disponibilidad |
 | `completed_at` | DateTime | No | Cuándo se finalizó |
 | `image_url` | URL | No | Primera imagen pública |
@@ -30,7 +31,9 @@ público.
 | `telegram_message_id` | SingleLineText | No | Referencia privada para n8n |
 | `interest_count` | Number | Sí | Contador agregado, valor inicial `0` |
 
-Telegram IDs se guardan como texto para evitar problemas de precisión o
+NocoDB ya aporta `CreatedAt` y `UpdatedAt`; no hay que crearlos ni rellenarlos
+desde el CSV. n8n los expondrá como `created_at` y `updated_at` en la respuesta
+pública. Telegram IDs se guardan como texto para evitar problemas de precisión o
 limitaciones de tamaño en campos numéricos. No se crea todavía el estado
 `reserved` ni la tabla de intereses; esta última llegará cuando implementemos
 `Me interesa`.
@@ -42,7 +45,8 @@ limitaciones de tamaño en campos numéricos. No se crea todavía el estado
 3. Nombrar la tabla `sv_items`.
 4. Revisar los tipos según la tabla anterior, especialmente `DateTime`,
    `SingleSelect`, `URL` y `Number`.
-5. Marcar `item-id` como primary key y crear una vista `Public catalog`.
+5. Mantener `Id` como clave técnica de NocoDB y usar `item-id` como identificador
+   de negocio; crear una vista `Public catalog`.
 6. En esa vista filtrar `status = available` y ordenar por `created_at`
    descendente.
 
@@ -120,7 +124,8 @@ En el nodo Code de n8n, acceder al campo de NocoDB y normalizarlo así:
   category: row.category,
   zone: row.zone,
   status: row.status,
-  created_at: row.created_at,
+  created_at: row.CreatedAt,
+  updated_at: row.UpdatedAt,
   expires_at: row.expires_at,
   image_url: row.image_url || null,
   owner_display_name: row.owner_display_name,
