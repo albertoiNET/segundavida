@@ -9,6 +9,7 @@ const telegramRuntime = window.SecondaVidaTelegram ?? {
 const auth = window.SecondaVidaAuth;
 const api = window.SecondaVidaApi;
 const CONSENT_VERSION = "sv-publish-2026-08-16-v1";
+const OWN_ITEMS_STORAGE_KEY = "segundavida:my-items:v1";
 const state = {
   items: [],
   category: "Todo",
@@ -16,6 +17,7 @@ const state = {
   selectedItem: null,
   offerFiles: [],
   telegramUser: null,
+  myItems: [],
 };
 
 const runtimeName = document.querySelector("#runtime-name");
@@ -48,6 +50,14 @@ const detailZone = document.querySelector("#detail-zone");
 const detailOwner = document.querySelector("#detail-owner");
 const interestButton = document.querySelector("#interest-button");
 const detailActionState = document.querySelector("#detail-action-state");
+const detailOwnerActions = document.querySelector("#detail-owner-actions");
+const markDeliveredButton = document.querySelector("#mark-delivered-button");
+const detailOwnerActionState = document.querySelector("#detail-owner-action-state");
+const publishSuccessView = document.querySelector("#publish-success-view");
+const successItemTitle = document.querySelector("#success-item-title");
+const successItemStatus = document.querySelector("#success-item-status");
+const viewPublishedButton = document.querySelector("#view-published-button");
+const goPostsButton = document.querySelector("#go-posts-button");
 const telegramAuthCard = document.querySelector("#telegram-auth-card");
 const telegramAuthBadge = document.querySelector("#telegram-auth-badge");
 const telegramAuthMessage = document.querySelector("#telegram-auth-message");
@@ -58,6 +68,8 @@ const offerImages = document.querySelector("#offer-images");
 const offerPreview = document.querySelector("#offer-preview");
 const offerFormState = document.querySelector("#offer-form-state");
 const offerConsent = document.querySelector("#offer-consent");
+const postsList = document.querySelector("#posts-list");
+const postsEmptyState = document.querySelector("#posts-empty-state");
 const navItems = [...document.querySelectorAll(".nav-item")];
 
 const categorySymbols = {
@@ -97,6 +109,52 @@ function createTextElement(tagName, className, text) {
 function normalizeTelegramUsername(value) {
   const username = String(value ?? "").trim().replace(/^@/, "");
   return /^[A-Za-z][A-Za-z0-9_]{4,31}$/.test(username) ? username : "";
+}
+
+function readOwnItems() {
+  try {
+    const stored = JSON.parse(window.localStorage.getItem(OWN_ITEMS_STORAGE_KEY) ?? "[]");
+    return Array.isArray(stored) ? stored.filter((item) => item?.id) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveOwnItems() {
+  try {
+    window.localStorage.setItem(OWN_ITEMS_STORAGE_KEY, JSON.stringify(state.myItems));
+  } catch {
+    // La lista sigue disponible durante esta sesión aunque el almacenamiento esté bloqueado.
+  }
+}
+
+function rememberOwnItem(item) {
+  if (!item?.id) return;
+
+  const index = state.myItems.findIndex((candidate) => candidate.id === item.id);
+  if (index >= 0) {
+    state.myItems[index] = { ...state.myItems[index], ...item };
+  } else {
+    state.myItems.unshift(item);
+  }
+
+  saveOwnItems();
+  renderMyItems();
+}
+
+function isOwnItem(item) {
+  if (!item?.id) return false;
+
+  if (state.myItems.some((candidate) => candidate.id === item.id)) return true;
+
+  const currentUsername = normalizeTelegramUsername(state.telegramUser?.username);
+  return Boolean(currentUsername && currentUsername === normalizeTelegramUsername(item.ownerUsername));
+}
+
+function getItemStatusLabel(item) {
+  if (item?.status === "completed") return "Entregado";
+  if (item?.expiresAt) return `Disponible hasta ${formatDate(item.expiresAt)}`;
+  return "Disponible ahora";
 }
 
 function createItemCard(item, index) {
@@ -161,6 +219,62 @@ function createItemCard(item, index) {
   return card;
 }
 
+function createOwnedItemCard(item) {
+  const card = document.createElement("article");
+  card.className = "owned-item-card";
+
+  const heading = document.createElement("div");
+  heading.className = "owned-item-card__heading";
+  heading.append(createTextElement("h2", "owned-item-card__title", item.title));
+  heading.append(createTextElement("span", `owned-item-card__status ${item.status === "completed" ? "is-completed" : ""}`, getItemStatusLabel(item)));
+  card.append(heading);
+
+  const meta = document.createElement("p");
+  meta.className = "owned-item-card__meta";
+  meta.textContent = `${item.category} · ${item.zone}`;
+  card.append(meta);
+
+  const actions = document.createElement("div");
+  actions.className = "owned-item-card__actions";
+
+  const viewButton = document.createElement("button");
+  viewButton.className = "text-button";
+  viewButton.type = "button";
+  viewButton.textContent = "Ver publicación";
+  viewButton.addEventListener("click", () => showDetail(item));
+  actions.append(viewButton);
+
+  const deliveredButton = document.createElement("button");
+  deliveredButton.className = "secondary-button secondary-button--compact";
+  deliveredButton.type = "button";
+  deliveredButton.disabled = item.status === "completed";
+  deliveredButton.textContent = item.status === "completed" ? "Entregado" : "Marcar entregado";
+  const actionState = createTextElement("p", "owned-item-card__state", "");
+  deliveredButton.addEventListener("click", () => completeItem(item, deliveredButton, actionState));
+  actions.append(deliveredButton);
+  card.append(actions);
+  card.append(actionState);
+
+  return card;
+}
+
+function renderMyItems() {
+  const catalogOwnedItems = state.items.filter(isOwnItem);
+  let changed = false;
+  catalogOwnedItems.forEach((item) => {
+    const index = state.myItems.findIndex((candidate) => candidate.id === item.id);
+    if (index >= 0) {
+      state.myItems[index] = { ...state.myItems[index], ...item };
+      changed = true;
+    }
+  });
+  if (changed) saveOwnItems();
+
+  const items = state.myItems;
+  postsList.replaceChildren(...items.map(createOwnedItemCard));
+  postsEmptyState.hidden = items.length > 0;
+}
+
 function renderDetail(item) {
   state.selectedItem = item;
   detailMedia.replaceChildren();
@@ -189,17 +303,31 @@ function renderDetail(item) {
   detailDescription.textContent = item.description || "La persona que lo ofrece todavía no ha añadido una descripción.";
   detailZone.textContent = item.zone || "Valladolid";
   detailOwner.textContent = item.ownerDisplayName || "Vecindad";
+  const ownItem = isOwnItem(item);
   const ownerUsername = normalizeTelegramUsername(item.ownerUsername);
-  interestButton.disabled = !ownerUsername;
+  interestButton.hidden = ownItem;
+  interestButton.disabled = ownItem || !ownerUsername;
   interestButton.textContent = "Me interesa";
   interestButton.setAttribute(
     "aria-label",
     ownerUsername ? `Contactar con ${item.ownerDisplayName || "la persona anunciante"} por Telegram` : "Contacto no disponible",
   );
-  detailActionState.textContent = ownerUsername
+  detailActionState.textContent = ownItem
+    ? "Gestiona el estado de tu publicación desde aquí."
+    : ownerUsername
     ? "Se abrirá el chat de Telegram de quien lo ofrece."
     : "El anunciante todavía no ha añadido un usuario público de Telegram.";
-  detailActionState.dataset.state = ownerUsername ? "" : "error";
+  detailActionState.dataset.state = ownItem || ownerUsername ? "" : "error";
+
+  detailOwnerActions.hidden = !ownItem;
+  markDeliveredButton.disabled = item.status === "completed";
+  markDeliveredButton.textContent = item.status === "completed"
+    ? "Ya está marcado como entregado"
+    : "Marcar como entregado";
+  detailOwnerActionState.textContent = item.status === "completed"
+    ? "Esta publicación ya no aparece entre los objetos disponibles."
+    : "Cuando se lo entregues a otra persona, márcalo aquí.";
+  detailOwnerActionState.dataset.state = "";
 }
 
 function showDetail(item) {
@@ -214,6 +342,7 @@ function setView(viewName) {
   const isOffer = viewName === "offer";
   const isPosts = viewName === "posts";
   const isDetail = viewName === "detail";
+  const isSuccess = viewName === "publish-success";
 
   catalogIntro.hidden = !isExplore;
   catalogTools.hidden = !isExplore;
@@ -221,8 +350,10 @@ function setView(viewName) {
   offerView.hidden = !isOffer;
   postsView.hidden = !isPosts;
   detailView.hidden = !isDetail;
+  publishSuccessView.hidden = !isSuccess;
 
   if (isOffer) configureOfferAuth();
+  if (isPosts) renderMyItems();
 
   if (!isDetail && window.location.hash.startsWith("#item=")) {
     window.history.replaceState({}, "", window.location.pathname + window.location.search);
@@ -303,6 +434,7 @@ async function loadCatalog() {
     state.items = records.filter((item) => item.status === "available" && isNotExpired(item));
     renderCategories();
     renderItems();
+    renderMyItems();
     openItemFromHash();
   } catch {
     itemsState.textContent = "No hemos podido cargar los objetos. Inténtalo de nuevo en unos instantes.";
@@ -338,6 +470,7 @@ async function checkIdentity() {
     if (result.valid) {
       state.telegramUser = result;
       configureOfferAuth(result);
+      renderMyItems();
       const firstName = result.first_name ? `Hola ${result.first_name}` : "Telegram";
       identityStatus.querySelector("span:nth-child(2)").textContent = firstName;
       setServiceState(identityStatus, identityStatusLabel, "connected", "Verificada ✓");
@@ -452,15 +585,16 @@ async function handleOfferSubmit(event) {
   }
 
   const formData = new FormData(offerForm);
+  const draftItem = {
+    title: String(formData.get("title") ?? "").trim(),
+    category: String(formData.get("category") ?? ""),
+    zone: String(formData.get("zone") ?? ""),
+    description: String(formData.get("description") ?? "").trim(),
+    duration_days: Number(formData.get("duration") ?? 14),
+  };
   const payload = {
     initData: auth.getInitData(),
-    item: {
-      title: String(formData.get("title") ?? "").trim(),
-      category: String(formData.get("category") ?? ""),
-      zone: String(formData.get("zone") ?? ""),
-      description: String(formData.get("description") ?? "").trim(),
-      duration_days: Number(formData.get("duration") ?? 14),
-    },
+    item: draftItem,
     consent: {
       accepted: offerConsent.checked,
       version: CONSENT_VERSION,
@@ -472,18 +606,90 @@ async function handleOfferSubmit(event) {
   try {
     const result = await api.publishItem(payload);
 
-    if (!result.ok) {
+    if (!result.ok || !result.item_id) {
       setFormState(result.error ?? "No se ha podido publicar.", "error");
       return;
     }
 
+    const expiresAt = new Date(Date.now() + draftItem.duration_days * 24 * 60 * 60 * 1000).toISOString();
+    const publishedItem = {
+      id: result.item_id,
+      title: result.title || draftItem.title,
+      description: draftItem.description,
+      category: draftItem.category,
+      zone: draftItem.zone,
+      status: result.status || "available",
+      expiresAt,
+      ownerDisplayName: state.telegramUser?.first_name || "Tú",
+      ownerUsername: state.telegramUser?.username || "",
+      imageUrl: null,
+      interestCount: 0,
+    };
+
+    rememberOwnItem(publishedItem);
     offerForm.reset();
     state.offerFiles = [];
     offerPreview.replaceChildren();
-    setFormState("Publicado. Ya aparece en el catálogo.", "connected");
     await loadCatalog();
+    const catalogItem = state.items.find((item) => item.id === publishedItem.id);
+    const finalItem = catalogItem ? { ...publishedItem, ...catalogItem } : publishedItem;
+    rememberOwnItem(finalItem);
+    showPublishSuccess(finalItem);
   } catch (error) {
     setFormState(error.message || "No se ha podido publicar.", "error");
+  }
+}
+
+function showPublishSuccess(item) {
+  successItemTitle.textContent = item.title;
+  successItemStatus.textContent = getItemStatusLabel(item);
+  setView("publish-success");
+}
+
+async function completeItem(item, triggerButton = markDeliveredButton, feedbackElement = detailOwnerActionState) {
+  if (!item?.id || item.status === "completed") return;
+
+  if (!auth?.hasInitData()) {
+    feedbackElement.textContent = "Abre la Mini App desde Telegram para gestionar esta publicación.";
+    feedbackElement.dataset.state = "error";
+    return;
+  }
+
+  if (!api?.isCompleteConfigured || typeof api.completeItem !== "function") {
+    feedbackElement.textContent = "La opción de marcar entregado todavía no está conectada en n8n.";
+    feedbackElement.dataset.state = "error";
+    return;
+  }
+
+  triggerButton.disabled = true;
+  const previousLabel = triggerButton.textContent;
+  triggerButton.textContent = "Guardando…";
+
+  try {
+    const result = await api.completeItem({
+      initData: auth.getInitData(),
+      item_id: item.id,
+    });
+
+    if (!result.ok) {
+      throw new Error(result.error || "No se ha podido actualizar la publicación.");
+    }
+
+    const completedItem = {
+      ...item,
+      status: "completed",
+      expiresAt: null,
+      completedAt: result.completed_at || new Date().toISOString(),
+    };
+    rememberOwnItem(completedItem);
+    state.items = state.items.filter((candidate) => candidate.id !== item.id);
+    renderItems();
+    renderDetail(completedItem);
+  } catch (error) {
+    triggerButton.disabled = false;
+    triggerButton.textContent = previousLabel;
+    feedbackElement.textContent = error.message || "No se ha podido actualizar la publicación.";
+    feedbackElement.dataset.state = "error";
   }
 }
 
@@ -566,9 +772,16 @@ navItems.forEach((button) => {
 detailBack.addEventListener("click", () => setView("explore"));
 detailShare.addEventListener("click", shareSelectedItem);
 interestButton.addEventListener("click", handleInterest);
+markDeliveredButton.addEventListener("click", () => completeItem(state.selectedItem));
 offerImages.addEventListener("change", handlePhotoSelection);
 offerForm.addEventListener("submit", handleOfferSubmit);
+viewPublishedButton.addEventListener("click", () => {
+  const item = state.myItems[0];
+  if (item) showDetail(item);
+});
+goPostsButton.addEventListener("click", () => setView("posts"));
 
+state.myItems = readOwnItems();
 window.SecondaVidaAnalytics?.trackPageView();
 configureOfferAuth();
 checkIdentity();

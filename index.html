@@ -75,6 +75,27 @@
           </dl>
           <button class="primary-button" id="interest-button" type="button">Me interesa</button>
           <p class="action-state" id="detail-action-state" aria-live="polite"></p>
+          <div class="detail-owner-actions" id="detail-owner-actions" hidden>
+            <span class="detail-owner-actions__label">Es tu publicación</span>
+            <button class="secondary-button" id="mark-delivered-button" type="button">Marcar como entregado</button>
+            <p class="action-state" id="detail-owner-action-state" aria-live="polite"></p>
+          </div>
+        </div>
+      </section>
+
+      <section class="success-view" id="publish-success-view" hidden aria-labelledby="publish-success-title">
+        <div class="success-mark" aria-hidden="true">✓</div>
+        <span class="eyebrow">SegundaVida</span>
+        <h1 id="publish-success-title">Se ha publicado</h1>
+        <p class="view-copy">Tu objeto ya está disponible para la comunidad.</p>
+        <div class="success-item-summary">
+          <strong id="success-item-title">Objeto publicado</strong>
+          <span id="success-item-status">Disponible ahora</span>
+        </div>
+        <p class="success-next-step">Cuando se lo entregues a otra persona, entra en <strong>Mis publicaciones</strong> y márcalo como entregado.</p>
+        <div class="success-actions">
+          <button class="primary-button" id="view-published-button" type="button">Ver publicación</button>
+          <button class="secondary-button" id="go-posts-button" type="button">Ir a mis publicaciones</button>
         </div>
       </section>
 
@@ -218,8 +239,9 @@
 
       <section class="secondary-view" id="posts-view" hidden aria-labelledby="posts-title">
         <h1 id="posts-title">Mis publicaciones</h1>
-        <p class="view-copy">Aquí podrás gestionar lo que has ofrecido.</p>
-        <div class="empty-state">
+        <p class="view-copy">Gestiona tus objetos y marca cuándo ya han encontrado otra casa.</p>
+        <div class="posts-list" id="posts-list" aria-live="polite"></div>
+        <div class="empty-state" id="posts-empty-state">
           <span class="empty-state__icon" aria-hidden="true">⌂</span>
           <strong>Aún no tienes publicaciones</strong>
           <p>Cuando ofrezcas algo, aparecerá en esta sección.</p>

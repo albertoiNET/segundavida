@@ -2,6 +2,7 @@
 const N8N_PING_URL = "https://tasks.nukeador.com/webhook/segundavida/ping";
 const N8N_DATA_URL = "https://tasks.nukeador.com/webhook/segundavida/data";
 const N8N_PUBLISH_URL = "https://tasks.nukeador.com/webhook/segundavida/publish";
+const N8N_COMPLETE_URL = "https://tasks.nukeador.com/webhook/segundavida/complete";
 
 async function ping() {
   if (!N8N_PING_URL) {
@@ -94,11 +95,41 @@ async function publishItem(payload) {
   return result ?? { ok: false, error: "Respuesta vacía del endpoint de publicación." };
 }
 
+async function completeItem(payload) {
+  if (!N8N_COMPLETE_URL) {
+    throw new Error("El endpoint de entrega todavía no está configurado.");
+  }
+
+  const response = await fetch(N8N_COMPLETE_URL, {
+    method: "POST",
+    headers: {
+      Accept: "application/json",
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+
+  let result = null;
+  try {
+    result = await response.json();
+  } catch {
+    result = null;
+  }
+
+  if (!response.ok) {
+    throw new Error(result?.error ?? `n8n respondió con HTTP ${response.status}`);
+  }
+
+  return result ?? { ok: false, error: "Respuesta vacía del endpoint de entrega." };
+}
+
 window.SecondaVidaApi = Object.freeze({
   isConfigured: Boolean(N8N_PING_URL),
   isDataConfigured: Boolean(N8N_DATA_URL),
   isPublishConfigured: Boolean(N8N_PUBLISH_URL),
+  isCompleteConfigured: Boolean(N8N_COMPLETE_URL),
   ping,
   listItems,
   publishItem,
+  completeItem,
 });
