@@ -15,9 +15,9 @@
       crossorigin="anonymous"
       onerror="document.documentElement.classList.add('icons-fallback')"
     />
-    <link rel="stylesheet" href="./css/icon-fallback.css?v=sv-20260816-7" />
-    <link rel="stylesheet" href="./css/tokens.css?v=sv-20260816-7" />
-    <link rel="stylesheet" href="./css/app.css?v=sv-20260816-7" />
+    <link rel="stylesheet" href="./css/icon-fallback.css?v=sv-20260816-8" />
+    <link rel="stylesheet" href="./css/tokens.css?v=sv-20260816-8" />
+    <link rel="stylesheet" href="./css/app.css?v=sv-20260816-8" />
     <script src="https://telegram.org/js/telegram-web-app.js?63"></script>
   </head>
   <body>
@@ -69,8 +69,6 @@
 
       <section class="detail-view" id="detail-view" hidden aria-labelledby="detail-title">
         <div class="detail-topbar">
-          <button class="text-button" id="detail-back" type="button"><i class="fa-solid fa-arrow-left fa-icon" data-fallback="←" aria-hidden="true"></i> <span>Explorar</span></button>
-          <span class="detail-context">Objeto</span>
           <button class="icon-button" id="detail-share" type="button" aria-label="Compartir objeto" title="Compartir objeto"><i class="fa-solid fa-share-nodes fa-icon" data-fallback="↗" aria-hidden="true"></i></button>
         </div>
         <div class="detail-media" id="detail-media"></div>
@@ -343,6 +341,10 @@
           <span class="empty-state__icon" aria-hidden="true"><i class="fa-solid fa-box-open fa-icon" data-fallback="⌂"></i></span>
           <strong id="posts-empty-title">Aún no tienes publicaciones activas</strong>
           <p id="posts-empty-copy">Cuando ofrezcas algo, aparecerá en esta sección.</p>
+          <button class="primary-button empty-state__action" id="offer-empty-button" type="button" hidden>
+            <i class="fa-solid fa-plus fa-icon" data-fallback="+" aria-hidden="true"></i>
+            <span>Ofrece algo que te sobra</span>
+          </button>
         </div>
       </section>
 
@@ -392,10 +394,10 @@
       </button>
     </main>
 
-    <script src="./js/telegram.js?v=sv-20260816-7"></script>
-    <script src="./js/auth.js?v=sv-20260816-7"></script>
-    <script src="./js/api.js?v=sv-20260816-7"></script>
-    <script src="./js/analytics.js?v=sv-20260816-7"></script>
-    <script src="./js/app.js?v=sv-20260816-7"></script>
+    <script src="./js/telegram.js?v=sv-20260816-8"></script>
+    <script src="./js/auth.js?v=sv-20260816-8"></script>
+    <script src="./js/api.js?v=sv-20260816-8"></script>
+    <script src="./js/analytics.js?v=sv-20260816-8"></script>
+    <script src="./js/app.js?v=sv-20260816-8"></script>
   </body>
 </html>

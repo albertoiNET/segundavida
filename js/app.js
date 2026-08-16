@@ -45,7 +45,6 @@ const catalogSection = document.querySelector(".catalog-section");
 const offerView = document.querySelector("#offer-view");
 const postsView = document.querySelector("#posts-view");
 const detailView = document.querySelector("#detail-view");
-const detailBack = document.querySelector("#detail-back");
 const detailShare = document.querySelector("#detail-share");
 const detailMedia = document.querySelector("#detail-media");
 const detailAvailability = document.querySelector("#detail-availability");
@@ -85,6 +84,7 @@ const postsList = document.querySelector("#posts-list");
 const postsEmptyState = document.querySelector("#posts-empty-state");
 const postsEmptyTitle = document.querySelector("#posts-empty-title");
 const postsEmptyCopy = document.querySelector("#posts-empty-copy");
+const offerEmptyButton = document.querySelector("#offer-empty-button");
 const postsTabs = [...document.querySelectorAll(".posts-tab")];
 const postsActiveCount = document.querySelector("#posts-active-count");
 const postsCompletedCount = document.querySelector("#posts-completed-count");
@@ -487,6 +487,7 @@ function renderMyItems() {
 
   postsList.replaceChildren(...visibleItems.map(createOwnedItemCard));
   postsEmptyState.hidden = visibleItems.length > 0;
+  offerEmptyButton.hidden = state.postsFilter !== "active" || visibleItems.length > 0;
   postsEmptyTitle.textContent = state.postsFilter === "completed"
     ? "Aún no has entregado publicaciones"
     : "Aún no tienes publicaciones activas";
@@ -1092,7 +1093,7 @@ if (themeToggle) {
 
 applyTheme(readThemePreference(), false);
 
-detailBack.addEventListener("click", goBack);
+offerEmptyButton.addEventListener("click", () => setView("offer"));
 detailShare.addEventListener("click", shareSelectedItem);
 interestButton.addEventListener("click", handleInterest);
 markDeliveredButton.addEventListener("click", () => completeItem(state.selectedItem));
