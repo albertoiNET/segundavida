@@ -175,6 +175,27 @@ input[type="search"] {
   animation: fade-up 550ms ease both;
 }
 
+.catalog-intro__copy {
+  max-width: 40rem;
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: clamp(0.98rem, 2.5vw, 1.1rem);
+  line-height: 1.5;
+}
+
+.catalog-intro__copy span {
+  display: block;
+  margin-top: 0.45rem;
+  color: var(--text-muted);
+  font-size: 0.84em;
+}
+
+.catalog-intro__copy a {
+  color: var(--color-primary-dark);
+  font-weight: 750;
+  text-underline-offset: 0.15em;
+}
+
 .eyebrow,
 .section-kicker {
   color: var(--color-primary);
@@ -967,6 +988,10 @@ body {
 
 .catalog-intro {
   margin-top: 1.8rem;
+}
+
+.catalog-tools {
+  margin-top: 1.2rem;
 }
 
 .eyebrow {
