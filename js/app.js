@@ -8,12 +8,14 @@ const telegramRuntime = window.SecondaVidaTelegram ?? {
 
 const auth = window.SecondaVidaAuth;
 const api = window.SecondaVidaApi;
+const CONSENT_VERSION = "sv-publish-2026-08-16-v1";
 const state = {
   items: [],
   category: "Todo",
   query: "",
   selectedItem: null,
   offerFiles: [],
+  telegramUser: null,
 };
 
 const runtimeName = document.querySelector("#runtime-name");
@@ -46,10 +48,16 @@ const detailZone = document.querySelector("#detail-zone");
 const detailOwner = document.querySelector("#detail-owner");
 const interestButton = document.querySelector("#interest-button");
 const detailActionState = document.querySelector("#detail-action-state");
+const telegramAuthCard = document.querySelector("#telegram-auth-card");
+const telegramAuthBadge = document.querySelector("#telegram-auth-badge");
+const telegramAuthMessage = document.querySelector("#telegram-auth-message");
+const telegramOpenLink = document.querySelector("#telegram-open-link");
+const offerTelegramUsername = document.querySelector("#offer-telegram-username");
 const offerForm = document.querySelector("#offer-form");
 const offerImages = document.querySelector("#offer-images");
 const offerPreview = document.querySelector("#offer-preview");
 const offerFormState = document.querySelector("#offer-form-state");
+const offerConsent = document.querySelector("#offer-consent");
 const navItems = [...document.querySelectorAll(".nav-item")];
 
 const categorySymbols = {
@@ -214,6 +222,8 @@ function setView(viewName) {
   postsView.hidden = !isPosts;
   detailView.hidden = !isDetail;
 
+  if (isOffer) configureOfferAuth();
+
   if (!isDetail && window.location.hash.startsWith("#item=")) {
     window.history.replaceState({}, "", window.location.pathname + window.location.search);
   }
@@ -326,16 +336,57 @@ async function checkIdentity() {
     const result = await auth.whoAmI();
 
     if (result.valid) {
+      state.telegramUser = result;
+      configureOfferAuth(result);
       const firstName = result.first_name ? `Hola ${result.first_name}` : "Telegram";
       identityStatus.querySelector("span:nth-child(2)").textContent = firstName;
       setServiceState(identityStatus, identityStatusLabel, "connected", "Verificada ✓");
       return;
     }
 
+    state.telegramUser = null;
+    configureOfferAuth();
     setServiceState(identityStatus, identityStatusLabel, "error", "No verificada");
   } catch {
+    state.telegramUser = null;
+    configureOfferAuth();
     setServiceState(identityStatus, identityStatusLabel, "error", "No disponible");
   }
+}
+
+function setOfferFormEnabled(enabled) {
+  offerForm.dataset.auth = enabled ? "connected" : "locked";
+  offerForm.querySelectorAll("input, select, textarea, button").forEach((control) => {
+    control.disabled = !enabled;
+  });
+}
+
+function configureOfferAuth(user = state.telegramUser) {
+  if (!telegramAuthCard || !offerForm) return;
+
+  const miniAppUrl = telegramRuntime.miniAppUrl || "https://t.me/pucelobot?startapp=segundavida";
+  telegramOpenLink.href = miniAppUrl;
+  const verified = Boolean(auth?.hasInitData() && user?.valid);
+
+  telegramAuthCard.dataset.state = verified ? "connected" : "error";
+  telegramAuthBadge.textContent = verified ? "Verificada" : "Solo Telegram";
+  telegramOpenLink.hidden = verified;
+
+  if (verified) {
+    const username = normalizeTelegramUsername(user.username);
+    offerTelegramUsername.value = username ? `@${username}` : "Sin usuario público";
+    offerTelegramUsername.readOnly = true;
+    telegramAuthMessage.textContent = "Identidad verificada. Este usuario se asociará a la publicación.";
+    setOfferFormEnabled(true);
+    return;
+  }
+
+  offerTelegramUsername.value = "";
+  offerTelegramUsername.readOnly = true;
+  telegramAuthMessage.textContent = auth?.hasInitData()
+    ? "No hemos podido verificar tu identidad. Vuelve a abrir la Mini App desde Telegram."
+    : "Este formulario solo está disponible dentro de la Mini App de Telegram.";
+  setOfferFormEnabled(false);
 }
 
 function setFormState(message, stateName = "") {
@@ -390,6 +441,11 @@ async function handleOfferSubmit(event) {
     return;
   }
 
+  if (!offerConsent.checked) {
+    setFormState("Debes aceptar las condiciones para publicar.", "error");
+    return;
+  }
+
   if (!api?.isPublishConfigured || typeof api.publishItem !== "function") {
     setFormState("El endpoint seguro de publicación todavía no está configurado.", "error");
     return;
@@ -404,6 +460,10 @@ async function handleOfferSubmit(event) {
       zone: String(formData.get("zone") ?? ""),
       description: String(formData.get("description") ?? "").trim(),
       duration_days: Number(formData.get("duration") ?? 14),
+    },
+    consent: {
+      accepted: offerConsent.checked,
+      version: CONSENT_VERSION,
     },
   };
 
@@ -510,5 +570,6 @@ offerImages.addEventListener("change", handlePhotoSelection);
 offerForm.addEventListener("submit", handleOfferSubmit);
 
 window.SecondaVidaAnalytics?.trackPageView();
+configureOfferAuth();
 checkIdentity();
 loadCatalog();

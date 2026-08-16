@@ -17,7 +17,10 @@ Antes de activarlo:
    este repositorio ni en el navegador.
 3. Confirmar que el nodo `Create NocoDB row` conserva la credencial y la tabla
    `Segunda Vida`.
-4. Activar el workflow.
+4. En NocoDB, crear estos campos en `sv_items` antes de activar el workflow:
+   `consent_accepted` (Checkbox), `consent_version` (SingleLineText) y
+   `consent_at` (DateTime).
+5. Activar el workflow.
 
 El endpoint de producción será:
 
@@ -36,6 +39,10 @@ El frontend envía JSON con esta forma:
     "zone": "Delicias - Canterac",
     "description": "En buen estado.",
     "duration_days": 14
+  },
+  "consent": {
+    "accepted": true,
+    "version": "sv-publish-2026-08-16-v1"
   }
 }
 ```
@@ -44,6 +51,9 @@ La identidad se valida con el HMAC de `initData`; no se confía en
 `initDataUnsafe`, en un `telegram_id` enviado por el navegador ni en una
 cabecera que el cliente pueda falsificar. `owner_telegram_id` se guarda solo en
 NocoDB y no se devuelve al catálogo público.
+
+El workflow también exige el consentimiento explícito, comprueba su versión y
+genera `consent_at` en n8n. La fecha no se acepta desde el navegador.
 
 ## Respuestas
 
@@ -70,3 +80,16 @@ Error de validación:
 
 La configuración actual permite probar desde `localhost:8000` y desde
 `https://segundavida.aldeapucela.org`. La foto no se envía en esta versión.
+
+## Enlace para abrir la Mini App
+
+El botón del formulario usa `https://t.me/pucelobot?startapp=segundavida`,
+configurado en `js/telegram.js`. Este formato abre directamente la Main Mini
+App; por tanto, si mantienes la Main App desactivada, Telegram abrirá el chat
+del bot y la persona tendrá que pulsar el botón `SegundaVida` del menú.
+
+Si quieres un enlace directo sin convertirla en la app principal, crea un
+`short_name` para la Mini App en BotFather y usa el formato
+`https://t.me/pucelobot/<short_name>?startapp=offer`. Después solo hay que
+actualizar una línea en `js/telegram.js`. El botón de menú que ya has
+configurado sigue siendo válido y es la ruta principal para entrar.

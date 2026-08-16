@@ -34,6 +34,19 @@
     },
     {
       "parameters": {
+        "jsCode": "const validated = $input.first()?.json ?? {};\nif (validated.valid !== true) return [{ json: validated }];\n\nconst webhook = $('Webhook').first()?.json ?? {};\nlet body = webhook.body ?? webhook;\nif (typeof body === 'string') {\n  try { body = JSON.parse(body); } catch { return [{ json: { ok: false, valid: false, error: 'invalid_json' } }]; }\n}\n\nconst consent = body.consent && typeof body.consent === 'object' ? body.consent : {};\nconst consentVersion = typeof consent.version === 'string' ? consent.version.trim() : '';\nif (consent.accepted !== true) return [{ json: { ok: false, valid: false, error: 'consent_required' } }];\nif (consentVersion !== 'sv-publish-2026-08-16-v1') return [{ json: { ok: false, valid: false, error: 'consent_version_invalid' } }];\n\nreturn [{ json: { ...validated, consent_accepted: true, consent_version: consentVersion, consent_at: new Date().toISOString() } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        336,
+        0
+      ],
+      "id": "e1f25d1c-0d79-4e09-9ca4-cf62f90d9d1d",
+      "name": "Validate consent"
+    },
+    {
+      "parameters": {
         "conditions": {
           "boolean": [
             {
@@ -124,6 +137,18 @@
             {
               "fieldName": "interest_count",
               "fieldValue": "={{ $json.interest_count }}"
+            },
+            {
+              "fieldName": "consent_accepted",
+              "fieldValue": "={{ $json.consent_accepted }}"
+            },
+            {
+              "fieldName": "consent_version",
+              "fieldValue": "={{ $json.consent_version }}"
+            },
+            {
+              "fieldName": "consent_at",
+              "fieldValue": "={{ $json.consent_at }}"
             }
           ]
         }
@@ -185,6 +210,17 @@
       ]
     },
     "Validate Telegram and item": {
+      "main": [
+        [
+          {
+            "node": "Validate consent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate consent": {
       "main": [
         [
           {

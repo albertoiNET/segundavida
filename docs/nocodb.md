@@ -30,6 +30,9 @@ público.
 | `telegram_thread_id` | SingleLineText | No | Referencia privada para n8n |
 | `telegram_message_id` | SingleLineText | No | Referencia privada para n8n |
 | `interest_count` | Number | Sí | Contador agregado, valor inicial `0` |
+| `consent_accepted` | Checkbox | Sí | Confirmación de aceptación de publicación y contacto |
+| `consent_version` | SingleLineText | Sí | Versión del texto aceptado por la persona |
+| `consent_at` | DateTime | Sí | Fecha generada por n8n al publicar |
 
 NocoDB ya aporta `CreatedAt` y `UpdatedAt`; no hay que crearlos ni rellenarlos
 desde el CSV. n8n los expondrá como `created_at` y `updated_at` en la respuesta
@@ -54,6 +57,11 @@ notificaciones.
 
 Después de probar el flujo, puedes eliminar los dos registros `sv-demo-001` y
 `sv-demo-002`, o conservarlos mientras permanezcan ocultos.
+
+Antes de activar el webhook de publicación, añade también los tres campos de
+consentimiento anteriores a la tabla existente. No hace falta volver a importar
+el CSV ni rellenarlos en los registros placeholder: los completará n8n en cada
+nueva publicación.
 
 ## Contrato público de n8n
 

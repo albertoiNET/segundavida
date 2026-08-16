@@ -1204,8 +1204,142 @@ h2 {
 .offer-form {
   display: grid;
   gap: 1.05rem;
-  margin-top: 1.65rem;
+  margin-top: 1rem;
   padding-bottom: 1rem;
+}
+
+.telegram-auth-card {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 1.2rem;
+  padding: 1rem;
+  border: 1px solid var(--border-light);
+  border-radius: 1rem;
+  background: var(--bg-card);
+  box-shadow: var(--shadow-soft);
+}
+
+.telegram-auth-card[data-state="error"] {
+  border-color: color-mix(in srgb, var(--color-secondary) 38%, var(--border-light));
+  background: color-mix(in srgb, var(--color-secondary-soft) 55%, var(--bg-card));
+}
+
+.telegram-auth-card[data-state="connected"] {
+  border-color: color-mix(in srgb, var(--color-primary) 42%, var(--border-light));
+}
+
+.telegram-auth-card__topline {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.telegram-auth-card h2 {
+  margin: 0.18rem 0 0;
+  color: var(--text-main);
+  font-size: 1rem;
+}
+
+.telegram-auth-card p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+
+.telegram-auth-card__badge {
+  flex: 0 0 auto;
+  padding: 0.3rem 0.55rem;
+  border-radius: 999px;
+  background: var(--color-secondary-soft);
+  color: var(--color-secondary-dark);
+  font-size: 0.68rem;
+  font-weight: 750;
+}
+
+.telegram-auth-card[data-state="connected"] .telegram-auth-card__badge {
+  background: var(--color-secondary-soft);
+  color: var(--color-primary-dark);
+}
+
+.telegram-open-link {
+  display: inline-flex;
+  width: fit-content;
+  align-items: center;
+  min-height: 2.65rem;
+  padding: 0.6rem 0.85rem;
+  border: 1px solid var(--color-primary);
+  border-radius: 0.75rem;
+  color: var(--color-primary-dark);
+  font-size: 0.8rem;
+  font-weight: 750;
+  text-decoration: none;
+}
+
+.telegram-identity-field {
+  margin-top: 0.1rem;
+}
+
+.telegram-identity-field input[readonly] {
+  background: var(--bg-card-hover);
+  color: var(--text-secondary);
+}
+
+.offer-form[data-auth="locked"] {
+  opacity: 0.68;
+}
+
+.offer-form :disabled {
+  cursor: not-allowed;
+}
+
+.consent-block {
+  display: grid;
+  gap: 0.65rem;
+  padding-top: 0.15rem;
+}
+
+.consent-field {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: start;
+  gap: 0.65rem;
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+  font-weight: 500;
+  line-height: 1.45;
+}
+
+.consent-field input {
+  width: 1.15rem;
+  height: 1.15rem;
+  margin: 0.12rem 0 0;
+  accent-color: var(--color-primary);
+}
+
+.consent-details {
+  margin-left: 1.8rem;
+  color: var(--text-muted);
+  font-size: 0.74rem;
+  line-height: 1.5;
+}
+
+.consent-details summary {
+  width: fit-content;
+  color: var(--color-primary-dark);
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.consent-details__body {
+  display: grid;
+  gap: 0.45rem;
+  margin-top: 0.55rem;
+}
+
+.consent-details__body p {
+  margin: 0;
 }
 
 .form-field {
