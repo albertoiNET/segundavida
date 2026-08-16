@@ -12,7 +12,7 @@ La web principal publica actualmente el `siteId 13`. SegundaVida tendrá un
 `siteId` propio para separar el uso de la Mini App de las métricas generales
 de Aldea Pucela.
 
-## Activación pendiente
+## Sitio configurado
 
 En Matomo hay que crear un nuevo sitio con este dominio:
 
@@ -20,13 +20,11 @@ En Matomo hay que crear un nuevo sitio con este dominio:
 segundavida.aldeapucela.org
 ```
 
-Después, sustituir el valor vacío de `MATOMO_SITE_ID` en
-[`js/analytics.js`](../js/analytics.js) por el nuevo ID numérico. No se debe
-copiar ningún `token_auth`, contraseña ni credencial de administración al
-frontend.
+El sitio propio de SegundaVida usa el `siteId 27`. El valor está configurado en
+[`js/analytics.js`](../js/analytics.js). No se debe copiar ningún `token_auth`,
+contraseña ni credencial de administración al frontend.
 
-Mientras el ID esté vacío, el wrapper no carga `matomo.js`, no realiza
-peticiones y no altera la experiencia de la Mini App.
+El wrapper carga `matomo.js` únicamente en páginas donde el ID está configurado.
 
 ## API interna
 

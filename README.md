@@ -41,6 +41,5 @@ CSV preparado para importar.
 
 ## Analítica
 
-El HITO 6 integra Matomo mediante un wrapper propio, sin exponer credenciales ni
-enviar identificadores personales. Falta crear el Site ID propio de
-SegundaVida y sustituirlo en `js/analytics.js`.
+El HITO 6 integra Matomo mediante un wrapper propio y el `siteId 27` de
+SegundaVida, sin exponer credenciales ni enviar identificadores personales.

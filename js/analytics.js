@@ -1,7 +1,6 @@
 // Wrapper de Matomo para SegundaVida.
-// El Site ID se completa cuando se cree el sitio propio en Matomo.
 const MATOMO_URL = "https://stats.aldeapucela.org/";
-const MATOMO_SITE_ID = "";
+const MATOMO_SITE_ID = "27";
 
 const queue = window._paq = window._paq || [];
 let trackerLoaded = false;
