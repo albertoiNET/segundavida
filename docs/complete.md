@@ -3,6 +3,11 @@
 Importa [`sv_complete_item.workflow.json`](./sv_complete_item.workflow.json) en
 n8n. Crea el endpoint:
 
+Si solo necesitas reemplazar el nodo NocoDB, puedes importar
+[`sv_complete_update_node.json`](./sv_complete_update_node.json). Debe recibir
+un item con `Id` (la clave técnica de NocoDB) y `completed_at`; el nodo envía
+explícitamente `status=completed` y `completed_at`.
+
 ```text
 POST https://tasks.nukeador.com/webhook/segundavida/complete
 ```

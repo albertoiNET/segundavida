@@ -138,18 +138,33 @@
           "cachedResultName": "Segunda Vida",
           "cachedResultUrl": "https://proyectos.aldeapucela.org/#/wfrogvq8/p3amiucxfm0jzoc/mwk20n0679wz5fr"
         },
-        "dataToSend": "defineBelow",
-        "fieldsUi": {
-          "fieldValues": [
+        "fieldsMapper": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "status": "completed",
+            "completed_at": "={{ $json.completed_at }}"
+          },
+          "matchingColumns": [],
+          "schema": [
             {
-              "fieldName": "status",
-              "fieldValue": "completed"
+              "id": "status",
+              "displayName": "status",
+              "type": "string",
+              "display": true,
+              "defaultMatch": false,
+              "readOnly": false
             },
             {
-              "fieldName": "completed_at",
-              "fieldValue": "={{ $json.completed_at }}"
+              "id": "completed_at",
+              "displayName": "completed_at",
+              "type": "dateTime",
+              "display": true,
+              "defaultMatch": false,
+              "readOnly": false
             }
-          ]
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
         }
       },
       "type": "n8n-nodes-base.nocoDb",
