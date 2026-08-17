@@ -1,0 +1,677 @@
+{
+  "name": "SV · Publish item (photos)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "segundavida/publish",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "https://segundavida.aldeapucela.org,http://localhost:8000,http://127.0.0.1:8000"
+        }
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -1000,
+        96
+      ],
+      "id": "f9a062fa-5748-401a-9d3a-4a5f2eeffa14",
+      "name": "Webhook",
+      "webhookId": "27bd70bc-f367-4457-9d32-2e8726a9220f"
+    },
+    {
+      "parameters": {
+        "jsCode": "const crypto = require('crypto');\nconst BOT_TOKEN = 'PEGA_AQUI_EL_TOKEN_REAL_DE_PUCELO_BOT';\nconst CATEGORIES = new Set('Hogar|Muebles|Electrodomésticos|Infantil|Ropa|Libros|Música y cine|Tecnología|Móviles y telefonía|Informática|Deportes y ocio|Bicicletas|Juegos y videojuegos|Manualidades y coleccionismo|Jardín y bricolaje|Otros'.split('|'));\nconst NEIGHBORHOODS = new Set('Arcas Reales|Arturo Eyries|Barrio España|Batallas|Belén - Pilarica|Campo Grande|Caño Argales|Circular|Ciudad de la Comunicación|Coto de Simancas|Covaresa|Cuatro de Marzo|Delicias - Arco de Ladrillo|Delicias - Canterac|El Berrocal|El Peral|El Pinar|Girón|Hospital|Huerta del Rey|La Antigua - Santa Cruz|La Farola|La Overuela|La Rubia|La Victoria|Las Flores|Las Villas - Valparaíso|Pajarillos Altos|Pajarillos Bajos|Parque Alameda - Paula López|Parquesol|Pilarica - Los Santos|Pinar de Jalón|Plaza de Toros|Plaza España|Plaza Mayor|Polígono Argales|Polígono Industrial la Mora|Polígono San Cristóbal|Puente Duero|Puente Jardín|Rondilla|San Isidro|San Pablo - San Nicolás|San Pedro Regalado|Soto de Medinilla|Urbanización El Pichón|Urbanización El Plantío|Urbanización Entrepinos|Urbanización Las Aceñas|Vadillos|Villa del Prado|Aldeamayor de San Martín|Arroyo de la Encomienda|Boecillo|Cabezón de Pisuerga|Casasola de Esgueva|Castronuevo de Esgueva|Cigales|Ciguñuela|Cistérniga|Corcos|Cubillas de Santa Marta|Fuensaldaña|Geria|Laguna de Duero|La Pedraja de Portillo|Mucientes|Olmos de Esgueva|Piña de Esgueva|Quintanilla de Trigueros|Renedo de Esgueva|Robladillo|San Martín de Valvení|Santovenia de Pisuerga|Simancas|Trigueros del Valle|Tudela de Duero|Valdestillas|Valoria la Buena|Viana de Cega|Villabáñez|Villanubla|Villanueva de Duero|Villanueva de los Infantes|Villarmentero de Esgueva|Villavaquerín|Wamba|Zaratán|Aguilarejo|Granja Muedra|Herrera de Duero|La Flecha|San Andrés'.split('|'));\nconst incoming = $input.first() ?? {};\nconst input = incoming.json ?? {};\nconst inputBinary = incoming.binary ?? {};\nfunction output(json) { return [{ json, binary: inputBinary }]; }\nfunction invalid(error) { return output({ ok: false, valid: false, error }); }\nfunction parseQueryString(value) {\n  const fields = {};\n  try {\n    for (const part of String(value).split('&')) {\n      const separator = part.indexOf('=');\n      if (separator < 0) continue;\n      const key = decodeURIComponent(part.slice(0, separator).replace(/\\+/g, ' '));\n      const fieldValue = decodeURIComponent(part.slice(separator + 1).replace(/\\+/g, ' '));\n      fields[key] = fieldValue;\n    }\n  } catch {\n    return null;\n  }\n  return {\n    get(key) { return fields[key] ?? null; },\n    entries() { return Object.entries(fields); },\n  };\n}\nif (!BOT_TOKEN || BOT_TOKEN.startsWith('PEGA_AQUI')) throw new Error('Falta pegar el token privado de Pucelo Bot en este nodo.');\nlet body = input.body ?? input;\nif (typeof body === 'string') { try { body = JSON.parse(body); } catch { return invalid('invalid_json'); } }\nconst multipartPayload = body?.payload ?? input.payload;\nif (typeof multipartPayload === 'string') { try { body = JSON.parse(multipartPayload); } catch { return invalid('invalid_payload'); } } else if (multipartPayload && typeof multipartPayload === 'object') { body = multipartPayload; }\nconst initData = typeof body.initData === 'string' ? body.initData.trim() : '';\nif (!initData) return invalid('telegram_init_data_missing');\nconst params = parseQueryString(initData);\nif (!params) return invalid('telegram_init_data_malformed');\nconst receivedHash = params.get('hash') ?? '';\nconst authDate = Number(params.get('auth_date'));\nif (!/^[a-f0-9]{64}$/i.test(receivedHash) || !Number.isInteger(authDate)) return invalid('telegram_init_data_invalid');\nconst now = Math.floor(Date.now() / 1000);\nif (authDate > now + 60 || now - authDate > 600) return invalid('telegram_init_data_expired');\nconst dataCheckString = [...params.entries()].filter(([key]) => key !== 'hash').sort(([left], [right]) => left.localeCompare(right)).map(([key, value]) => key + '=' + value).join('\\n');\nconst secretKey = crypto.createHmac('sha256', 'WebAppData').update(BOT_TOKEN).digest();\nconst expectedHash = crypto.createHmac('sha256', secretKey).update(dataCheckString).digest('hex');\nconst received = Buffer.from(receivedHash, 'hex');\nconst expected = Buffer.from(expectedHash, 'hex');\nif (received.length !== expected.length || !crypto.timingSafeEqual(received, expected)) return invalid('telegram_identity_invalid');\nlet user;\ntry { user = JSON.parse(params.get('user') ?? '{}'); } catch { return invalid('telegram_user_invalid'); }\nif (!user || !Number.isSafeInteger(user.id)) return invalid('telegram_user_invalid');\nconst consent = body.consent && typeof body.consent === 'object' ? body.consent : {};\nconst consentVersion = typeof consent.version === 'string' ? consent.version.trim() : '';\nif (consent.accepted !== true) return invalid('consent_required');\nif (consentVersion !== 'sv-publish-2026-08-16-v1') return invalid('consent_version_invalid');\nconst photoEntries = Object.entries(inputBinary).filter(([name, file]) => /^photo_[01]$/.test(name) && file?.data).sort(([left], [right]) => left.localeCompare(right));\nif (photoEntries.length > 2) return invalid('too_many_photos');\nfor (const [, file] of photoEntries) { const mimeType = file.mimeType ?? file.mimetype ?? ''; const size = Number(file.fileSize ?? file.size ?? 0); if (!['image/jpeg', 'image/png', 'image/webp'].includes(mimeType)) return invalid('photo_type_invalid'); if (!Number.isFinite(size) || size <= 0 || size > 5 * 1024 * 1024) return invalid('photo_too_large'); }\nconst item = body.item && typeof body.item === 'object' ? body.item : {};\nconst title = typeof item.title === 'string' ? item.title.trim() : '';\nconst category = typeof item.category === 'string' ? item.category.trim() : '';\nconst zone = typeof item.zone === 'string' ? item.zone.trim() : '';\nconst description = typeof item.description === 'string' ? item.description.trim() : '';\nconst durationDays = Number(item.duration_days ?? 14);\nif (title.length < 3 || title.length > 80) return invalid('title_invalid');\nif (!CATEGORIES.has(category)) return invalid('category_invalid');\nif (!NEIGHBORHOODS.has(zone)) return invalid('zone_invalid');\nif (description.length > 600) return invalid('description_too_long');\nif (![7, 14, 30].includes(durationDays)) return invalid('duration_invalid');\nconst displayName = [user.first_name, user.last_name].filter((value) => typeof value === 'string' && value.trim()).join(' ').trim().slice(0, 120) || 'Vecindad';\nconst ownerTelegramId = String(user.id);\nconst publicItemId = crypto.randomBytes(6).toString('base64url');\nconst expiresAt = new Date(Date.now() + durationDays * 24 * 60 * 60 * 1000).toISOString();\nreturn output({ ok: true, valid: true, public_id: publicItemId, item_id: publicItemId, title, description, category, zone, status: 'available', expires_at: expiresAt, owner_telegram_id: ownerTelegramId, owner_display_name: displayName, owner_username: typeof user.username === 'string' ? user.username : '', interest_count: 0, consent_accepted: true, consent_version: consentVersion, consent_at: new Date().toISOString(), photo_count: photoEntries.length, Fotos: [], image_url: '' });"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -760,
+        96
+      ],
+      "id": "ef7ae183-5d16-4f25-aacf-fd04f5fb76f2",
+      "name": "Validate Telegram and item"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "9eb65f2b-132e-442a-801c-ccc5c617aa52",
+              "leftValue": "={{ $json.valid }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -520,
+        96
+      ],
+      "id": "23e21f44-8e84-41b4-bf3c-5f240f67c895",
+      "name": "Valid request?"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "a502e9f5-e105-41a5-9eb4-7b6c2bfdf733",
+              "leftValue": "={{ $('Validate Telegram and item').first().json.photo_count > 0 }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -296,
+        0
+      ],
+      "id": "28bf51f3-c755-4c02-bb90-a5bce9e2c0a1",
+      "name": "Has photos?"
+    },
+    {
+      "parameters": {
+        "jsCode": "const source = $('Validate Telegram and item').first() ?? {};\nconst created = $('Create NocoDB row').first() ?? {};\nconst binary = source.binary ?? {};\nconst createdJson = created.json ?? {};\nconst rowId = createdJson.id ?? createdJson.Id ?? createdJson.fields?.id ?? createdJson.fields?.Id ?? '';\nif (!rowId) throw new Error('NocoDB no devolvió el ID de la fila creada.');\nconst names = Object.keys(binary).filter((name) => /^photo_[01]$/.test(name) && binary[name]?.data).sort();\nreturn names.map((name, index) => ({ json: { ...createdJson, row_id: rowId, photo_index: index, photo_binary_name: name }, binary: { data: binary[name] } }));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -64,
+        144
+      ],
+      "id": "4ee8f69a-7f2a-4e78-a4ef-54f9f9e947db",
+      "name": "Prepare photo uploads"
+    },
+    {
+      "parameters": {
+        "authentication": "nocoDbApiToken",
+        "operation": "update",
+        "id": "={{ $json.row_id }}",
+        "workspaceId": {
+          "__rl": true,
+          "value": "wfrogvq8",
+          "mode": "list",
+          "cachedResultName": "Default Workspace",
+          "cachedResultUrl": "https://proyectos.aldeapucela.org/#/wfrogvq8"
+        },
+        "projectId": {
+          "__rl": true,
+          "value": "p3amiucxfm0jzoc",
+          "mode": "list",
+          "cachedResultName": "Aldea Pucela",
+          "cachedResultUrl": "https://proyectos.aldeapucela.org/#/wfrogvq8/p3amiucxfm0jzoc"
+        },
+        "table": {
+          "__rl": true,
+          "value": "mwk20n0679wz5fr",
+          "mode": "list",
+          "cachedResultName": "Segunda Vida",
+          "cachedResultUrl": "https://proyectos.aldeapucela.org/#/wfrogvq8/p3amiucxfm0jzoc/mwk20n0679wz5fr"
+        },
+        "fieldsMapper": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "status": "available"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "status",
+              "displayName": "status",
+              "type": "string",
+              "display": true,
+              "readOnly": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      },
+      "type": "n8n-nodes-base.nocoDb",
+      "typeVersion": 4,
+      "position": [
+        608,
+        144
+      ],
+      "id": "b00b3e1b-9c68-43c8-9d14-0d3a1a4c82a6",
+      "name": "Activate NocoDB row",
+      "credentials": {
+        "nocoDbApiToken": {
+          "id": "t0BGosFerj8egJ4y",
+          "name": "NocoDB Token account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "nocoDbApiToken",
+        "operation": "upload",
+        "id": "={{ $json.row_id }}",
+        "uploadMode": "base64",
+        "uploadFieldName": {
+          "__rl": true,
+          "value": "photos",
+          "mode": "list",
+          "cachedResultName": "photos"
+        },
+        "filename": "={{ $binary.data.fileName }}",
+        "contentType": "={{ $binary.data.mimeType }}",
+        "base64value": "={{ $binary.data.data }}",
+        "workspaceId": {
+          "__rl": true,
+          "value": "wfrogvq8",
+          "mode": "list",
+          "cachedResultName": "Default Workspace",
+          "cachedResultUrl": "https://proyectos.aldeapucela.org/#/wfrogvq8"
+        },
+        "projectId": {
+          "__rl": true,
+          "value": "p3amiucxfm0jzoc",
+          "mode": "list",
+          "cachedResultName": "Aldea Pucela",
+          "cachedResultUrl": "https://proyectos.aldeapucela.org/#/wfrogvq8/p3amiucxfm0jzoc"
+        },
+        "table": {
+          "__rl": true,
+          "value": "mwk20n0679wz5fr",
+          "mode": "list",
+          "cachedResultName": "Segunda Vida",
+          "cachedResultUrl": "https://proyectos.aldeapucela.org/#/wfrogvq8/p3amiucxfm0jzoc/mwk20n0679wz5fr"
+        }
+      },
+      "type": "n8n-nodes-base.nocoDb",
+      "typeVersion": 4,
+      "position": [
+        160,
+        144
+      ],
+      "id": "a88608e2-d2d7-42a5-bf2e-7df900e9a9b3",
+      "name": "Upload photo to NocoDB",
+      "credentials": {
+        "nocoDbApiToken": {
+          "id": "t0BGosFerj8egJ4y",
+          "name": "NocoDB Token account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const created = $('Create NocoDB row').first()?.json ?? {};\nconst rowId = created.id ?? created.Id ?? created.fields?.id ?? created.fields?.Id ?? '';\nif (!rowId) throw new Error('NocoDB no devolvió el ID de la fila creada.');\nreturn [{ json: { ...created, row_id: rowId, status: 'available' } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        384,
+        144
+      ],
+      "id": "0c73c88a-78d1-4f6c-a7f3-0e9d4c667e6d",
+      "name": "Prepare row activation"
+    },
+    {
+      "parameters": {
+        "authentication": "nocoDbApiToken",
+        "operation": "create",
+        "workspaceId": {
+          "__rl": true,
+          "value": "wfrogvq8",
+          "mode": "list",
+          "cachedResultName": "Default Workspace",
+          "cachedResultUrl": "https://proyectos.aldeapucela.org/#/wfrogvq8"
+        },
+        "projectId": {
+          "__rl": true,
+          "value": "p3amiucxfm0jzoc",
+          "mode": "list",
+          "cachedResultName": "Aldea Pucela",
+          "cachedResultUrl": "https://proyectos.aldeapucela.org/#/wfrogvq8/p3amiucxfm0jzoc"
+        },
+        "table": {
+          "__rl": true,
+          "value": "mwk20n0679wz5fr",
+          "mode": "list",
+          "cachedResultName": "Segunda Vida",
+          "cachedResultUrl": "https://proyectos.aldeapucela.org/#/wfrogvq8/p3amiucxfm0jzoc/mwk20n0679wz5fr"
+        },
+        "fieldsMapper": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "public_id": "={{ $json.public_id }}",
+            "item-id": "={{ $json.item_id }}",
+            "title": "={{ $json.title }}",
+            "description": "={{ $json.description }}",
+            "category": "={{ $json.category }}",
+            "zone": "={{ $json.zone }}",
+            "owner_telegram_id": "={{ $json.owner_telegram_id }}",
+            "owner_display_name": "={{ $json.owner_display_name }}",
+            "owner_username": "={{ $json.owner_username }}",
+            "status": "={{ $json.photo_count > 0 ? 'hidden' : 'available' }}",
+            "expires_at": "={{ $json.expires_at }}",
+            "interest_count": "={{ $json.interest_count }}",
+            "consent_accepted": "={{ $json.consent_accepted }}",
+            "consent_version": "={{ $json.consent_version }}",
+            "consent_at": "={{ $json.consent_at }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "public_id",
+              "displayName": "public_id",
+              "type": "string",
+              "display": true,
+              "readOnly": false
+            },
+            {
+              "id": "item-id",
+              "displayName": "item-id",
+              "type": "string",
+              "display": true,
+              "readOnly": false
+            },
+            {
+              "id": "title",
+              "displayName": "title",
+              "type": "string",
+              "display": true,
+              "readOnly": false
+            },
+            {
+              "id": "description",
+              "displayName": "description",
+              "type": "string",
+              "display": true,
+              "readOnly": false
+            },
+            {
+              "id": "category",
+              "displayName": "category",
+              "type": "string",
+              "display": true,
+              "readOnly": false
+            },
+            {
+              "id": "zone",
+              "displayName": "zone",
+              "type": "string",
+              "display": true,
+              "readOnly": false
+            },
+            {
+              "id": "owner_telegram_id",
+              "displayName": "owner_telegram_id",
+              "type": "string",
+              "display": true,
+              "readOnly": false
+            },
+            {
+              "id": "owner_display_name",
+              "displayName": "owner_display_name",
+              "type": "string",
+              "display": true,
+              "readOnly": false
+            },
+            {
+              "id": "owner_username",
+              "displayName": "owner_username",
+              "type": "string",
+              "display": true,
+              "readOnly": false
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "type": "string",
+              "display": true,
+              "readOnly": false
+            },
+            {
+              "id": "expires_at",
+              "displayName": "expires_at",
+              "type": "dateTime",
+              "display": true,
+              "readOnly": false
+            },
+            {
+              "id": "interest_count",
+              "displayName": "interest_count",
+              "type": "number",
+              "display": true,
+              "readOnly": false
+            },
+            {
+              "id": "consent_accepted",
+              "displayName": "consent_accepted",
+              "type": "boolean",
+              "display": true,
+              "readOnly": false
+            },
+            {
+              "id": "consent_version",
+              "displayName": "consent_version",
+              "type": "string",
+              "display": true,
+              "readOnly": false
+            },
+            {
+              "id": "consent_at",
+              "displayName": "consent_at",
+              "type": "dateTime",
+              "display": true,
+              "readOnly": false
+            }
+          ],
+          "attemptToConvertTypes": true,
+          "convertFieldsToString": false
+        }
+      },
+      "type": "n8n-nodes-base.nocoDb",
+      "typeVersion": 4,
+      "position": [
+        608,
+        0
+      ],
+      "id": "89caae55-2b9f-430d-94f1-703dbec95eeb",
+      "name": "Create NocoDB row",
+      "credentials": {
+        "nocoDbApiToken": {
+          "id": "t0BGosFerj8egJ4y",
+          "name": "NocoDB Token account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const current = $input.first()?.json ?? {};\nconst created = $('Create NocoDB row').first()?.json ?? {};\nconst fields = current.fields ?? current;\nconst createdFields = created.fields ?? created;\nconst publicId = fields.public_id ?? fields['item-id'] ?? createdFields.public_id ?? createdFields['item-id'] ?? '';\nconst rawAttachments = fields.photos ?? createdFields.photos ?? fields.Fotos ?? createdFields.Fotos ?? [];\nconst attachments = Array.isArray(rawAttachments) ? rawAttachments : [];\nconst imageUrls = attachments.map((attachment) => attachment?.url ?? attachment?.signedUrl ?? attachment?.signed_url ?? '').filter(Boolean);\nreturn [{ json: { ok: true, public_id: publicId, item_id: publicId, title: fields.title ?? createdFields.title ?? '', status: fields.status ?? createdFields.status ?? 'available', image_url: fields.image_url ?? imageUrls[0] ?? null, image_urls: imageUrls, message: 'Publicado correctamente' } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        832,
+        0
+      ],
+      "id": "720801cf-9cdb-42a8-a606-f2841570c953",
+      "name": "Build success response"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        1056,
+        96
+      ],
+      "id": "a392932b-f582-4016-9078-c4d56a9a8d13",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "4b89b8fa-1c1a-43fc-8601-a4cdce2bcfc5",
+              "leftValue": "={{ $json.ok }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1280,
+        96
+      ],
+      "id": "cfb86be7-2dc0-4a7a-8e32-516f23e9d8e2",
+      "name": "Publication succeeded?"
+    },
+    {
+      "parameters": {
+        "resource": "workflow",
+        "owner": {
+          "__rl": true,
+          "value": "aldeapucela",
+          "mode": "list",
+          "cachedResultName": "aldeapucela",
+          "cachedResultUrl": "https://github.com/aldeapucela"
+        },
+        "repository": {
+          "__rl": true,
+          "value": "segundavida",
+          "mode": "list",
+          "cachedResultName": "segundavida",
+          "cachedResultUrl": "https://github.com/aldeapucela/segundavida"
+        },
+        "workflowId": {
+          "__rl": true,
+          "value": 336174137,
+          "mode": "list",
+          "cachedResultName": "Generate SegundaVida static item pages"
+        },
+        "ref": {
+          "__rl": true,
+          "value": "main",
+          "mode": "list",
+          "cachedResultName": "main"
+        }
+      },
+      "type": "n8n-nodes-base.github",
+      "typeVersion": 1.1,
+        "position": [
+          1504,
+          96
+        ],
+      "id": "f8d4d95e-cff4-4940-b22e-d6c6f97aaa1b",
+      "name": "Dispatch a workflow event",
+      "webhookId": "399cb089-b510-416c-8682-b7d850fa6877",
+      "credentials": {
+        "githubApi": {
+          "id": "FNC6Y91BVAeWInuJ",
+          "name": "GitHub account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Validate Telegram and item",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Telegram and item": {
+      "main": [
+        [
+          {
+            "node": "Valid request?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Valid request?": {
+      "main": [
+        [
+          {
+            "node": "Create NocoDB row",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has photos?": {
+      "main": [
+        [
+          {
+            "node": "Prepare photo uploads",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Build success response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare photo uploads": {
+      "main": [
+        [
+          {
+            "node": "Upload photo to NocoDB",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload photo to NocoDB": {
+      "main": [
+        [
+          {
+            "node": "Prepare row activation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare row activation": {
+      "main": [
+        [
+          {
+            "node": "Activate NocoDB row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create NocoDB row": {
+      "main": [
+        [
+          {
+            "node": "Has photos?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Activate NocoDB row": {
+      "main": [
+        [
+          {
+            "node": "Build success response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build success response": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Respond to Webhook": {
+      "main": [
+        [
+          {
+            "node": "Publication succeeded?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Publication succeeded?": {
+      "main": [
+        [
+          {
+            "node": "Dispatch a workflow event",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "be957af11790fcbfae97d348b38615664a9a30c3b433d3d8d49fa37b5ad315fa"
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "active": false
+}

@@ -1,0 +1,154 @@
+# Publicación con fotos
+
+El workflow completo importable está en
+[`sv_publish_item_photos.workflow.json`](./sv_publish_item_photos.workflow.json).
+
+La web envía ahora la publicación como `multipart/form-data`. El campo
+`payload` contiene el JSON de la publicación y las fotos llegan como binarios
+independientes:
+
+```text
+payload  = { initData, item, consent }
+photo_0  = primera foto optimizada en JPEG
+photo_1  = segunda foto optimizada en JPEG (opcional)
+```
+
+El navegador conserva las selecciones sucesivas hasta dos fotos, permite quitar
+cualquiera de ellas y las redimensiona a un máximo de 1600 px por lado antes de
+enviarlas.
+
+## Cambios en el workflow de n8n
+
+El Webhook puede conservar el mismo método, ruta y CORS. Hay que cambiar el
+nodo `Validate Telegram and item` para que:
+
+1. Lea `body.payload` cuando la petición sea multipart.
+2. Parsee ese valor como JSON.
+3. Valide también `consent`.
+4. Valide que existan como máximo dos binarios `photo_0` y `photo_1`, con MIME
+   `image/jpeg`, `image/png` o `image/webp` y tamaño máximo de 5 MB.
+5. Devuelva el binario original junto al JSON validado.
+
+Al principio del nodo, sustituye la función `result` y la lectura actual de
+`input/body` por este bloque. Las constantes de categorías y barrios se pueden
+mantener tal como están:
+
+```javascript
+const incoming = $input.first() ?? {};
+const input = incoming.json ?? {};
+const inputBinary = incoming.binary ?? {};
+
+function result(json) {
+  return [{ json, binary: inputBinary }];
+}
+
+function invalid(error) {
+  return result({ ok: false, valid: false, error });
+}
+
+let body = input.body ?? input;
+if (typeof body === 'string') {
+  try {
+    body = JSON.parse(body);
+  } catch {
+    return invalid('invalid_json');
+  }
+}
+
+const multipartPayload = body?.payload ?? input.payload;
+if (typeof multipartPayload === 'string') {
+  try {
+    body = JSON.parse(multipartPayload);
+  } catch {
+    return invalid('invalid_payload');
+  }
+} else if (multipartPayload && typeof multipartPayload === 'object') {
+  body = multipartPayload;
+}
+
+const consent = body.consent && typeof body.consent === 'object' ? body.consent : {};
+const consentVersion = typeof consent.version === 'string' ? consent.version.trim() : '';
+if (consent.accepted !== true) return invalid('consent_required');
+if (consentVersion !== 'sv-publish-2026-08-16-v1') {
+  return invalid('consent_version_invalid');
+}
+
+const photoEntries = Object.entries(inputBinary)
+  .filter(([name, file]) => /^photo_[01]$/.test(name) && file?.data)
+  .sort(([left], [right]) => left.localeCompare(right));
+
+if (photoEntries.length > 2) return invalid('too_many_photos');
+
+for (const [, file] of photoEntries) {
+  const mimeType = file.mimeType ?? file.mimetype ?? '';
+  const size = Number(file.fileSize ?? file.size ?? 0);
+  if (!['image/jpeg', 'image/png', 'image/webp'].includes(mimeType)) {
+    return invalid('photo_type_invalid');
+  }
+  if (!Number.isFinite(size) || size <= 0 || size > 5 * 1024 * 1024) {
+    return invalid('photo_too_large');
+  }
+}
+```
+
+Después, en el mismo nodo, cambia la lectura del objeto `item` para que use
+el `body` ya parseado. En el objeto final añade:
+
+```javascript
+public_id: itemId,
+consent_accepted: true,
+consent_version: consentVersion,
+consent_at: new Date().toISOString(),
+photo_count: photoEntries.length,
+```
+
+El `itemId` debe usarse para `public_id` y `item-id`:
+
+```javascript
+const itemId = crypto.randomBytes(6).toString('base64url');
+```
+
+## Subir las fotos con el nodo nativo de NocoDB
+
+El workflow importable ya contiene el flujo completo:
+
+1. `Create NocoDB row` crea primero la fila. Si hay fotos, la crea con estado
+   `hidden` para que no se publique antes de tiempo.
+2. `Prepare photo uploads` conserva cada binario como una entrada separada.
+3. `Upload photo to NocoDB` usa `NocoDB → Row → Upload`, en modo `Base64`, y
+   apunta al campo Attachment `photos`.
+4. `Activate NocoDB row` cambia el estado a `available` después de subir todas
+   las fotos.
+
+Todos los nodos NocoDB usan directamente la credencial existente
+`NocoDB Token account`. No hay `NOCODB_API_TOKEN`, `HTTP Request` ni token
+adicional que configurar.
+
+Al importar el workflow, comprueba únicamente que el nodo `Upload photo to
+NocoDB` mantiene el campo `photos` seleccionado. Si tu instancia de n8n muestra
+el selector vacío, abre ese nodo, selecciona la base `Aldea Pucela`, la tabla
+`Segunda Vida` y el campo Attachment `photos`, y guarda el workflow. No cambies
+el modo `Base64` ni los campos `Filename`, `Content Type` y `Base64 Value`.
+
+El campo `photos` puede contener los dos archivos; no hay que crear `foto_1` y
+`foto_2` como columnas separadas. La API de NocoDB no debe recibir el array de
+adjuntos en `Create`: la operación nativa `Row Upload` lo añade a la celda de
+la fila ya creada.
+
+## Proyección pública
+
+El endpoint `/data`, el endpoint individual y `mine` deberían convertir el
+campo `Fotos` en:
+
+```json
+{
+  "image_url": "url-de-la-primera-foto",
+  "image_urls": [
+    "url-de-la-primera-foto",
+    "url-de-la-segunda-foto"
+  ]
+}
+```
+
+La web sigue usando `image_url` como portada y ya acepta `image_urls` para una
+galería futura.

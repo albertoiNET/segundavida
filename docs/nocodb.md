@@ -25,7 +25,8 @@ deben entrar desde el workflow de publicación o desde una importación validada
 | `status` | SingleSelect | Sí | `available`, `completed`, `expired`, `hidden` |
 | `expires_at` | DateTime | Sí | Fin de disponibilidad |
 | `completed_at` | DateTime | No | Cuándo se finalizó |
-| `image_url` | URL | No | Primera imagen pública |
+| `Fotos` | Attachment | No | Hasta dos fotos públicas; la primera es la portada |
+| `image_url` | URL | No | Compatibilidad: URL de la primera foto |
 | `telegram_chat_id` | SingleLineText | No | Referencia privada para n8n |
 | `telegram_thread_id` | SingleLineText | No | Referencia privada para n8n |
 | `telegram_message_id` | SingleLineText | No | Referencia privada para n8n |

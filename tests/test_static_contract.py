@@ -85,6 +85,10 @@ class StaticContractTests(unittest.TestCase):
         self.assertIn('live: false, error: "api_unavailable"', app_source)
         self.assertIn("/i/${encodeURIComponent(item.id)}/", app_source)
         self.assertNotIn('url.hash = `item=', app_source)
+        self.assertIn('body.append("payload"', api_source)
+        self.assertIn('body.append(`photo_${index}`', api_source)
+        self.assertIn("PHOTO_MAX_EDGE = 1600", app_source)
+        self.assertIn("state.offerFiles = [...state.offerFiles, ...filesToAdd]", app_source)
 
     def test_publish_workflow_writes_opaque_public_id_and_keeps_legacy_alias(self):
         workflow = json.loads((ROOT / "docs" / "sv_publish_item.workflow.json").read_text(encoding="utf-8"))
@@ -94,6 +98,24 @@ class StaticContractTests(unittest.TestCase):
         self.assertIn("public_id: publicItemId", code)
         self.assertIn('"fieldName": "public_id"', json.dumps(workflow))
         self.assertIn("crypto.randomBytes(6)", code)
+
+    def test_photo_publish_workflow_is_importable_and_has_binary_branch(self):
+        workflow_path = ROOT / "docs" / "sv_publish_item_photos.workflow.json"
+        workflow = json.loads(workflow_path.read_text(encoding="utf-8"))
+        node_names = {node["name"] for node in workflow["nodes"]}
+        self.assertIn("Webhook", node_names)
+        self.assertIn("Has photos?", node_names)
+        self.assertIn("Upload photo to NocoDB", node_names)
+        workflow_text = json.dumps(workflow)
+        self.assertIn("photo_[01]", workflow_text)
+        self.assertNotIn("NOCODB_API_TOKEN", workflow_text)
+        self.assertNotIn('"type": "n8n-nodes-base.httpRequest"', workflow_text)
+        upload = next(node for node in workflow["nodes"] if node["name"] == "Upload photo to NocoDB")
+        self.assertEqual(upload["type"], "n8n-nodes-base.nocoDb")
+        self.assertEqual(upload["parameters"]["operation"], "upload")
+        self.assertEqual(upload["parameters"]["uploadMode"], "base64")
+        self.assertEqual(upload["parameters"]["uploadFieldName"]["value"], "photos")
+        self.assertEqual(upload["credentials"]["nocoDbApiToken"]["name"], "NocoDB Token account")
 
 
 if __name__ == "__main__":

@@ -5,8 +5,25 @@ const N8N_PUBLISH_URL = "https://tasks.nukeador.com/webhook/segundavida/publish"
 const N8N_COMPLETE_URL = "https://tasks.nukeador.com/webhook/segundavida/complete";
 const N8N_MINE_URL = "https://tasks.nukeador.com/webhook/segundavida/mine";
 
+function extractImageUrls(value) {
+  if (!Array.isArray(value)) return [];
+
+  return value
+    .map((attachment) => (
+      typeof attachment === "string"
+        ? attachment
+        : attachment?.url ?? attachment?.signedUrl ?? attachment?.signed_url ?? ""
+    ))
+    .filter(Boolean);
+}
+
 function normalizeItem(record, { privateFields = false } = {}) {
   const fields = record?.fields ?? record ?? {};
+  const imageUrls = [...new Set([
+    ...extractImageUrls(fields.image_urls),
+    ...extractImageUrls(fields.Fotos ?? fields.fotos ?? fields.photos),
+  ])];
+  const imageUrl = fields.image_url ?? imageUrls[0] ?? null;
 
   return {
     id: fields.public_id ?? fields["item-id"] ?? record?.public_id ?? record?.id ?? "",
@@ -21,7 +38,8 @@ function normalizeItem(record, { privateFields = false } = {}) {
     createdAt: fields.created_at ?? fields.CreatedAt ?? null,
     completedAt: fields.completed_at ?? null,
     expiresAt: fields.expires_at ?? null,
-    imageUrl: fields.image_url ?? null,
+    imageUrl,
+    imageUrls,
     interestCount: Number(fields.interest_count ?? 0),
   };
 }
@@ -119,18 +137,23 @@ async function getItem(itemId) {
   return normalizeItem(payload.item);
 }
 
-async function publishItem(payload) {
+async function publishItem(payload, files = []) {
   if (!N8N_PUBLISH_URL) {
     throw new Error("El endpoint de publicación todavía no está configurado.");
   }
+
+  const body = new FormData();
+  body.append("payload", JSON.stringify(payload));
+  files.forEach((file, index) => {
+    body.append(`photo_${index}`, file, file.name);
+  });
 
   const response = await fetch(N8N_PUBLISH_URL, {
     method: "POST",
     headers: {
       Accept: "application/json",
-      "Content-Type": "application/json",
     },
-    body: JSON.stringify(payload),
+    body,
   });
 
   let result = null;

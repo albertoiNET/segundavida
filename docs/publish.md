@@ -1,7 +1,9 @@
 # Publicar un objeto desde Telegram
 
-La primera versión del formulario no sube fotos. Acepta título, categoría,
-barrio, descripción opcional y duración; la foto queda para una segunda fase.
+El formulario acepta hasta dos fotos. Las selecciones sucesivas se acumulan,
+se pueden quitar individualmente y se redimensionan en el navegador antes de
+enviarse. El contrato completo de la subida y la modificación del workflow de
+n8n está en [`publish-photos.md`](./publish-photos.md).
 
 ## Workflow de n8n
 
@@ -28,7 +30,8 @@ El endpoint de producción será:
 POST https://tasks.nukeador.com/webhook/segundavida/publish
 ```
 
-El frontend envía JSON con esta forma:
+Sin fotos, el contenido lógico que envía el frontend tiene esta forma dentro del
+campo multipart `payload`:
 
 ```json
 {

@@ -10,6 +10,10 @@ const auth = window.SecondaVidaAuth;
 const api = window.SecondaVidaApi;
 const CONSENT_VERSION = "sv-publish-2026-08-16-v1";
 const MAX_OFFER_PHOTOS = 2;
+const MAX_PHOTO_BYTES = 5 * 1024 * 1024;
+const PHOTO_MAX_EDGE = 1600;
+const PHOTO_JPEG_QUALITY = 0.82;
+const ALLOWED_PHOTO_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 const OWN_ITEMS_STORAGE_KEY = "segundavida:my-items:v1";
 const THEME_STORAGE_KEY = "segundavida:theme:v1";
 const state = {
@@ -18,6 +22,7 @@ const state = {
   query: "",
   selectedItem: null,
   offerFiles: [],
+  photoPreviewUrls: [],
   telegramUser: null,
   myItems: [],
   postsFilter: "active",
@@ -961,38 +966,131 @@ function setFormState(message, stateName = "") {
   offerFormState.dataset.state = stateName;
 }
 
+function revokePhotoPreviewUrls() {
+  state.photoPreviewUrls.forEach((url) => URL.revokeObjectURL(url));
+  state.photoPreviewUrls = [];
+}
+
 function renderPhotoPreview(files) {
   offerPreview.replaceChildren();
+  revokePhotoPreviewUrls();
 
-  files.forEach((file) => {
+  files.forEach((file, index) => {
     const preview = document.createElement("div");
     preview.className = "photo-preview__item";
     const image = document.createElement("img");
-    image.src = URL.createObjectURL(file);
+    const previewUrl = URL.createObjectURL(file);
+    state.photoPreviewUrls.push(previewUrl);
+    image.src = previewUrl;
     image.alt = file.name;
     preview.append(image);
+
+    const removeButton = document.createElement("button");
+    removeButton.className = "photo-preview__remove";
+    removeButton.type = "button";
+    removeButton.setAttribute("aria-label", `Quitar foto ${index + 1}`);
+    removeButton.title = "Quitar foto";
+    removeButton.innerHTML = '<i class="fa-solid fa-xmark fa-icon" data-fallback="×" aria-hidden="true"></i>';
+    removeButton.addEventListener("click", () => removePhoto(index));
+    preview.append(removeButton);
     offerPreview.append(preview);
   });
 }
 
+function photoKey(file) {
+  return [file.name, file.size, file.lastModified, file.type].join(":");
+}
+
+function removePhoto(index) {
+  state.offerFiles.splice(index, 1);
+  renderPhotoPreview(state.offerFiles);
+  setFormState("");
+}
+
+function resetOfferPhotos() {
+  state.offerFiles = [];
+  offerImages.value = "";
+  offerPreview.replaceChildren();
+  revokePhotoPreviewUrls();
+}
+
 function handlePhotoSelection(event) {
   const files = [...event.target.files];
-  const validFiles = files.filter((file) => file.type.startsWith("image/") && file.size <= 5 * 1024 * 1024);
+  // Permite volver a seleccionar el mismo archivo en una selección posterior.
+  event.target.value = "";
 
-  state.offerFiles = validFiles.slice(0, MAX_OFFER_PHOTOS);
+  const invalidFiles = files.filter((file) => (
+    !ALLOWED_PHOTO_TYPES.has(file.type) || file.size > MAX_PHOTO_BYTES
+  ));
+  const existingKeys = new Set(state.offerFiles.map(photoKey));
+  const newFiles = files.filter((file) => (
+    ALLOWED_PHOTO_TYPES.has(file.type) &&
+    file.size <= MAX_PHOTO_BYTES &&
+    !existingKeys.has(photoKey(file))
+  ));
+  const availableSlots = Math.max(0, MAX_OFFER_PHOTOS - state.offerFiles.length);
+  const filesToAdd = newFiles.slice(0, availableSlots);
+
+  state.offerFiles = [...state.offerFiles, ...filesToAdd];
   renderPhotoPreview(state.offerFiles);
 
-  if (files.length > MAX_OFFER_PHOTOS) {
+  if (filesToAdd.length < newFiles.length) {
     setFormState(`Puedes añadir hasta ${MAX_OFFER_PHOTOS} fotos.`, "error");
     return;
   }
 
-  if (validFiles.length !== files.length) {
+  if (invalidFiles.length > 0) {
     setFormState("Cada foto debe ser JPG, PNG o WebP y pesar menos de 5 MB.", "error");
     return;
   }
 
   setFormState("");
+}
+
+function loadPhoto(file) {
+  return new Promise((resolve, reject) => {
+    const objectUrl = URL.createObjectURL(file);
+    const image = new Image();
+    image.onload = () => {
+      URL.revokeObjectURL(objectUrl);
+      resolve(image);
+    };
+    image.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      reject(new Error(`No se ha podido leer ${file.name}.`));
+    };
+    image.src = objectUrl;
+  });
+}
+
+async function optimizePhoto(file) {
+  const image = await loadPhoto(file);
+  const sourceWidth = image.naturalWidth || image.width;
+  const sourceHeight = image.naturalHeight || image.height;
+  const scale = Math.min(1, PHOTO_MAX_EDGE / Math.max(sourceWidth, sourceHeight));
+  const width = Math.max(1, Math.round(sourceWidth * scale));
+  const height = Math.max(1, Math.round(sourceHeight * scale));
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+
+  const context = canvas.getContext("2d", { alpha: false });
+  if (!context) return file;
+
+  context.fillStyle = "#ffffff";
+  context.fillRect(0, 0, width, height);
+  context.drawImage(image, 0, 0, width, height);
+
+  const blob = await new Promise((resolve) => {
+    canvas.toBlob(resolve, "image/jpeg", PHOTO_JPEG_QUALITY);
+  });
+  if (!blob) return file;
+
+  const baseName = file.name.replace(/\.[^.]+$/, "") || "foto";
+  return new File([blob], `${baseName}.jpg`, {
+    type: "image/jpeg",
+    lastModified: Date.now(),
+  });
 }
 
 async function handleOfferSubmit(event) {
@@ -1035,10 +1133,12 @@ async function handleOfferSubmit(event) {
     },
   };
 
-  setFormState("Publicando…", "pending");
+  setFormState(state.offerFiles.length ? "Preparando fotos…" : "Publicando…", "pending");
 
   try {
-    const result = await api.publishItem(payload);
+    const optimizedFiles = await Promise.all(state.offerFiles.map(optimizePhoto));
+    setFormState("Publicando…", "pending");
+    const result = await api.publishItem(payload, optimizedFiles);
 
     if (!result.ok || !result.item_id) {
       setFormState(result.error ?? "No se ha podido publicar.", "error");
@@ -1057,14 +1157,14 @@ async function handleOfferSubmit(event) {
       ownerDisplayName: state.telegramUser?.first_name || "Tú",
       ownerUsername: state.telegramUser?.username || "",
       ownerTelegramId: String(state.telegramUser?.telegram_id ?? state.telegramUser?.id ?? ""),
-      imageUrl: null,
+      imageUrl: result.image_url ?? null,
+      imageUrls: Array.isArray(result.image_urls) ? result.image_urls : [],
       interestCount: 0,
     };
 
     rememberOwnItem(publishedItem);
     offerForm.reset();
-    state.offerFiles = [];
-    offerPreview.replaceChildren();
+    resetOfferPhotos();
     await loadCatalog();
     const catalogItem = state.items.find((item) => item.id === publishedItem.id);
     const finalItem = catalogItem ? { ...publishedItem, ...catalogItem } : publishedItem;
