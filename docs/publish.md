@@ -70,8 +70,7 @@ generan enlaces nuevos con el valor antiguo.
 
 El workflow de publicación debe responder primero con `public_id` (manteniendo
 `item_id` como alias temporal) y después dejar preparada una llamada al
-generador. Este repositorio no activa esa llamada desde n8n ni contiene
-credenciales reales.
+generador. Este repositorio no contiene credenciales reales.
 
 Contrato de llamada para n8n:
 
@@ -105,14 +104,51 @@ python3 scripts/generate_static_pages.py \
 
 El generador produce `i/<public_id>/index.html`, `sitemap.xml`, `robots.txt` y
 un `404.html` de fallback. Rechaza campos sensibles, escapa HTML y usa la
-marca de SegundaVida como imagen fallback. Para probar manualmente basta con
-usar el ejemplo anterior en un archivo local; no hace falta tocar NocoDB.
+marca de SegundaVida como imagen fallback.
 
-La alternativa sin commits automáticos es ejecutar manualmente o por schedule
-`.github/workflows/generate-static-pages.yml`, configurando la variable de
-repositorio `SEGUNDAVIDA_PUBLIC_ITEMS_URL` con un endpoint público ya
-proyectado. El workflow prepara y despliega Pages cuando la fuente del sitio se
-ha cambiado a **GitHub Actions**; no llama a n8n por sí mismo.
+### Momento exacto para disparar GitHub Actions
+
+En `SV · Publish Item`, la llamada debe ir después de que `Create NocoDB row`
+haya respondido correctamente y antes de `Respond to Webhook`. Así el
+`public_id` ya existe y la generación puede leer `/data` con la fila publicada.
+La llamada es asíncrona; no hay que esperar a que termine GitHub para devolver
+el `200` de `/publish`.
+
+Añade un nodo `HTTP Request` con una credencial privada de GitHub (nunca pegues
+el token en el código) que haga:
+
+```text
+POST https://api.github.com/repos/aldeapucela/segundavida/actions/workflows/generate-static-pages.yml/dispatches
+```
+
+Headers:
+
+```text
+Accept: application/vnd.github+json
+X-GitHub-Api-Version: 2022-11-28
+Authorization: Bearer <GITHUB_ACTIONS_TOKEN>
+```
+
+Body JSON:
+
+```json
+{
+  "ref": "main",
+  "inputs": {
+    "source_url": "https://tasks.nukeador.com/webhook/segundavida/data"
+  }
+}
+```
+
+Configura el nodo para continuar aunque GitHub no esté disponible: la fila de
+NocoDB ya se ha publicado y la ejecución programada podrá recuperar el sitio.
+El token debe tener permiso para ejecutar workflows y vivir solo en las
+credenciales de n8n.
+
+También puedes ejecutar manualmente o por schedule
+`.github/workflows/generate-static-pages.yml`. La variable
+`SEGUNDAVIDA_PUBLIC_ITEMS_URL` es opcional porque el workflow ya contiene la
+URL pública real de `/data` como valor predeterminado.
 
 ## Respuestas
 

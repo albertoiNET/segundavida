@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       source_url:
-        description: "Public JSON endpoint (optional; repository variable is used when empty)"
+        description: "Public JSON endpoint override (optional)"
         required: false
         type: string
   schedule:
@@ -30,6 +30,7 @@ jobs:
         run: |
           source_url="$INPUT_SOURCE_URL"
           if [ -z "$source_url" ]; then source_url="$REPOSITORY_SOURCE_URL"; fi
+          if [ -z "$source_url" ]; then source_url="https://tasks.nukeador.com/webhook/segundavida/data"; fi
           echo "url=$source_url" >> "$GITHUB_OUTPUT"
 
       - name: Generate pages
@@ -48,7 +49,7 @@ jobs:
       - name: Explain skipped generation
         if: steps.source.outputs.url == ''
         run: |
-          echo "No source configured. Set repository variable SEGUNDAVIDA_PUBLIC_ITEMS_URL or pass source_url manually."
+          echo "No public source configured. Pass source_url or set the repository override variable."
 
       - name: Upload generated site for Pages
         if: steps.source.outputs.url != ''

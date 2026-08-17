@@ -90,9 +90,9 @@ del objeto; el repositorio deja esa integración preparada pero no la dispara.
 GitHub Pages está configurado actualmente desde `main`. Para evitar commits
 automáticos de páginas generadas, configura Pages en **GitHub Actions** y usa
 `.github/workflows/generate-static-pages.yml`, que prepara y despliega el sitio
-desde el artefacto generado. La ejecución necesita la variable de repositorio
-`SEGUNDAVIDA_PUBLIC_ITEMS_URL` o una URL introducida manualmente; sin ella el
-job termina sin generar ni publicar datos.
+desde el artefacto generado. El workflow ya incluye como valor predeterminado
+la URL pública real de `/data`; `SEGUNDAVIDA_PUBLIC_ITEMS_URL` solo sirve como
+override opcional.
 
 ## Analítica
 

@@ -92,7 +92,9 @@ repositorio no dispara todavía ese flujo automáticamente.
 GitHub Pages está documentado para cambiar de la fuente actual `main` a
 `GitHub Actions` si se desea publicar el resultado generado sin commits
 periódicos. El workflow incluido permite ejecución manual y programada como
-opción; su job es deliberadamente neutral respecto a secretos, NocoDB y n8n.
+opción y usa por defecto la URL pública real de `/data`; la variable de
+repositorio solo permite sustituirla. El job es deliberadamente neutral
+respecto a secretos, NocoDB y n8n.
 
 ## Seguridad y límites
 
