@@ -33,6 +33,10 @@ const state = {
   selectedItemLive: false,
 };
 
+let photoLightboxUrls = [];
+let photoLightboxIndex = 0;
+let photoLightboxReturnFocus = null;
+
 const runtimeName = document.querySelector("#runtime-name");
 const telegramSdkState = document.querySelector("#telegram-sdk-state");
 const telegramStatus = document.querySelector("#telegram-status");
@@ -54,6 +58,14 @@ const postsView = document.querySelector("#posts-view");
 const detailView = document.querySelector("#detail-view");
 const detailShare = document.querySelector("#detail-share");
 const detailMedia = document.querySelector("#detail-media");
+const photoLightbox = document.querySelector("#photo-lightbox");
+const photoLightboxTitle = document.querySelector("#photo-lightbox-title");
+const photoLightboxCounter = document.querySelector("#photo-lightbox-counter");
+const photoLightboxImage = document.querySelector("#photo-lightbox-image");
+const photoLightboxThumbs = document.querySelector("#photo-lightbox-thumbs");
+const photoLightboxClose = document.querySelector("#photo-lightbox-close");
+const photoLightboxPrevious = document.querySelector("#photo-lightbox-previous");
+const photoLightboxNext = document.querySelector("#photo-lightbox-next");
 const detailAvailability = document.querySelector("#detail-availability");
 const detailTitle = document.querySelector("#detail-title");
 const detailCategory = document.querySelector("#detail-category");
@@ -543,17 +555,134 @@ function renderMyItems() {
     : "Cuando ofrezcas algo, aparecerá en esta sección.";
 }
 
+function getItemImageUrls(item) {
+  const imageUrls = Array.isArray(item?.imageUrls)
+    ? item.imageUrls.filter((url) => typeof url === "string" && url.trim())
+    : [];
+
+  if (item?.imageUrl && !imageUrls.includes(item.imageUrl)) {
+    imageUrls.unshift(item.imageUrl);
+  }
+
+  return [...new Set(imageUrls)];
+}
+
+function updatePhotoLightbox() {
+  if (!photoLightbox || !photoLightboxImage || !photoLightboxUrls.length) return;
+
+  const total = photoLightboxUrls.length;
+  const url = photoLightboxUrls[photoLightboxIndex];
+  photoLightboxImage.src = url;
+  photoLightboxImage.alt = `${photoLightboxTitle.textContent} · foto ${photoLightboxIndex + 1}`;
+  photoLightboxCounter.textContent = total > 1
+    ? `${photoLightboxIndex + 1} / ${total}`
+    : "";
+  photoLightboxPrevious.hidden = total < 2;
+  photoLightboxNext.hidden = total < 2;
+
+  photoLightboxThumbs.replaceChildren(...photoLightboxUrls.map((thumbUrl, index) => {
+    const button = document.createElement("button");
+    button.className = "photo-lightbox__thumb";
+    button.type = "button";
+    button.setAttribute("aria-label", `Ver foto ${index + 1}`);
+    button.setAttribute("aria-pressed", String(index === photoLightboxIndex));
+    button.classList.toggle("is-active", index === photoLightboxIndex);
+    button.addEventListener("click", () => {
+      photoLightboxIndex = index;
+      updatePhotoLightbox();
+    });
+
+    const image = document.createElement("img");
+    image.src = thumbUrl;
+    image.alt = "";
+    image.loading = "lazy";
+    button.append(image);
+    return button;
+  }));
+}
+
+function openPhotoLightbox(item, index = 0, trigger = null) {
+  if (!photoLightbox) return;
+
+  photoLightboxUrls = getItemImageUrls(item);
+  if (!photoLightboxUrls.length) return;
+
+  photoLightboxIndex = Math.min(Math.max(index, 0), photoLightboxUrls.length - 1);
+  photoLightboxTitle.textContent = item.title || "Foto";
+  photoLightboxReturnFocus = trigger || document.activeElement;
+  updatePhotoLightbox();
+
+  if (typeof photoLightbox.showModal === "function") {
+    photoLightbox.showModal();
+  } else {
+    photoLightbox.setAttribute("open", "");
+  }
+  document.body.classList.add("photo-lightbox-open");
+}
+
+function closePhotoLightbox() {
+  if (!photoLightbox) return;
+
+  if (photoLightbox.open && typeof photoLightbox.close === "function") {
+    photoLightbox.close();
+  } else {
+    photoLightbox.removeAttribute("open");
+  }
+
+  document.body.classList.remove("photo-lightbox-open");
+  if (photoLightboxReturnFocus?.isConnected) photoLightboxReturnFocus.focus();
+  photoLightboxReturnFocus = null;
+}
+
+function movePhotoLightbox(step) {
+  if (photoLightboxUrls.length < 2) return;
+  photoLightboxIndex = (photoLightboxIndex + step + photoLightboxUrls.length) % photoLightboxUrls.length;
+  updatePhotoLightbox();
+}
+
 function renderDetail(item, { live = true, error = "" } = {}) {
   state.selectedItem = item;
   state.selectedItemLive = live;
   detailMedia.replaceChildren();
 
-  if (item.imageUrl) {
+  const imageUrls = getItemImageUrls(item);
+
+  if (imageUrls.length) {
+    const trigger = document.createElement("button");
+    trigger.className = "detail-media__trigger";
+    trigger.type = "button";
+    trigger.setAttribute("aria-label", "Abrir foto en grande");
+    trigger.addEventListener("click", () => openPhotoLightbox(item, 0, trigger));
+
     const image = document.createElement("img");
     image.className = "detail-media__image";
-    image.src = item.imageUrl;
+    image.src = imageUrls[0];
     image.alt = item.title;
-    detailMedia.append(image);
+    trigger.append(image);
+    detailMedia.append(trigger);
+
+    if (imageUrls.length > 1) {
+      const gallery = document.createElement("div");
+      gallery.className = "detail-media__gallery";
+      gallery.setAttribute("aria-label", `${imageUrls.length} fotos disponibles`);
+
+      imageUrls.forEach((url, index) => {
+        const thumbnail = document.createElement("button");
+        thumbnail.className = "detail-media__thumbnail";
+        thumbnail.type = "button";
+        thumbnail.setAttribute("aria-label", `Abrir foto ${index + 1}`);
+        thumbnail.addEventListener("click", () => openPhotoLightbox(item, index, thumbnail));
+
+        const thumbnailImage = document.createElement("img");
+        thumbnailImage.src = url;
+        thumbnailImage.alt = "";
+        thumbnailImage.loading = "lazy";
+        thumbnail.append(thumbnailImage);
+        gallery.append(thumbnail);
+      });
+
+      detailMedia.append(gallery);
+    }
   } else {
     const placeholder = document.createElement("div");
     placeholder.className = "detail-media__placeholder";
@@ -648,6 +777,8 @@ function setView(viewName, { syncHistory = true, itemId = "" } = {}) {
   const isPosts = viewName === "posts";
   const isDetail = viewName === "detail";
   const isSuccess = viewName === "publish-success";
+
+  if (!isDetail) closePhotoLightbox();
 
   catalogIntro.hidden = !isExplore;
   catalogTools.hidden = !isExplore;
@@ -1394,6 +1525,26 @@ postsTabs.forEach((tab) => {
 });
 appBackButton.addEventListener("click", goBack);
 appForwardButton.addEventListener("click", goForward);
+
+if (photoLightbox) {
+  photoLightboxClose.addEventListener("click", closePhotoLightbox);
+  photoLightboxPrevious.addEventListener("click", () => movePhotoLightbox(-1));
+  photoLightboxNext.addEventListener("click", () => movePhotoLightbox(1));
+  photoLightbox.addEventListener("click", (event) => {
+    if (event.target === photoLightbox) closePhotoLightbox();
+  });
+  photoLightbox.addEventListener("cancel", (event) => {
+    event.preventDefault();
+    closePhotoLightbox();
+  });
+}
+
+document.addEventListener("keydown", (event) => {
+  if (!photoLightbox?.open) return;
+  if (event.key === "ArrowLeft") movePhotoLightbox(-1);
+  if (event.key === "ArrowRight") movePhotoLightbox(1);
+});
+
 brandHomeLink.addEventListener("click", (event) => {
   event.preventDefault();
   setView("explore");

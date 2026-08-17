@@ -20,7 +20,7 @@
     />
     <link rel="stylesheet" href="/css/icon-fallback.css?v=sv-20260817-40" />
     <link rel="stylesheet" href="/css/tokens.css?v=sv-20260817-40" />
-    <link rel="stylesheet" href="/css/app.css?v=sv-20260817-40" />
+    <link rel="stylesheet" href="/css/app.css?v=sv-20260817-42" />
     <script src="https://telegram.org/js/telegram-web-app.js?63"></script>
   </head>
   <body>
@@ -351,6 +351,33 @@
         <button class="primary-button" id="telegram-username-retry" type="button">Ya lo he configurado</button>
       </dialog>
 
+      <dialog class="photo-lightbox" id="photo-lightbox" aria-labelledby="photo-lightbox-title">
+        <div class="photo-lightbox__panel">
+          <div class="photo-lightbox__topline">
+            <div>
+              <span class="eyebrow">SegundaVida</span>
+              <h2 id="photo-lightbox-title">Foto</h2>
+            </div>
+            <div class="photo-lightbox__actions">
+              <span class="photo-lightbox__counter" id="photo-lightbox-counter" aria-live="polite"></span>
+              <button class="icon-button photo-lightbox__close" id="photo-lightbox-close" type="button" aria-label="Cerrar foto" title="Cerrar foto">
+                <i class="fa-solid fa-xmark fa-icon" data-fallback="×" aria-hidden="true"></i>
+              </button>
+            </div>
+          </div>
+          <div class="photo-lightbox__stage">
+            <button class="photo-lightbox__nav photo-lightbox__nav--previous" id="photo-lightbox-previous" type="button" aria-label="Foto anterior" title="Foto anterior">
+              <i class="fa-solid fa-chevron-left fa-icon" data-fallback="‹" aria-hidden="true"></i>
+            </button>
+            <img class="photo-lightbox__image" id="photo-lightbox-image" alt="" />
+            <button class="photo-lightbox__nav photo-lightbox__nav--next" id="photo-lightbox-next" type="button" aria-label="Foto siguiente" title="Foto siguiente">
+              <i class="fa-solid fa-chevron-right fa-icon" data-fallback="›" aria-hidden="true"></i>
+            </button>
+          </div>
+          <div class="photo-lightbox__thumbs" id="photo-lightbox-thumbs" aria-label="Fotos de la publicación"></div>
+        </div>
+      </dialog>
+
       <section class="secondary-view" id="posts-view" hidden aria-labelledby="posts-title">
         <div id="posts-content" hidden>
           <h1 id="posts-title">Mis publicaciones</h1>
@@ -445,6 +472,6 @@
     <script src="/js/auth.js?v=sv-20260817-41"></script>
     <script src="/js/api.js?v=sv-20260817-41"></script>
     <script src="/js/analytics.js?v=sv-20260817-41"></script>
-    <script src="/js/app.js?v=sv-20260817-41"></script>
+    <script src="/js/app.js?v=sv-20260817-42"></script>
   </body>
 </html>
