@@ -120,11 +120,11 @@ input[type="search"] {
 
 .brand-mark {
   display: grid;
-  width: 2.25rem;
-  height: 2.25rem;
+  width: 2.75rem;
+  height: 2.75rem;
   place-items: center;
-  border-radius: 0.7rem;
-  background: var(--color-secondary-soft);
+  border-radius: 0;
+  background: transparent;
   color: var(--color-secondary);
   font-size: 1.5rem;
   font-weight: 700;
@@ -135,6 +135,7 @@ input[type="search"] {
   display: block;
   width: 100%;
   height: 100%;
+  object-fit: contain;
 }
 
 .brand-name,
@@ -1017,9 +1018,9 @@ body {
 }
 
 .brand-mark {
-  width: 2rem;
-  height: 2rem;
-  border-radius: 0.65rem;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 0;
   font-size: 1.35rem;
 }
 
