@@ -98,10 +98,20 @@ const navItems = [...document.querySelectorAll(".nav-item")];
 
 const categoryIcons = {
   Hogar: ["fa-house", "⌂"],
+  Muebles: ["fa-couch", "▰"],
+  Electrodomésticos: ["fa-blender", "▣"],
   Infantil: ["fa-child", "☺"],
-  Libros: ["fa-book-open", "▤"],
-  Tecnología: ["fa-laptop", "⌘"],
   Ropa: ["fa-shirt", "◌"],
+  Libros: ["fa-book-open", "▤"],
+  "Música y cine": ["fa-music", "♫"],
+  Tecnología: ["fa-laptop", "⌘"],
+  "Móviles y telefonía": ["fa-mobile-screen-button", "▯"],
+  Informática: ["fa-computer", "▣"],
+  "Deportes y ocio": ["fa-futbol", "⚽"],
+  Bicicletas: ["fa-bicycle", "♢"],
+  "Juegos y videojuegos": ["fa-gamepad", "◉"],
+  "Manualidades y coleccionismo": ["fa-palette", "✦"],
+  "Jardín y bricolaje": ["fa-seedling", "❧"],
   Otros: ["fa-recycle", "♻"],
 };
 

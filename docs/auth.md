@@ -96,7 +96,7 @@ del endpoint de publicación.
 
 - El propietario se obtiene del `telegram_id` validado por n8n; nunca del body
   enviado por el navegador.
-- `category` solo acepta las categorías configuradas en NocoDB.
+- `category` solo acepta las categorías configuradas en NocoDB: `Hogar`, `Muebles`, `Electrodomésticos`, `Infantil`, `Ropa`, `Libros`, `Música y cine`, `Tecnología`, `Móviles y telefonía`, `Informática`, `Deportes y ocio`, `Bicicletas`, `Juegos y videojuegos`, `Manualidades y coleccionismo`, `Jardín y bricolaje` y `Otros`.
 - `title`, `description` y `expires_at` se validan de nuevo en n8n.
 - Los endpoints de escritura no devolverán campos privados de NocoDB.
 - No habrá token persistente en `localStorage` ni secretos en GitHub Pages.

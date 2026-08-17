@@ -17,7 +17,7 @@ público.
 | `item-id` | SingleLineText | Sí | Identificador público opaco y aleatorio generado por n8n; nunca contiene el Telegram user ID |
 | `title` | SingleLineText | Sí | Título visible |
 | `description` | LongText | Sí | Descripción del objeto |
-| `category` | SingleSelect | Sí | `Hogar`, `Infantil`, `Libros`, `Tecnología`, `Ropa`, `Otros` |
+| `category` | SingleSelect | Sí | `Hogar`, `Muebles`, `Electrodomésticos`, `Infantil`, `Ropa`, `Libros`, `Música y cine`, `Tecnología`, `Móviles y telefonía`, `Informática`, `Deportes y ocio`, `Bicicletas`, `Juegos y videojuegos`, `Manualidades y coleccionismo`, `Jardín y bricolaje`, `Otros` |
 | `zone` | SingleLineText | Sí | Zona aproximada, no dirección exacta |
 | `owner_telegram_id` | SingleLineText | Sí | Identidad privada de Telegram |
 | `owner_display_name` | SingleLineText | Sí | Nombre público mostrado |
