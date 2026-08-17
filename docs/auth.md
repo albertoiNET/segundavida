@@ -31,7 +31,8 @@ Respuesta válida mínima:
   "valid": true,
   "telegram_id": 123456789,
   "first_name": "Pepe",
-  "username": "pepe"
+  "username": "pepe",
+  "is_admin": false
 }
 ```
 
@@ -51,6 +52,8 @@ El workflow `SV · Validate Telegram User` tiene esta estructura:
 ```text
 Webhook (POST /segundavida/whoami)
   -> Code: validar initData
+  -> Data Table: buscar permisos de administrador
+  -> Code: construir respuesta con is_admin
   -> Respond to Webhook
 ```
 
@@ -86,12 +89,18 @@ El nodo de backend debe:
    constante con `hash`.
 5. Rechazar datos antiguos comprobando `auth_date` con una tolerancia corta
    (por ejemplo, 10 minutos para este endpoint).
-6. Devolver únicamente `telegram_id`, `first_name` y el campo técnico `username` (nombre de usuario) después de
-   validar. No devolver el `initData` ni el token.
+6. Devolver únicamente `telegram_id`, `first_name`, el campo técnico `username`
+   (nombre de usuario) y el booleano `is_admin` después de validar. No devolver
+   el `initData` ni el token.
 
 La misma validación debe repetirse en cada endpoint que escriba datos. La
 respuesta de `whoami` sirve para la interfaz, pero no sustituye la autorización
-del endpoint de publicación.
+del endpoint de publicación ni del endpoint de gestión de publicaciones.
+
+El campo `is_admin` se calcula en n8n consultando el Data Table `Segunda Vida -
+Permisos`. El cliente solo lo usa para mostrar controles; el endpoint
+de gestión vuelve a comprobar la identidad y el permiso antes de modificar
+una fila.
 
 ## Reglas de publicación y seguridad
 

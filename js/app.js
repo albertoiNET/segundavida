@@ -91,6 +91,7 @@ const detailCreatedAt = document.querySelector("#detail-created-at");
 const interestButton = document.querySelector("#interest-button");
 const detailActionState = document.querySelector("#detail-action-state");
 const detailOwnerActions = document.querySelector("#detail-owner-actions");
+const detailOwnerActionsLabel = document.querySelector(".detail-owner-actions__label");
 const markDeliveredButton = document.querySelector("#mark-delivered-button");
 const deleteItemButton = document.querySelector("#delete-item-button");
 const detailOwnerActionState = document.querySelector("#detail-owner-action-state");
@@ -465,6 +466,19 @@ function isOwnItem(item) {
 
   const currentUsername = normalizeTelegramUsername(state.telegramUser?.username);
   return Boolean(currentUsername && currentUsername === normalizeTelegramUsername(item.ownerUsername));
+}
+
+function isAdminUser() {
+  return Boolean(
+    state.telegramUser?.valid === true &&
+    state.telegramUser?.is_admin === true &&
+    auth?.hasInitData(),
+  );
+}
+
+function refreshSelectedDetailForIdentity() {
+  if (state.currentView !== "detail" || !state.selectedItem) return;
+  renderDetail(state.selectedItem, { live: state.selectedItemLive });
 }
 
 function getItemStatusLabel(item) {
@@ -904,6 +918,8 @@ function renderDetail(item, { live = true, error = "" } = {}) {
   detailOwner.textContent = item.ownerDisplayName || "Vecindad";
   if (detailCreatedAt) detailCreatedAt.textContent = formatShortDateTime(item.createdAt) || "—";
   const ownItem = isOwnItem(item);
+  const adminUser = isAdminUser();
+  const canManageItem = ownItem || adminUser;
   const ownerUsername = normalizeTelegramUsername(item.ownerUsername);
   const isAvailable = item.status === "available" && isNotExpired(item);
   interestButton.hidden = ownItem || !live || !isAvailable;
@@ -930,15 +946,22 @@ function renderDetail(item, { live = true, error = "" } = {}) {
             : "Este vecino o vecina no tiene un nombre de usuario público para recibir contactos.";
   detailActionState.dataset.state = !live || (!ownItem && !ownerUsername && isAvailable) ? "error" : "";
 
-  detailOwnerActions.hidden = !ownItem || !live;
+  detailOwnerActions.hidden = !canManageItem || !live;
+  if (detailOwnerActionsLabel) {
+    detailOwnerActionsLabel.textContent = ownItem
+      ? "Es tu publicación"
+      : "Gestión de administrador";
+  }
   markDeliveredButton.disabled = false;
   configureDeliveryButton(markDeliveredButton, item.status);
-  deleteItemButton.hidden = !ownItem || !live;
+  deleteItemButton.hidden = !canManageItem || !live;
   deleteItemButton.disabled = false;
   configureDeleteButton(deleteItemButton);
-  detailOwnerActionState.textContent = item.status === "completed"
-    ? "Si vuelve a estar disponible, puedes reactivar esta publicación."
-    : "Cuando se lo entregues a otra persona, márcalo aquí.";
+  detailOwnerActionState.textContent = adminUser && !ownItem
+    ? "Gestiona esta publicación como administrador."
+    : item.status === "completed"
+      ? "Si vuelve a estar disponible, puedes reactivar esta publicación."
+      : "Cuando se lo entregues a otra persona, márcalo aquí.";
   detailOwnerActionState.dataset.state = "";
 }
 
@@ -1273,6 +1296,7 @@ async function checkIdentity() {
       configureOfferAuth(result);
       configurePostsView();
       await loadMineItems();
+      refreshSelectedDetailForIdentity();
       schedulePublishRetryIfReady();
       const firstName = result.first_name ? `Hola ${result.first_name}` : "Telegram";
       const identityName = identityStatus?.querySelector("span:nth-child(2)");
@@ -1284,11 +1308,13 @@ async function checkIdentity() {
     state.telegramUser = null;
     configureOfferAuth();
     configurePostsView();
+    refreshSelectedDetailForIdentity();
     setServiceState(identityStatus, identityStatusLabel, "error", "No verificada");
   } catch {
     state.telegramUser = null;
     configureOfferAuth();
     configurePostsView();
+    refreshSelectedDetailForIdentity();
     setServiceState(identityStatus, identityStatusLabel, "error", "No disponible");
   }
 }

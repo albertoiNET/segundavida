@@ -114,6 +114,10 @@ class StaticContractTests(unittest.TestCase):
         self.assertIn("function createPhotoCarousel", app_source)
         self.assertIn("function sortNewestFirst", app_source)
         self.assertIn("function formatShortDateTime", app_source)
+        self.assertIn("function isAdminUser", app_source)
+        self.assertIn("function refreshSelectedDetailForIdentity", app_source)
+        self.assertIn("const canManageItem = ownItem || adminUser", app_source)
+        self.assertIn("Gestión de administrador", app_source)
         self.assertIn("createdAt: result.created_at ?? new Date().toISOString()", app_source)
         self.assertIn("const localImageUrls", app_source)
         self.assertIn("const catalogImageUrls = getItemImageUrls(item)", app_source)
@@ -184,6 +188,13 @@ class StaticContractTests(unittest.TestCase):
         self.assertIn("Dispatch static page regeneration", node_names)
         self.assertIn('"type": "n8n-nodes-base.github"', workflow_text)
         self.assertNotIn('"operation": "delete"', workflow_text)
+
+    def test_admin_permissions_contract_uses_n8n_data_table(self):
+        docs = (ROOT / "docs" / "admin-permissions.md").read_text(encoding="utf-8")
+        self.assertIn("Segunda Vida - Permisos", docs)
+        self.assertIn("Data Table de n8n", docs)
+        self.assertIn("2191395", docs)
+        self.assertNotIn("tabla de NocoDB", docs)
 
 
 if __name__ == "__main__":

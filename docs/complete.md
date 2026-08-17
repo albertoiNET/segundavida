@@ -15,8 +15,9 @@ POST https://tasks.nukeador.com/webhook/segundavida/complete
 
 El workflow usa la credencial existente `NocoDB Token account`, busca la fila
 en la tabla `Segunda Vida`, comprueba la firma de `Telegram.WebApp.initData` y
-solo permite cambiar la publicación si `owner_telegram_id` coincide con la
-persona autenticada. La acción recibida puede ser `complete`, `reopen` o `hide`. En el
+permite cambiar la publicación si `owner_telegram_id` coincide con la persona
+autenticada o si la identidad aparece activa con rol `admin` en el Data Table
+`Segunda Vida - Permisos`. La acción recibida puede ser `complete`, `reopen` o `hide`. En el
 nodo `Update NocoDB row`, el campo **Row ID Value** debe quedar exactamente así:
 
 ```text
