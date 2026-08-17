@@ -20,7 +20,7 @@
     />
     <link rel="stylesheet" href="/css/icon-fallback.css?v=sv-20260817-40" />
     <link rel="stylesheet" href="/css/tokens.css?v=sv-20260817-41" />
-    <link rel="stylesheet" href="/css/app.css?v=sv-20260817-45" />
+    <link rel="stylesheet" href="/css/app.css?v=sv-20260817-46" />
     <script src="https://telegram.org/js/telegram-web-app.js?63"></script>
   </head>
   <body>
@@ -307,10 +307,10 @@
           </fieldset>
           <div class="form-field">
             <span class="field-label">Fotos <small>1 obligatoria · hasta 2</small></span>
-            <label class="photo-picker" for="offer-images">
+            <label class="photo-picker" id="offer-photo-picker" for="offer-images" tabindex="-1">
               <span class="photo-picker__icon" aria-hidden="true"><i class="fa-solid fa-plus fa-icon" data-fallback="+"></i></span>
               <span><strong>Añadir fotos</strong><small>Añade al menos una · puedes añadirlas en varias veces · la primera será la portada</small></span>
-              <input id="offer-images" name="images" type="file" accept="image/jpeg,image/png,image/webp" multiple />
+              <input id="offer-images" name="images" type="file" accept="image/jpeg,image/png,image/webp" multiple aria-describedby="offer-form-state" />
             </label>
             <div class="photo-preview" id="offer-preview" aria-live="polite"></div>
           </div>

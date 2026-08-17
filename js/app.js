@@ -105,6 +105,7 @@ const offerForm = document.querySelector("#offer-form");
 const offerSubmitButton = offerForm?.querySelector('button[type="submit"]');
 const offerSubmitLabel = offerSubmitButton?.textContent?.trim() || "Publicar";
 const offerImages = document.querySelector("#offer-images");
+const offerPhotoPicker = document.querySelector("#offer-photo-picker");
 const offerPreview = document.querySelector("#offer-preview");
 const offerFormState = document.querySelector("#offer-form-state");
 const offerConsent = document.querySelector("#offer-consent");
@@ -1226,6 +1227,16 @@ function setFormState(message, stateName = "") {
   offerFormState.dataset.state = stateName;
 }
 
+function setPhotoFieldError(hasError) {
+  if (!offerPhotoPicker || !offerImages) return;
+  offerPhotoPicker.dataset.state = hasError ? "error" : "";
+  if (hasError) {
+    offerImages.setAttribute("aria-invalid", "true");
+  } else {
+    offerImages.removeAttribute("aria-invalid");
+  }
+}
+
 function readSessionStorage(key) {
   try {
     return window.sessionStorage.getItem(key);
@@ -1420,6 +1431,16 @@ function isTelegramInitDataExpired(value) {
   return candidates.includes("telegram_init_data_expired");
 }
 
+function isPhotoRequiredError(value) {
+  const candidates = [
+    typeof value === "string" ? value : "",
+    value?.error_code,
+    value?.error,
+    value?.code,
+  ];
+  return candidates.some((candidate) => String(candidate).trim().toLowerCase().replace(/[\s-]+/g, "_") === "photo_required");
+}
+
 async function refreshTelegramSession() {
   if (!telegramRuntime.isTelegram || typeof window.location?.reload !== "function") {
     return false;
@@ -1483,6 +1504,7 @@ function photoKey(file) {
 function removePhoto(index) {
   state.offerFiles.splice(index, 1);
   renderPhotoPreview(state.offerFiles);
+  setPhotoFieldError(false);
   setFormState("");
 }
 
@@ -1491,6 +1513,7 @@ function resetOfferPhotos() {
   offerImages.value = "";
   offerPreview.replaceChildren();
   revokePhotoPreviewUrls();
+  setPhotoFieldError(false);
 }
 
 function handlePhotoSelection(event) {
@@ -1511,17 +1534,21 @@ function handlePhotoSelection(event) {
 
   state.offerFiles = [...state.offerFiles, ...filesToAdd];
   renderPhotoPreview(state.offerFiles);
+  setPhotoFieldError(state.offerFiles.length < 1);
 
   if (filesToAdd.length < newFiles.length) {
+    setPhotoFieldError(true);
     setFormState(`Puedes añadir hasta ${MAX_OFFER_PHOTOS} fotos.`, "error");
     return;
   }
 
   if (invalidFiles.length > 0) {
+    setPhotoFieldError(true);
     setFormState("Cada foto debe ser JPG, PNG o WebP.", "error");
     return;
   }
 
+  setPhotoFieldError(false);
   setFormState("");
 }
 
@@ -1613,7 +1640,9 @@ async function handleOfferSubmit(event) {
   }
 
   if (state.offerFiles.length < 1) {
+    setPhotoFieldError(true);
     setFormState("Añade al menos una foto para publicar.", "error");
+    offerPhotoPicker?.focus({ preventScroll: false });
     return;
   }
 
@@ -1676,6 +1705,13 @@ async function handleOfferSubmit(event) {
     setFormState("Publicando…", "pending");
     const result = await api.publishItem(payload, optimizedFiles);
 
+    if (isPhotoRequiredError(result)) {
+      setPhotoFieldError(true);
+      setFormState("Añade al menos una foto para publicar.", "error");
+      offerPhotoPicker?.focus({ preventScroll: false });
+      return;
+    }
+
     if (isTelegramInitDataExpired(result)) {
       const refreshed = await refreshTelegramSession();
       if (!refreshed) {
@@ -1716,6 +1752,12 @@ async function handleOfferSubmit(event) {
     rememberOwnItem(finalItem);
     showPublishSuccess(finalItem);
   } catch (error) {
+    if (isPhotoRequiredError(error)) {
+      setPhotoFieldError(true);
+      setFormState("Añade al menos una foto para publicar.", "error");
+      offerPhotoPicker?.focus({ preventScroll: false });
+      return;
+    }
     if (isTelegramInitDataExpired(error)) {
       const refreshed = await refreshTelegramSession();
       if (!refreshed) {

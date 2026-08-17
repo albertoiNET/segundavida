@@ -2293,6 +2293,25 @@ body.photo-lightbox-open {
   cursor: pointer;
 }
 
+.photo-picker[data-state="error"] {
+  border-color: #c57878;
+  background: color-mix(in srgb, #c57878 7%, var(--bg-card));
+}
+
+.photo-picker[data-state="error"] .photo-picker__icon {
+  background: color-mix(in srgb, #c57878 16%, var(--bg-card));
+  color: #c57878;
+}
+
+.photo-picker:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 3px;
+}
+
+.photo-picker[data-state="error"]:focus-visible {
+  outline-color: #c57878;
+}
+
 .photo-picker__icon {
   display: grid;
   width: 2.15rem;
