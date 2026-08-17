@@ -2,5 +2,8 @@
 .generated-site/
 generated-site/
 
+# Item pages are generated locally/CI and must never be committed to the repo.
+/i/
+
 # Local macOS/editor noise.
 .DS_Store
