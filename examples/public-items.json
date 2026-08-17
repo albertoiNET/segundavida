@@ -1,0 +1,19 @@
+{
+  "ok": true,
+  "items": [
+    {
+      "public_id": "sv-demo-001",
+      "title": "Silla de escritorio",
+      "description": "Silla giratoria en buen estado.",
+      "category": "Hogar",
+      "zone": "Delicias",
+      "status": "available",
+      "created_at": "2026-08-16T10:00:00+02:00",
+      "expires_at": "2026-09-15T23:59:00+02:00",
+      "image_url": null,
+      "owner_display_name": "Pepe",
+      "owner_username": "pepe_demo",
+      "interest_count": 0
+    }
+  ]
+}
