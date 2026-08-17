@@ -423,7 +423,7 @@ function getItemUrl(item) {
 }
 
 function getInterestMessage(item) {
-  return `Hola, he visto que has publicado «${item.title}» en SegundaVida y estoy interesado/a en él.\n\n${getItemUrl(item)}`;
+  return `Hola, he visto que has publicado «${item.title}» en SegundaVida y estoy interesado/a.\n\n${getItemUrl(item)}`;
 }
 
 function createItemCard(item, index) {
