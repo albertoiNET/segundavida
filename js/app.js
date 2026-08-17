@@ -694,17 +694,27 @@ async function loadCatalog() {
 
 async function loadMineItems() {
   if (!auth?.hasInitData() || !api?.isMineConfigured || typeof api.listMineItems !== "function") {
-    return;
+    return null;
   }
 
   try {
     const records = await api.listMineItems(auth.getInitData());
+    const mineById = new Map(records.map((item) => [item.id, item]));
+
+    state.items = [
+      ...state.items.filter((item) => !mineById.has(item.id)),
+      ...records.filter((item) => item.status === "available" && isNotExpired(item)),
+    ];
     state.myItems = records.filter(isOwnItem);
     saveOwnItems();
+    renderCategories();
+    renderItems();
     renderMyItems();
     openItemFromHash();
+    return records;
   } catch {
     // Conservamos la copia local si el endpoint privado aún no está disponible.
+    return null;
   }
 }
 
@@ -996,13 +1006,18 @@ async function completeItem(item, triggerButton = markDeliveredButton, feedbackE
       throw new Error(result.error || "No se ha podido actualizar la publicación.");
     }
 
-    const nextStatus = result.status || (item.status === "completed" ? "available" : "completed");
+    const mineItems = await loadMineItems();
+    const syncedItem = mineItems?.find((candidate) => candidate.id === item.id) ?? null;
+    const nextStatus = syncedItem?.status
+      || result.status
+      || (item.status === "completed" ? "available" : "completed");
     const updatedItem = {
       ...item,
+      ...(syncedItem ?? {}),
       status: nextStatus,
       expiresAt: result.expires_at ?? item.expiresAt ?? null,
       completedAt: nextStatus === "completed"
-        ? result.completed_at || new Date().toISOString()
+        ? syncedItem?.completedAt || result.completed_at || new Date().toISOString()
         : null,
     };
     rememberOwnItem(updatedItem);

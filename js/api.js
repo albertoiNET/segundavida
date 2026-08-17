@@ -126,17 +126,18 @@ async function completeItem(payload) {
     body: JSON.stringify(payload),
   });
 
-  let result = null;
+  let payloadResult = null;
   try {
-    result = await response.json();
+    payloadResult = await response.json();
   } catch {
-    result = null;
+    payloadResult = null;
   }
 
   if (!response.ok) {
-    throw new Error(result?.error ?? `n8n respondió con HTTP ${response.status}`);
+    throw new Error(payloadResult?.error ?? `n8n respondió con HTTP ${response.status}`);
   }
 
+  const result = Array.isArray(payloadResult) ? payloadResult[0] : payloadResult;
   return result ?? { ok: false, error: "Respuesta vacía del endpoint de entrega." };
 }
 
