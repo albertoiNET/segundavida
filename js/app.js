@@ -1946,16 +1946,16 @@ async function shareSelectedItem() {
 
   try {
     const webApp = window.Telegram?.WebApp;
+    if (typeof navigator.share === "function") {
+      await navigator.share(shareData);
+      return;
+    }
+
     if (telegramRuntime.isTelegram && typeof webApp?.openTelegramLink === "function") {
       const telegramShareUrl = `https://t.me/share/url?url=${encodeURIComponent(itemUrl)}&text=${encodeURIComponent(shareData.text)}`;
       webApp.openTelegramLink(telegramShareUrl);
       detailActionState.textContent = "Elige dónde compartir la publicación.";
       detailActionState.dataset.state = "connected";
-      return;
-    }
-
-    if (typeof navigator.share === "function") {
-      await navigator.share(shareData);
       return;
     }
 
