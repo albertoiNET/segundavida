@@ -85,6 +85,7 @@ const detailCategory = document.querySelector("#detail-category");
 const detailDescription = document.querySelector("#detail-description");
 const detailZone = document.querySelector("#detail-zone");
 const detailOwner = document.querySelector("#detail-owner");
+const detailCreatedAt = document.querySelector("#detail-created-at");
 const interestButton = document.querySelector("#interest-button");
 const detailActionState = document.querySelector("#detail-action-state");
 const detailOwnerActions = document.querySelector("#detail-owner-actions");
@@ -352,6 +353,22 @@ function formatDate(value) {
     day: "numeric",
     month: "short",
   }).format(date).replace(" de ", " ");
+}
+
+function formatShortDateTime(value) {
+  if (!value) return "";
+
+  const rawValue = String(value);
+  const normalized = rawValue.includes(" ") ? rawValue.replace(" ", "T") : rawValue;
+  const date = new Date(normalized);
+  if (Number.isNaN(date.getTime())) return "";
+
+  return new Intl.DateTimeFormat("es-ES", {
+    day: "numeric",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(date).replace(",", "");
 }
 
 function createTextElement(tagName, className, text) {
@@ -850,6 +867,7 @@ function renderDetail(item, { live = true, error = "" } = {}) {
   detailDescription.hidden = !item.description;
   detailZone.textContent = item.zone || "Valladolid";
   detailOwner.textContent = item.ownerDisplayName || "Vecindad";
+  if (detailCreatedAt) detailCreatedAt.textContent = formatShortDateTime(item.createdAt) || "—";
   const ownItem = isOwnItem(item);
   const ownerUsername = normalizeTelegramUsername(item.ownerUsername);
   const isAvailable = item.status === "available" && isNotExpired(item);
@@ -1952,6 +1970,7 @@ async function handleOfferSubmit(event) {
       category: draftItem.category,
       zone: draftItem.zone,
       status: result.status || "available",
+      createdAt: result.created_at ?? new Date().toISOString(),
       expiresAt,
       ownerDisplayName: state.telegramUser?.first_name || "Tú",
       ownerUsername: state.telegramUser?.username || "",
