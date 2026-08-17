@@ -904,13 +904,35 @@ async function loadMineItems() {
 
   try {
     const records = await api.listMineItems(auth.getInitData());
-    const mineById = new Map(records.map((item) => [item.id, item]));
+    const catalogById = new Map(state.items.map((item) => [item.id, item]));
+    const mergedRecords = records.map((item) => {
+      const catalogItem = catalogById.get(item.id);
+      const itemImageUrls = Array.isArray(item.imageUrls) && item.imageUrls.length
+        ? item.imageUrls
+        : item.imageUrl
+          ? [item.imageUrl]
+          : [];
+      const catalogImageUrls = Array.isArray(catalogItem?.imageUrls)
+        ? catalogItem.imageUrls
+        : catalogItem?.imageUrl
+          ? [catalogItem.imageUrl]
+          : [];
+      const imageUrls = itemImageUrls.length ? itemImageUrls : catalogImageUrls;
+
+      return {
+        ...catalogItem,
+        ...item,
+        imageUrl: item.imageUrl || imageUrls[0] || null,
+        imageUrls,
+      };
+    });
+    const mineById = new Map(mergedRecords.map((item) => [item.id, item]));
 
     state.items = [
       ...state.items.filter((item) => !mineById.has(item.id)),
-      ...records.filter((item) => item.status === "available" && isNotExpired(item)),
+      ...mergedRecords.filter((item) => item.status === "available" && isNotExpired(item)),
     ];
-    state.myItems = records.filter(isOwnItem);
+    state.myItems = mergedRecords.filter(isOwnItem);
     saveOwnItems();
     renderCategories();
     renderItems();
