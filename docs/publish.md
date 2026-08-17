@@ -1,6 +1,6 @@
 # Publicar un objeto desde Telegram
 
-El formulario acepta hasta dos fotos. Las selecciones sucesivas se acumulan,
+El formulario exige al menos una foto y acepta hasta dos. Las selecciones sucesivas se acumulan,
 se pueden quitar individualmente y se redimensionan en el navegador antes de
 enviarse. El contrato completo de la subida y la modificación del workflow de
 n8n está en [`publish-photos.md`](./publish-photos.md).
@@ -30,8 +30,8 @@ El endpoint de producción será:
 POST https://tasks.nukeador.com/webhook/segundavida/publish
 ```
 
-Sin fotos, el contenido lógico que envía el frontend tiene esta forma dentro del
-campo multipart `payload`:
+El contenido lógico que envía el frontend tiene esta forma dentro del campo
+multipart `payload`:
 
 ```json
 {
@@ -45,7 +45,7 @@ campo multipart `payload`:
   },
   "consent": {
     "accepted": true,
-    "version": "sv-publish-2026-08-17-v2"
+    "version": "sv-publish-2026-08-17-v3"
   }
 }
 ```
@@ -58,7 +58,10 @@ NocoDB y no se devuelve al catálogo público.
 El workflow también exige el consentimiento explícito, comprueba su versión y
 genera `consent_at` en n8n. La fecha no se acepta desde el navegador.
 El consentimiento informa además de que el texto y las fotos compartidos se
-publican bajo la licencia [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/deed.es).
+publican bajo la licencia [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/deed.es)
+y de que deben cumplir las condiciones de SegundaVida. La moderación de n8n
+comprueba el título, la descripción y las imágenes para rechazar publicaciones
+no permitidas, además de contenido ofensivo o spam.
 
 El identificador público se genera en un nodo separado con bytes aleatorios:
 `crypto.randomBytes(6).toString('base64url')`. Nunca se construye a partir

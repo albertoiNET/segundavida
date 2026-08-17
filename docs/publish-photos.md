@@ -17,8 +17,10 @@ El navegador conserva las selecciones sucesivas hasta dos fotos, permite quitar
 cualquiera de ellas y las redimensiona a un máximo de 1600 px por lado antes de
 enviarlas.
 
-El formulario informa y solicita aceptar que el texto y las fotos compartidos
-se publiquen bajo la licencia [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/deed.es).
+El formulario exige al menos una foto e informa y solicita aceptar que el texto
+y las fotos compartidos se publiquen bajo la licencia
+[CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/deed.es), además
+de cumplir las condiciones de SegundaVida.
 
 ## Cambios en el workflow de n8n
 
@@ -72,7 +74,7 @@ if (typeof multipartPayload === 'string') {
 const consent = body.consent && typeof body.consent === 'object' ? body.consent : {};
 const consentVersion = typeof consent.version === 'string' ? consent.version.trim() : '';
 if (consent.accepted !== true) return invalid('consent_required');
-if (consentVersion !== 'sv-publish-2026-08-17-v2') {
+if (consentVersion !== 'sv-publish-2026-08-17-v3') {
   return invalid('consent_version_invalid');
 }
 
@@ -137,6 +139,20 @@ El campo `photos` puede contener los dos archivos; no hay que crear `foto_1` y
 `foto_2` como columnas separadas. La API de NocoDB no debe recibir el array de
 adjuntos en `Create`: la operación nativa `Row Upload` lo añade a la celda de
 la fila ya creada.
+
+## Moderación de contenido
+
+Después de preparar las fotos, el workflow analiza cada imagen junto con el
+título y la descripción mediante el modelo de OpenRouter configurado en n8n.
+Además de contenido ofensivo y spam, comprueba las categorías no permitidas
+descritas en el formulario: armas, drogas, medicamentos sujetos a prescripción,
+animales, datos personales, dinero, servicios, publicidad, ventas, trueques y
+otros objetos o publicaciones ilegales, peligrosos o engañosos.
+
+Si detecta una categoría prohibida, la publicación no se crea y el endpoint
+devuelve un mensaje como: `No se puede publicar «Título» porque no está
+permitido en SegundaVida. Motivo: animales. Revisa las condiciones de
+publicación.`
 
 ## Proyección pública
 

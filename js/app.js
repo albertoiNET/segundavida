@@ -8,7 +8,7 @@ const telegramRuntime = window.SecondaVidaTelegram ?? {
 
 const auth = window.SecondaVidaAuth;
 const api = window.SecondaVidaApi;
-const CONSENT_VERSION = "sv-publish-2026-08-17-v2";
+const CONSENT_VERSION = "sv-publish-2026-08-17-v3";
 const MAX_OFFER_PHOTOS = 2;
 const MAX_PHOTO_BYTES = 5 * 1024 * 1024;
 const PHOTO_OPTIMIZE_THRESHOLD = 1.5 * 1024 * 1024;

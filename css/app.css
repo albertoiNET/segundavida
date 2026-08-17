@@ -2282,6 +2282,17 @@ body.photo-lightbox-open {
   margin: 0;
 }
 
+.consent-details__list {
+  display: grid;
+  gap: 0.3rem;
+  margin: 0;
+  padding-left: 1.15rem;
+}
+
+.consent-details__list li {
+  padding-left: 0.1rem;
+}
+
 .form-field {
   display: grid;
   gap: 0.45rem;
