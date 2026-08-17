@@ -410,10 +410,13 @@ function createItemCard(item, index) {
     zone.append(createIconElement("fa-location-dot", "⌖"), document.createTextNode(` ${item.zone}`));
     meta.append(zone);
   }
-  const availability = item.expiresAt
-    ? `Hasta ${formatDate(item.expiresAt)}`
-    : "Disponible";
-  meta.append(createTextElement("span", "availability", availability));
+  const availability = document.createElement("span");
+  availability.className = "availability";
+  availability.append(createTextElement("span", "availability__label", item.expiresAt ? "Hasta" : "Disponible"));
+  if (item.expiresAt) {
+    availability.append(createTextElement("span", "availability__date", formatDate(item.expiresAt)));
+  }
+  meta.append(availability);
   meta.append(createIconElement("fa-arrow-right", "→", "item-card__arrow"));
   body.append(meta);
 
