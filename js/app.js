@@ -349,7 +349,7 @@ function createTextElement(tagName, className, text) {
 
 function configureDeliveryButton(button, status) {
   const completed = status === "completed";
-  const actionLabel = completed ? "Volver a publicar" : "Marcar como entregado";
+  const actionLabel = completed ? "Volver a publicar" : "Marcar entregado";
   const actionIcon = completed ? "fa-rotate-left" : "fa-check";
   const fallback = completed ? "↶" : "✓";
 
@@ -624,26 +624,43 @@ function createOwnedItemCard(item) {
   const card = document.createElement("article");
   card.className = "owned-item-card";
 
-  const heading = document.createElement("div");
-  heading.className = "owned-item-card__heading";
-  heading.append(createTextElement("h2", "owned-item-card__title", item.title));
-  heading.append(createTextElement("span", `owned-item-card__status ${item.status === "completed" ? "is-completed" : ""}`, getItemStatusLabel(item)));
-  card.append(heading);
+  const itemLink = document.createElement("button");
+  itemLink.className = "owned-item-card__link";
+  itemLink.type = "button";
+  itemLink.setAttribute("aria-label", `Ver publicación: ${item.title}`);
+  itemLink.addEventListener("click", () => showDetail(item));
 
-  const meta = document.createElement("p");
-  meta.className = "owned-item-card__meta";
-  meta.textContent = `${item.category} · ${item.zone}`;
-  card.append(meta);
+  const thumbnail = document.createElement("span");
+  thumbnail.className = "owned-item-card__thumb";
+  const imageUrls = getItemImageUrls(item);
+  if (imageUrls.length) {
+    const image = document.createElement("img");
+    image.src = imageUrls[0];
+    image.alt = "";
+    image.loading = "lazy";
+    thumbnail.append(image);
+  } else {
+    thumbnail.classList.add("owned-item-card__thumb--placeholder");
+    thumbnail.append(createCategoryIcon(item.category));
+  }
+  itemLink.append(thumbnail);
+
+  const content = document.createElement("span");
+  content.className = "owned-item-card__content";
+  const heading = document.createElement("span");
+  heading.className = "owned-item-card__heading";
+  const title = createTextElement("span", "owned-item-card__title", item.title);
+  title.setAttribute("role", "heading");
+  title.setAttribute("aria-level", "2");
+  heading.append(title);
+  heading.append(createTextElement("span", `owned-item-card__status ${item.status === "completed" ? "is-completed" : ""}`, getItemStatusLabel(item)));
+  content.append(heading);
+  content.append(createTextElement("span", "owned-item-card__meta", `${item.category} · ${item.zone}`));
+  itemLink.append(content);
+  card.append(itemLink);
 
   const actions = document.createElement("div");
   actions.className = "owned-item-card__actions";
-
-  const viewButton = document.createElement("button");
-  viewButton.className = "text-button";
-  viewButton.type = "button";
-  viewButton.textContent = "Ver publicación";
-  viewButton.addEventListener("click", () => showDetail(item));
-  actions.append(viewButton);
 
   const deliveredButton = document.createElement("button");
   deliveredButton.className = "secondary-button secondary-button--compact delivery-action-button";
@@ -687,7 +704,7 @@ function renderMyItems() {
   postsEmptyState.hidden = visibleItems.length > 0;
   offerEmptyButton.hidden = state.postsFilter !== "active" || visibleItems.length > 0;
   postsEmptyTitle.textContent = state.postsFilter === "completed"
-    ? "Aún no has entregado publicaciones"
+    ? "Aún no tienes publicaciones finalizadas"
     : "Aún no tienes publicaciones activas";
   postsEmptyCopy.textContent = state.postsFilter === "completed"
     ? "Cuando marques una publicación como entregada, aparecerá aquí."
