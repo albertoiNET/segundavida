@@ -1,0 +1,6 @@
+# Static generation output is published as a GitHub Pages artifact.
+.generated-site/
+generated-site/
+
+# Local macOS/editor noise.
+.DS_Store
