@@ -129,6 +129,12 @@ input[type="search"] {
   line-height: 1;
 }
 
+.brand-mark__image {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
 .brand-name,
 .brand-owner,
 .eyebrow,

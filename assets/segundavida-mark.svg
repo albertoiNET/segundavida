@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
+  <title id="title">SegundaVida</title>
+  <desc id="desc">Un pavo morado rodeado por tres flechas turquesas de economía circular.</desc>
+
+  <g fill="none" stroke="#1e9e8a" stroke-linecap="round" stroke-linejoin="round" stroke-width="18">
+    <path d="M106 38C75 45 51 65 38 93" />
+    <path d="M150 38c31 7 55 27 68 55" />
+    <path d="M48 157c23 31 57 48 95 48s72-17 95-48" />
+  </g>
+  <g fill="#1e9e8a">
+    <path d="m31 75 4 37 32-20z" />
+    <path d="m225 75-4 37-32-20z" />
+    <path d="m222 141 12 35-36-14z" />
+  </g>
+
+  <g fill="#66517d">
+    <path d="M111 106c-4 18-11 28-20 40-12 16-18 33-15 51 4 27 29 45 61 45 35 0 58-18 65-50-18-2-36-9-48-23-11-13-16-30-15-48-2-9-7-15-14-15z" />
+    <path d="M114 106c-12-1-22-8-29-18l31-4c8 4 13 11 13 20z" />
+    <circle cx="119" cy="84" r="22" />
+    <path d="m101 82-25 8 24 10z" />
+    <circle cx="124" cy="78" r="4" fill="#fff" />
+    <circle cx="102" cy="48" r="5" />
+    <circle cx="119" cy="40" r="5" />
+    <circle cx="136" cy="48" r="5" />
+    <path d="M102 75 99 54M119 70V46M136 75l3-21" fill="none" stroke="#66517d" stroke-linecap="round" stroke-width="4" />
+  </g>
+</svg>
