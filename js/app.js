@@ -94,6 +94,7 @@ const telegramUsernameDialog = document.querySelector("#telegram-username-dialog
 const telegramUsernameDialogClose = document.querySelector("#telegram-username-dialog-close");
 const telegramUsernameRetry = document.querySelector("#telegram-username-retry");
 const offerForm = document.querySelector("#offer-form");
+const offerSubmitButton = offerForm?.querySelector('button[type="submit"]');
 const offerImages = document.querySelector("#offer-images");
 const offerPreview = document.querySelector("#offer-preview");
 const offerFormState = document.querySelector("#offer-form-state");
@@ -1247,6 +1248,8 @@ async function optimizePhoto(file) {
 async function handleOfferSubmit(event) {
   event.preventDefault();
 
+  if (offerSubmitButton?.disabled) return;
+
   if (!offerForm.reportValidity()) {
     setFormState("Revisa los campos obligatorios.", "error");
     return;
@@ -1267,6 +1270,8 @@ async function handleOfferSubmit(event) {
     return;
   }
 
+  if (offerSubmitButton) offerSubmitButton.disabled = true;
+
   const formData = new FormData(offerForm);
   const draftItem = {
     title: String(formData.get("title") ?? "").trim(),
@@ -1284,7 +1289,12 @@ async function handleOfferSubmit(event) {
     },
   };
 
-  setFormState(state.offerFiles.length ? "Preparando fotos…" : "Publicando…", "pending");
+  setFormState(
+    state.offerFiles.length
+      ? `Optimizando ${state.offerFiles.length === 1 ? "foto" : "fotos"}…`
+      : "Publicando…",
+    "pending",
+  );
 
   try {
     const optimizedFiles = await Promise.all(state.offerFiles.map(optimizePhoto));
@@ -1323,6 +1333,8 @@ async function handleOfferSubmit(event) {
     showPublishSuccess(finalItem);
   } catch (error) {
     setFormState(error.message || "No se ha podido publicar.", "error");
+  } finally {
+    if (offerSubmitButton) offerSubmitButton.disabled = false;
   }
 }
 
