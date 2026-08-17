@@ -1150,13 +1150,12 @@ function handlePhotoSelection(event) {
   // Permite volver a seleccionar el mismo archivo en una selección posterior.
   event.target.value = "";
 
-  const invalidFiles = files.filter((file) => (
-    !ALLOWED_PHOTO_TYPES.has(file.type) || file.size > MAX_PHOTO_BYTES
-  ));
+  // El límite de 5 MB se comprueba después de optimizar la imagen al enviar.
+  // En la selección solo rechazamos formatos que el navegador no puede tratar.
+  const invalidFiles = files.filter((file) => !ALLOWED_PHOTO_TYPES.has(file.type));
   const existingKeys = new Set(state.offerFiles.map(photoKey));
   const newFiles = files.filter((file) => (
     ALLOWED_PHOTO_TYPES.has(file.type) &&
-    file.size <= MAX_PHOTO_BYTES &&
     !existingKeys.has(photoKey(file))
   ));
   const availableSlots = Math.max(0, MAX_OFFER_PHOTOS - state.offerFiles.length);
@@ -1171,7 +1170,7 @@ function handlePhotoSelection(event) {
   }
 
   if (invalidFiles.length > 0) {
-    setFormState("Cada foto debe ser JPG, PNG o WebP y pesar menos de 5 MB.", "error");
+    setFormState("Cada foto debe ser JPG, PNG o WebP.", "error");
     return;
   }
 
