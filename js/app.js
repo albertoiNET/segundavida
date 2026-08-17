@@ -1084,21 +1084,36 @@ function handleInterest() {
 async function shareSelectedItem() {
   if (!state.selectedItem) return;
 
+  const itemUrl = getItemUrl(state.selectedItem);
   const shareData = {
     title: state.selectedItem.title,
     text: `${state.selectedItem.title} · SegundaVida`,
-    url: window.location.href,
+    url: itemUrl,
   };
 
   try {
-    if (navigator.share) {
+    const webApp = window.Telegram?.WebApp;
+    if (telegramRuntime.isTelegram && typeof webApp?.openTelegramLink === "function") {
+      const telegramShareUrl = `https://t.me/share/url?url=${encodeURIComponent(itemUrl)}&text=${encodeURIComponent(shareData.text)}`;
+      webApp.openTelegramLink(telegramShareUrl);
+      detailActionState.textContent = "Elige dónde compartir la publicación.";
+      detailActionState.dataset.state = "connected";
+      return;
+    }
+
+    if (typeof navigator.share === "function") {
       await navigator.share(shareData);
       return;
     }
 
-    await navigator.clipboard.writeText(window.location.href);
-    detailActionState.textContent = "Enlace copiado.";
-    detailActionState.dataset.state = "connected";
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(itemUrl);
+      detailActionState.textContent = "Enlace copiado.";
+      detailActionState.dataset.state = "connected";
+      return;
+    }
+
+    throw new Error("share_unavailable");
   } catch {
     detailActionState.textContent = "No se ha podido compartir ahora.";
     detailActionState.dataset.state = "error";
