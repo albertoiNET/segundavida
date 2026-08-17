@@ -2489,6 +2489,14 @@ body.photo-lightbox-open {
   opacity: 0;
 }
 
+.photo-picker-actions > input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  opacity: 0;
+}
+
 @media (max-width: 560px) {
   .photo-picker-actions {
     grid-template-columns: repeat(2, minmax(0, 1fr));

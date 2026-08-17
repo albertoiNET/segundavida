@@ -1615,6 +1615,10 @@ function handleCameraRequest() {
   offerCamera.click();
 }
 
+function handleGalleryRequest() {
+  offerImages.click();
+}
+
 function handlePhotoSelection(event) {
   const files = [...event.target.files];
   // Permite volver a seleccionar el mismo archivo en una selección posterior.
@@ -2077,6 +2081,7 @@ detailShare.addEventListener("click", shareSelectedItem);
 interestButton.addEventListener("click", handleInterest);
 markDeliveredButton.addEventListener("click", () => completeItem(state.selectedItem));
 offerImages.addEventListener("change", handlePhotoSelection);
+offerPhotoPicker?.addEventListener("click", handleGalleryRequest);
 offerCamera?.addEventListener("change", handlePhotoSelection);
 offerCameraButton?.addEventListener("click", handleCameraRequest);
 offerForm.addEventListener("submit", handleOfferSubmit);

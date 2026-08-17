@@ -39,7 +39,7 @@
     />
     <link rel="stylesheet" href="/css/icon-fallback.css?v=sv-20260817-40" />
     <link rel="stylesheet" href="/css/tokens.css?v=sv-20260817-41" />
-    <link rel="stylesheet" href="/css/app.css?v=sv-20260817-54" />
+    <link rel="stylesheet" href="/css/app.css?v=sv-20260817-55" />
     <script src="https://telegram.org/js/telegram-web-app.js?63"></script>
   </head>
   <body>
@@ -342,15 +342,15 @@
           <div class="form-field">
             <span class="field-label">Fotos <small>1 obligatoria · hasta 2</small></span>
             <div class="photo-picker-actions">
-              <label class="photo-picker photo-picker--gallery" id="offer-photo-picker" for="offer-images" tabindex="-1">
+              <button class="photo-picker photo-picker--gallery" id="offer-photo-picker" type="button" aria-controls="offer-images">
                 <span class="photo-picker__icon" aria-hidden="true"><i class="fa-solid fa-images fa-icon" data-fallback="▧"></i></span>
-                <span><strong>Elegir fotos</strong><small>Desde la galería o los archivos · puedes añadirlas en varias veces</small></span>
-                <input id="offer-images" name="images" type="file" accept="image/jpeg,image/png,image/webp" multiple aria-describedby="offer-form-state" />
-              </label>
+                <span><strong>Elegir fotos</strong></span>
+              </button>
               <button class="photo-picker photo-picker--camera" id="offer-camera-button" type="button" aria-controls="offer-camera">
                 <span class="photo-picker__icon" aria-hidden="true"><i class="fa-solid fa-camera fa-icon" data-fallback="◎"></i></span>
-                <span><strong>Hacer una foto</strong><small>Usar la cámara del dispositivo</small></span>
+                <span><strong>Hacer foto</strong></span>
               </button>
+              <input id="offer-images" name="images" type="file" accept="image/jpeg,image/png,image/webp" multiple aria-describedby="offer-form-state" />
               <input id="offer-camera" type="file" accept="image/jpeg,image/png,image/webp" capture="environment" aria-describedby="offer-form-state" />
             </div>
             <div class="photo-preview" id="offer-preview" aria-live="polite"></div>
