@@ -65,7 +65,6 @@ const viewPublishedButton = document.querySelector("#view-published-button");
 const goPostsButton = document.querySelector("#go-posts-button");
 const telegramAuthCard = document.querySelector("#telegram-auth-card");
 const telegramAuthTitle = document.querySelector("#telegram-auth-title");
-const telegramAuthBadge = document.querySelector("#telegram-auth-badge");
 const telegramAuthMessage = document.querySelector("#telegram-auth-message");
 const telegramDownloadLink = document.querySelector("#telegram-download-link");
 const telegramOpenLink = document.querySelector("#telegram-open-link");
@@ -804,21 +803,21 @@ function configureOfferAuth(user = state.telegramUser) {
     : verified
       ? "Necesitas un username público"
       : "Publica desde Telegram";
-  telegramAuthBadge.textContent = verified && username ? "Detectado" : "Username necesario";
-  telegramAuthBadge.hidden = !verified;
   telegramDownloadLink.hidden = verified;
   telegramOpenLink.hidden = verified;
-  telegramIdentityField.hidden = !verified;
+  telegramIdentityField.hidden = !verified || Boolean(username);
   telegramUsernameHelp.hidden = !verified || Boolean(username);
 
   if (verified) {
     offerTelegramUsername.value = username ? `@${username}` : "Sin usuario público";
     offerTelegramUsername.readOnly = true;
     if (username) {
-      telegramAuthMessage.textContent = "Tu usuario de Telegram se ha detectado y se asociará a esta publicación para que puedan contactarte.";
+      telegramAuthMessage.textContent = "";
+      telegramAuthMessage.hidden = true;
       setOfferFormEnabled(true);
     } else {
       telegramAuthMessage.textContent = "Configúralo en Telegram para publicar y recibir contactos.";
+      telegramAuthMessage.hidden = false;
       setOfferFormEnabled(false);
     }
     return;
@@ -827,6 +826,7 @@ function configureOfferAuth(user = state.telegramUser) {
   offerTelegramUsername.value = "";
   offerTelegramUsername.readOnly = true;
   telegramAuthMessage.textContent = "Abre esta aplicación dentro de Telegram para continuar.";
+  telegramAuthMessage.hidden = false;
   setOfferFormEnabled(false);
 }
 
