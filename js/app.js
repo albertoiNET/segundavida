@@ -546,7 +546,7 @@ function renderDetail(item) {
     ? "Gestiona el estado de tu publicación desde aquí."
     : ownerUsername
     ? "Se abrirá el chat de Telegram de quien lo ofrece."
-    : "Este vecino o vecina no tiene un username público para recibir contactos.";
+    : "Este vecino o vecina no tiene un nombre de usuario público para recibir contactos.";
   detailActionState.dataset.state = ownItem || ownerUsername ? "" : "error";
 
   detailOwnerActions.hidden = !ownItem;
@@ -782,6 +782,7 @@ async function checkIdentity() {
 }
 
 function setOfferFormEnabled(enabled) {
+  offerForm.hidden = !enabled;
   offerForm.dataset.auth = enabled ? "connected" : "locked";
   offerForm.querySelectorAll("input, select, textarea, button").forEach((control) => {
     control.disabled = !enabled;
@@ -800,7 +801,7 @@ function configureOfferAuth(user = state.telegramUser) {
   telegramAuthTitle.textContent = verified && username
     ? `Publicar como @${username}`
     : verified
-      ? "Necesitas un username público"
+      ? "Necesitas un nombre de usuario público"
       : "Publica desde Telegram";
   telegramDownloadLink.hidden = verified;
   telegramOpenLink.hidden = verified;
@@ -1053,7 +1054,7 @@ function handleInterest() {
 
   const username = normalizeTelegramUsername(state.selectedItem?.ownerUsername);
   if (!username) {
-    detailActionState.textContent = "Este vecino o vecina no tiene un username público para recibir contactos.";
+    detailActionState.textContent = "Este vecino o vecina no tiene un nombre de usuario público para recibir contactos.";
     detailActionState.dataset.state = "error";
     return;
   }

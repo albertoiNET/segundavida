@@ -35,6 +35,6 @@ SecondaVidaAnalytics.trackPageView();
 SecondaVidaAnalytics.trackEvent("SegundaVida", "open_telegram");
 ```
 
-No se enviarán a Matomo el Telegram ID, username, nombre, correo, teléfono,
+No se enviarán a Matomo el Telegram ID, nombre de usuario, nombre, correo, teléfono,
 descripción de objetos ni ningún otro contenido escrito por usuarios. Matomo
 medirá comportamiento agregado; la identidad operativa permanecerá en NocoDB.

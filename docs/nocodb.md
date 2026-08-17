@@ -21,7 +21,7 @@ público.
 | `zone` | SingleLineText | Sí | Zona aproximada, no dirección exacta |
 | `owner_telegram_id` | SingleLineText | Sí | Identidad privada de Telegram |
 | `owner_display_name` | SingleLineText | Sí | Nombre público mostrado |
-| `owner_username` | SingleLineText | No | Username opcional |
+| `owner_username` | SingleLineText | No | Nombre de usuario opcional |
 | `status` | SingleSelect | Sí | `available`, `completed`, `expired`, `hidden` |
 | `expires_at` | DateTime | Sí | Fin de disponibilidad |
 | `completed_at` | DateTime | No | Cuándo se finalizó |
@@ -41,8 +41,8 @@ limitaciones de tamaño en campos numéricos. No se crea todavía el estado
 `reserved` ni la tabla de intereses. Cuando haya un `owner_username` público,
 `Me interesa` abre directamente el chat del vecino o la vecina con un mensaje
 preparado y el enlace a la ficha concreta. Por eso el formulario exige
-configurar un username público antes de publicar. Las
-publicaciones antiguas sin username se mantienen visibles, pero no ofrecen un
+configurar un nombre de usuario público antes de publicar. Las
+publicaciones antiguas sin nombre de usuario se mantienen visibles, pero no ofrecen un
 canal de contacto. La tabla de intereses queda para una segunda fase si
 necesitamos métricas o notificaciones más detalladas.
 

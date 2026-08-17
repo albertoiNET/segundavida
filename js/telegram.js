@@ -1,6 +1,6 @@
 // Adaptador mínimo para Telegram Mini Apps.
 (function setupTelegramRuntime() {
-  // Si cambia el username o el short name de la Mini App, solo hay que actualizar esta línea.
+  // Si cambia el nombre de usuario o el short name de la Mini App, solo hay que actualizar esta línea.
   const miniAppUrl = "https://t.me/pucelobot?startapp=segundavida";
   const webApp = window.Telegram?.WebApp;
   const isTelegram = Boolean(webApp);

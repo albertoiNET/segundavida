@@ -85,7 +85,7 @@ El nodo de backend debe:
    constante con `hash`.
 5. Rechazar datos antiguos comprobando `auth_date` con una tolerancia corta
    (por ejemplo, 10 minutos para este endpoint).
-6. Devolver únicamente `telegram_id`, `first_name` y `username` después de
+6. Devolver únicamente `telegram_id`, `first_name` y el campo técnico `username` (nombre de usuario) después de
    validar. No devolver el `initData` ni el token.
 
 La misma validación debe repetirse en cada endpoint que escriba datos. La
