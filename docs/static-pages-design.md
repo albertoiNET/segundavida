@@ -27,7 +27,7 @@ generador rechaza IDs que parezcan contener datos sensibles.
 
 No se generan fichas de prueba ni se incluyen objetos ficticios en el
 repositorio. Al activar el flujo, cada fila real debe recibir un `public_id`
-opaco (por ejemplo, `sv-k8Qm2LxP`, generado aleatoriamente) y conservar
+opaco (por ejemplo, `k8Qm2LxP`, generado aleatoriamente) y conservar
 `item-id` durante la transición. Nunca se debe poner un Telegram user ID en
 ninguno de los dos campos.
 
@@ -39,7 +39,7 @@ contener:
 
 ```json
 {
-  "id": "sv-k8Qm2LxP",
+  "id": "k8Qm2LxP",
   "title": "Silla de escritorio",
   "description": "En buen estado.",
   "category": "Hogar",

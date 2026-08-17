@@ -18,7 +18,7 @@ class StaticContractTests(unittest.TestCase):
 
     def item(self, status="available"):
         return {
-            "public_id": "sv-safe-001",
+            "public_id": "safe-001",
             "title": '<Silla> "azul"',
             "description": "Descripción con <script>alert(1)</script> & comillas.",
             "category": "Hogar",
@@ -31,14 +31,16 @@ class StaticContractTests(unittest.TestCase):
         }
 
     def test_public_id_is_stable_and_legacy_alias_is_accepted(self):
-        self.assertEqual(normalize_item({**self.item(), "item-id": "sv-safe-002"})["id"], "sv-safe-001")
+        self.assertEqual(normalize_item({**self.item(), "item-id": "legacy-002"})["id"], "safe-001")
         legacy = {key: value for key, value in self.item().items() if key != "public_id"}
-        legacy["item-id"] = "sv-legacy-001"
-        self.assertEqual(normalize_item(legacy)["id"], "sv-legacy-001")
+        legacy["item-id"] = "legacy-001"
+        self.assertEqual(normalize_item(legacy)["id"], "legacy-001")
 
     def test_numeric_telegram_style_id_and_sensitive_data_are_rejected(self):
         with self.assertRaises(ContractError):
-            normalize_item({**self.item(), "public_id": "sv-2191395-1786900112374"})
+            normalize_item({**self.item(), "public_id": "2191395-1786900112374"})
+        with self.assertRaises(ContractError):
+            normalize_item({**self.item(), "public_id": "1786900112374"})
         with self.assertRaises(ContractError):
             normalize_item({**self.item(), "owner_telegram_id": "123456789"})
 
@@ -47,8 +49,8 @@ class StaticContractTests(unittest.TestCase):
             output = Path(directory)
             count = generate([normalize_item(self.item())], output, self.template, self.site_url)
             self.assertEqual(count, 1)
-            page = (output / "i" / "sv-safe-001" / "index.html").read_text(encoding="utf-8")
-            self.assertIn('rel="canonical" href="https://segundavida.aldeapucela.org/i/sv-safe-001/"', page)
+            page = (output / "i" / "safe-001" / "index.html").read_text(encoding="utf-8")
+            self.assertIn('rel="canonical" href="https://segundavida.aldeapucela.org/i/safe-001/"', page)
             self.assertIn('property="og:image"', page)
             self.assertIn("summary_large_image", page)
             self.assertIn("&lt;script&gt;alert(1)&lt;/script&gt;", page)
@@ -60,12 +62,12 @@ class StaticContractTests(unittest.TestCase):
             self.assertTrue((output / "404.html").exists())
 
             embedded = page.split('id="static-item-data">', 1)[1].split("</script>", 1)[0]
-            self.assertEqual(json.loads(embedded)["id"], "sv-safe-001")
+            self.assertEqual(json.loads(embedded)["id"], "safe-001")
 
     def test_supported_operational_statuses_are_renderable_but_hidden_is_not_public(self):
         with tempfile.TemporaryDirectory() as directory:
             output = Path(directory)
-            items = [normalize_item({**self.item(), "public_id": f"sv-safe-{index}", "status": status})
+            items = [normalize_item({**self.item(), "public_id": f"safe-{index:03d}", "status": status})
                      for index, status in enumerate(("available", "completed", "expired"), 1)]
             generate(items, output, self.template, self.site_url)
             for item in items:

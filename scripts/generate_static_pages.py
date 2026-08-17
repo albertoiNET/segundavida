@@ -26,8 +26,8 @@ SENSITIVE_KEYS = {
     "secret",
     "token",
 }
-PUBLIC_ID_PATTERN = re.compile(r"^sv-[A-Za-z0-9_-]{6,80}$")
-TELEGRAM_DERIVED_ID_PATTERN = re.compile(r"^sv-\d+(?:-\d+)+$")
+PUBLIC_ID_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]{5,79}$")
+TELEGRAM_DERIVED_ID_PATTERN = re.compile(r"^(?:\d{6,80}|\d+(?:[-_]\d+)+)$")
 
 
 class ContractError(ValueError):
@@ -58,7 +58,7 @@ def has_sensitive_key(value: object) -> str | None:
 def safe_public_id(value: object) -> str:
     public_id = str(value or "").strip()
     if not PUBLIC_ID_PATTERN.fullmatch(public_id):
-        raise fail("public_id must match sv-<opaque-value>")
+        raise fail("public_id must be an opaque 6-80 character token")
     if TELEGRAM_DERIVED_ID_PATTERN.fullmatch(public_id):
         raise fail("public_id looks derived from a numeric Telegram identifier")
     return public_id

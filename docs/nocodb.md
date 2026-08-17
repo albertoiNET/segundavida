@@ -67,7 +67,7 @@ manualmente antes de activar el catálogo.
 ### Migración no destructiva
 
 1. Añade `public_id` como `SingleLineText` y hazlo único si NocoDB lo permite.
-2. Genera valores como `sv-k8Qm2LxP` desde n8n; nunca derives el valor de un
+2. Genera valores como `k8Qm2LxP` desde n8n; nunca derives el valor de un
    Telegram user ID, `chat_id`, timestamp u otro dato privado.
 3. Escribe el valor en `public_id` y en `item-id` durante la transición.
 4. Actualiza los workflows para leer `public_id` primero y `item-id` solo como

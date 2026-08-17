@@ -56,13 +56,13 @@ El workflow también exige el consentimiento explícito, comprueba su versión y
 genera `consent_at` en n8n. La fecha no se acepta desde el navegador.
 
 El identificador público se genera en un nodo separado con bytes aleatorios:
-`sv-${crypto.randomBytes(6).toString('base64url')}`. Nunca se construye a partir
+`crypto.randomBytes(6).toString('base64url')`. Nunca se construye a partir
 del Telegram user ID. El valor se escribe en `public_id` y, mientras dure la
 compatibilidad, también en `item-id`.
 
 Las filas antiguas que tengan un `item-id` como
 `sv-2191395-1786900112374` deben editarse una vez en NocoDB y recibir un valor
-opaco, por ejemplo `sv-k8Qm2LxP`, en ambos campos. Las URLs antiguas se aceptan
+opaco, por ejemplo `k8Qm2LxP`, en ambos campos. Las URLs antiguas se aceptan
 solo como fallback de navegación y se normalizan a `/i/<public_id>/`; no se
 generan enlaces nuevos con el valor antiguo.
 
@@ -77,9 +77,9 @@ Contrato de llamada para n8n:
 
 ```json
 {
-  "public_id": "sv-k8Qm2LxP",
+  "public_id": "k8Qm2LxP",
   "items": [{
-    "public_id": "sv-k8Qm2LxP",
+    "public_id": "k8Qm2LxP",
     "title": "Mesa auxiliar",
     "description": "En buen estado.",
     "category": "Hogar",
@@ -121,7 +121,7 @@ ha cambiado a **GitHub Actions**; no llama a n8n por sí mismo.
 ```json
 {
   "ok": true,
-  "item_id": "sv-k8Qm2LxP",
+  "item_id": "k8Qm2LxP",
   "status": "available",
   "message": "Publicado correctamente"
 }

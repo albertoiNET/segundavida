@@ -56,7 +56,7 @@ El frontend ya envía este cuerpo:
 ```json
 {
   "initData": "<Telegram.WebApp.initData>",
-  "item_id": "sv-k8Qm2LxP",
+  "item_id": "k8Qm2LxP",
   "action": "complete"
 }
 ```
@@ -69,7 +69,7 @@ Respuesta correcta al completar:
 ```json
 {
   "ok": true,
-  "item_id": "sv-k8Qm2LxP",
+  "item_id": "k8Qm2LxP",
   "status": "completed",
   "completed_at": "2026-08-16T12:00:00.000Z",
   "message": "Marcado como entregado"
@@ -81,7 +81,7 @@ Respuesta correcta al reactivar:
 ```json
 {
   "ok": true,
-  "item_id": "sv-k8Qm2LxP",
+  "item_id": "k8Qm2LxP",
   "status": "available",
   "completed_at": null,
   "message": "Publicación reactivada"
