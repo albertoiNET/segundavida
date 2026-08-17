@@ -1,0 +1,140 @@
+{
+  "name": "SV · My items",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "segundavida/mine",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "https://segundavida.aldeapucela.org,http://localhost:8000,http://127.0.0.1:8000"
+        }
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [0, 0],
+      "id": "e7c3f1f2-3da5-4af0-9cd9-7e2c1f91a402",
+      "name": "Webhook"
+    },
+    {
+      "parameters": {
+        "jsCode": "const crypto = require('crypto');\n\n// Pega aquí el mismo token privado que ya usa tu nodo /whoami.\n// No lo guardes en GitHub ni lo envíes al navegador.\nconst BOT_TOKEN = 'PEGA_AQUI_EL_TOKEN_REAL_DE_PUCELO_BOT';\n\nfunction result(json) {\n  return [{ json }];\n}\n\nfunction invalid(error) {\n  return result({ ok: false, valid: false, error });\n}\n\nfunction parseQueryString(value) {\n  const fields = {};\n\n  try {\n    for (const part of String(value).split('&')) {\n      const separator = part.indexOf('=');\n      if (separator < 0) continue;\n\n      const key = decodeURIComponent(part.slice(0, separator).replace(/\\+/g, ' '));\n      const fieldValue = decodeURIComponent(part.slice(separator + 1).replace(/\\+/g, ' '));\n      fields[key] = fieldValue;\n    }\n  } catch {\n    return null;\n  }\n\n  return fields;\n}\n\nif (!BOT_TOKEN || BOT_TOKEN.startsWith('PEGA_AQUI')) {\n  throw new Error('Pega el token privado de Pucelo Bot en este nodo.');\n}\n\nconst input = $input.first()?.json ?? {};\nlet body = input.body ?? input;\n\nif (typeof body === 'string') {\n  try {\n    body = JSON.parse(body);\n  } catch {\n    return invalid('invalid_json');\n  }\n}\n\nconst initData = typeof body.initData === 'string' ? body.initData.trim() : '';\nif (!initData) return invalid('telegram_init_data_missing');\n\nconst fields = parseQueryString(initData);\nif (!fields) return invalid('telegram_init_data_malformed');\n\nconst receivedHash = fields.hash ?? '';\nconst authDate = Number(fields.auth_date);\nif (!/^[a-f0-9]{64}$/i.test(receivedHash) || !Number.isInteger(authDate)) {\n  return invalid('telegram_init_data_invalid');\n}\n\nconst now = Math.floor(Date.now() / 1000);\nif (authDate > now + 60 || now - authDate > 600) {\n  return invalid('telegram_init_data_expired');\n}\n\nconst dataCheckString = Object.keys(fields)\n  .filter((key) => key !== 'hash')\n  .sort()\n  .map((key) => `${key}=${fields[key]}`)\n  .join('\\n');\n\nconst secretKey = crypto.createHmac('sha256', 'WebAppData').update(BOT_TOKEN).digest();\nconst expectedHash = crypto.createHmac('sha256', secretKey).update(dataCheckString).digest('hex');\nconst received = Buffer.from(receivedHash, 'hex');\nconst expected = Buffer.from(expectedHash, 'hex');\n\nif (received.length !== expected.length || !crypto.timingSafeEqual(received, expected)) {\n  return invalid('telegram_identity_invalid');\n}\n\nlet user;\ntry {\n  user = JSON.parse(fields.user ?? '{}');\n} catch {\n  return invalid('telegram_user_invalid');\n}\n\nif (!user || !Number.isSafeInteger(user.id)) {\n  return invalid('telegram_user_invalid');\n}\n\nreturn result({\n  ok: true,\n  valid: true,\n  telegram_id: String(user.id),\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [224, 0],
+      "id": "f8d4e2a3-4eb6-5b0f-ae8d-8f3d2a02b513",
+      "name": "Validate Telegram initData"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.valid }}",
+              "operation": "isTrue"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [448, 0],
+      "id": "a9e5f3b4-5fc7-6c1f-bf9e-9a4e3b13c624",
+      "name": "Identity valid?"
+    },
+    {
+      "parameters": {
+        "authentication": "nocoDbApiToken",
+        "operation": "search",
+        "workspaceId": {
+          "__rl": true,
+          "value": "wfrogvq8",
+          "mode": "list",
+          "cachedResultName": "Default Workspace",
+          "cachedResultUrl": "https://proyectos.aldeapucela.org/#/wfrogvq8"
+        },
+        "projectId": {
+          "__rl": true,
+          "value": "p3amiucxfm0jzoc",
+          "mode": "list",
+          "cachedResultName": "Aldea Pucela",
+          "cachedResultUrl": "https://proyectos.aldeapucela.org/#/wfrogvq8/p3amiucxfm0jzoc"
+        },
+        "table": {
+          "__rl": true,
+          "value": "mwk20n0679wz5fr",
+          "mode": "list",
+          "cachedResultName": "Segunda Vida",
+          "cachedResultUrl": "https://proyectos.aldeapucela.org/#/wfrogvq8/p3amiucxfm0jzoc/mwk20n0679wz5fr"
+        },
+        "returnAll": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.nocoDb",
+      "typeVersion": 4,
+      "position": [672, -96],
+      "id": "baf604c5-6ad8-7d20-cg0f-0b5f4c24d735",
+      "name": "Search rows",
+      "alwaysOutputData": true,
+      "credentials": {
+        "nocoDbApiToken": {
+          "id": "t0BGosFerj8egJ4y",
+          "name": "NocoDB Token account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const auth = $('Validate Telegram initData').first()?.json ?? {};\n\nif (auth.valid !== true) {\n  return [{ json: auth }];\n}\n\nconst items = $input.all()\n  .map(({ json }) => json.fields ?? json)\n  .filter((fields) => String(fields.owner_telegram_id ?? '') === String(auth.telegram_id))\n  .map((fields) => ({\n    id: fields['item-id'] ?? null,\n    title: fields.title ?? '',\n    description: fields.description ?? '',\n    category: fields.category ?? 'Otros',\n    zone: fields.zone ?? 'Valladolid',\n    status: fields.status ?? 'hidden',\n    created_at: fields.created_at ?? fields.CreatedAt ?? null,\n    updated_at: fields.updated_at ?? fields.UpdatedAt ?? null,\n    expires_at: fields.expires_at ?? null,\n    completed_at: fields.completed_at ?? null,\n    image_url: fields.image_url || null,\n    owner_display_name: fields.owner_display_name ?? 'Vecindad',\n    owner_username: fields.owner_username ?? fields.owner_telegram_username ?? fields.telegram_username ?? '',\n    owner_telegram_id: String(fields.owner_telegram_id ?? ''),\n    interest_count: Number(fields.interest_count ?? 0),\n  }))\n  .filter((item) => item.id && ['available', 'completed'].includes(item.status));\n\nreturn [{\n  json: {\n    ok: true,\n    items,\n    total: items.length,\n  },\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [896, -96],
+      "id": "cb0715d6-7be8-8e31-dg10-1c6g5d35e846",
+      "name": "Filter owner items"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [1120, 0],
+      "id": "dc1826e7-8cf9-9f42-eh21-2d7g6e46f957",
+      "name": "Respond to Webhook"
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [[{"node": "Validate Telegram initData", "type": "main", "index": 0}]]
+    },
+    "Validate Telegram initData": {
+      "main": [[{"node": "Identity valid?", "type": "main", "index": 0}]]
+    },
+    "Identity valid?": {
+      "main": [
+        [{"node": "Search rows", "type": "main", "index": 0}],
+        [{"node": "Respond to Webhook", "type": "main", "index": 0}]
+      ]
+    },
+    "Search rows": {
+      "main": [[{"node": "Filter owner items", "type": "main", "index": 0}]]
+    },
+    "Filter owner items": {
+      "main": [[{"node": "Respond to Webhook", "type": "main", "index": 0}]]
+    }
+  },
+  "pinData": {},
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "tags": []
+}
