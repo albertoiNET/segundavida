@@ -9,6 +9,24 @@ function getInitData() {
   return getWebApp()?.initData?.trim() ?? "";
 }
 
+function getInitDataAgeSeconds() {
+  const initData = getInitData();
+  if (!initData) return null;
+
+  try {
+    const authDate = Number(new URLSearchParams(initData).get("auth_date"));
+    if (!Number.isInteger(authDate)) return null;
+    return Math.max(0, Math.floor(Date.now() / 1000) - authDate);
+  } catch {
+    return null;
+  }
+}
+
+function isInitDataExpired() {
+  const age = getInitDataAgeSeconds();
+  return age !== null && age > 600;
+}
+
 async function whoAmI() {
   const initData = getInitData();
 
@@ -44,5 +62,7 @@ window.SecondaVidaAuth = Object.freeze({
   isTelegram: Boolean(getWebApp()),
   hasInitData: () => Boolean(getInitData()),
   getInitData,
+  getInitDataAgeSeconds,
+  isInitDataExpired,
   whoAmI,
 });

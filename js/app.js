@@ -17,6 +17,12 @@ const PHOTO_JPEG_QUALITY = 0.74;
 const ALLOWED_PHOTO_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 const OWN_ITEMS_STORAGE_KEY = "segundavida:my-items:v1";
 const THEME_STORAGE_KEY = "segundavida:theme:v1";
+const PUBLISH_DRAFT_STORAGE_KEY = "segundavida:publish-draft:v1";
+const PUBLISH_DRAFT_VALUES_KEY = "segundavida:publish-draft-values:v1";
+const AUTH_REFRESH_STORAGE_KEY = "segundavida:auth-refresh:v1";
+const AUTH_REFRESH_WINDOW_MS = 2 * 60 * 1000;
+const PUBLISH_DRAFT_DB_NAME = "segundavida-drafts-v1";
+const PUBLISH_DRAFT_STORE_NAME = "drafts";
 const state = {
   items: [],
   category: "Todo",
@@ -32,6 +38,7 @@ const state = {
   historyMaxIndex: 0,
   staticItem: null,
   selectedItemLive: false,
+  publishRetryAfterRefresh: false,
 };
 
 let photoLightboxUrls = [];
@@ -1127,6 +1134,7 @@ async function checkIdentity() {
       configurePostsView();
       await loadMineItems();
       void openItemFromRoute();
+      schedulePublishRetryIfReady();
       const firstName = result.first_name ? `Hola ${result.first_name}` : "Telegram";
       identityStatus.querySelector("span:nth-child(2)").textContent = firstName;
       setServiceState(identityStatus, identityStatusLabel, "connected", "Verificada ✓");
@@ -1216,6 +1224,225 @@ function retryTelegramUsername() {
 function setFormState(message, stateName = "") {
   offerFormState.textContent = message;
   offerFormState.dataset.state = stateName;
+}
+
+function readSessionStorage(key) {
+  try {
+    return window.sessionStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+
+function writeSessionStorage(key, value) {
+  try {
+    window.sessionStorage.setItem(key, value);
+  } catch {
+    // El borrador sigue funcionando mientras la página permanezca abierta.
+  }
+}
+
+function removeSessionStorage(key) {
+  try {
+    window.sessionStorage.removeItem(key);
+  } catch {
+    // El almacenamiento puede estar bloqueado en algunos WebViews.
+  }
+}
+
+function getPublishDraftValues() {
+  const formData = new FormData(offerForm);
+  return {
+    title: String(formData.get("title") ?? ""),
+    category: String(formData.get("category") ?? ""),
+    zone: String(formData.get("zone") ?? ""),
+    description: String(formData.get("description") ?? ""),
+    duration: String(formData.get("duration") ?? "14"),
+    consent: offerConsent.checked,
+  };
+}
+
+function openPublishDraftDatabase() {
+  if (!window.indexedDB) {
+    return Promise.reject(new Error("indexeddb_unavailable"));
+  }
+
+  return new Promise((resolve, reject) => {
+    const request = window.indexedDB.open(PUBLISH_DRAFT_DB_NAME, 1);
+    request.onupgradeneeded = () => {
+      if (!request.result.objectStoreNames.contains(PUBLISH_DRAFT_STORE_NAME)) {
+        request.result.createObjectStore(PUBLISH_DRAFT_STORE_NAME);
+      }
+    };
+    request.onerror = () => reject(request.error || new Error("indexeddb_open_failed"));
+    request.onsuccess = () => resolve(request.result);
+  });
+}
+
+async function savePublishDraft() {
+  const values = getPublishDraftValues();
+  writeSessionStorage(PUBLISH_DRAFT_STORAGE_KEY, "pending");
+  writeSessionStorage(PUBLISH_DRAFT_VALUES_KEY, JSON.stringify(values));
+
+  try {
+    const db = await openPublishDraftDatabase();
+    await new Promise((resolve, reject) => {
+      const transaction = db.transaction(PUBLISH_DRAFT_STORE_NAME, "readwrite");
+      const draft = {
+        values,
+        files: state.offerFiles.map((file) => ({
+          blob: file,
+          name: file.name,
+          type: file.type,
+          lastModified: file.lastModified,
+        })),
+      };
+      transaction.objectStore(PUBLISH_DRAFT_STORE_NAME).put(draft, "publish");
+      transaction.oncomplete = resolve;
+      transaction.onerror = () => reject(transaction.error || new Error("indexeddb_write_failed"));
+      transaction.onabort = () => reject(transaction.error || new Error("indexeddb_write_aborted"));
+    });
+    db.close();
+  } catch {
+    // Los campos de texto quedan en sessionStorage como respaldo. Si el
+    // navegador no permite IndexedDB, se pedirá volver a elegir las fotos.
+  }
+}
+
+async function consumePublishDraft() {
+  if (readSessionStorage(PUBLISH_DRAFT_STORAGE_KEY) !== "pending") return null;
+
+  removeSessionStorage(PUBLISH_DRAFT_STORAGE_KEY);
+  let fallbackValues = null;
+  try {
+    fallbackValues = JSON.parse(readSessionStorage(PUBLISH_DRAFT_VALUES_KEY) || "null");
+  } catch {
+    fallbackValues = null;
+  }
+  removeSessionStorage(PUBLISH_DRAFT_VALUES_KEY);
+
+  try {
+    const db = await openPublishDraftDatabase();
+    const draft = await new Promise((resolve, reject) => {
+      const transaction = db.transaction(PUBLISH_DRAFT_STORE_NAME, "readonly");
+      const request = transaction.objectStore(PUBLISH_DRAFT_STORE_NAME).get("publish");
+      request.onsuccess = () => resolve(request.result ?? null);
+      request.onerror = () => reject(request.error || new Error("indexeddb_read_failed"));
+    });
+    db.close();
+
+    const clearDb = await openPublishDraftDatabase();
+    await new Promise((resolve, reject) => {
+      const transaction = clearDb.transaction(PUBLISH_DRAFT_STORE_NAME, "readwrite");
+      transaction.objectStore(PUBLISH_DRAFT_STORE_NAME).delete("publish");
+      transaction.oncomplete = resolve;
+      transaction.onerror = () => reject(transaction.error || new Error("indexeddb_delete_failed"));
+    });
+    clearDb.close();
+    return draft ?? { values: fallbackValues, files: [] };
+  } catch {
+    return fallbackValues ? { values: fallbackValues, files: [] } : null;
+  }
+}
+
+function restoreDraftFile(entry) {
+  const blob = entry?.blob;
+  if (!(blob instanceof Blob)) return null;
+
+  return new File([blob], entry.name || "foto.jpg", {
+    type: entry.type || blob.type || "image/jpeg",
+    lastModified: Number(entry.lastModified) || Date.now(),
+  });
+}
+
+function schedulePublishRetryIfReady() {
+  if (!state.publishRetryAfterRefresh || !state.telegramUser?.valid) return;
+  if (!normalizeTelegramUsername(state.telegramUser?.username)) return;
+
+  state.publishRetryAfterRefresh = false;
+  window.setTimeout(() => {
+    void handleOfferSubmit({ preventDefault() {} });
+  }, 350);
+}
+
+async function restorePublishDraft() {
+  const draft = await consumePublishDraft();
+  if (!draft?.values) return;
+
+  const values = draft.values;
+  const title = offerForm.elements.namedItem("title");
+  const category = offerForm.elements.namedItem("category");
+  const zone = offerForm.elements.namedItem("zone");
+  const description = offerForm.elements.namedItem("description");
+  const duration = offerForm.elements.namedItem("duration");
+
+  if (title) title.value = values.title ?? "";
+  if (category) category.value = values.category ?? "";
+  if (zone) zone.value = values.zone ?? "";
+  if (description) description.value = values.description ?? "";
+  if (duration) {
+    [...offerForm.querySelectorAll('input[name="duration"]')].forEach((input) => {
+      input.checked = input.value === String(values.duration ?? "14");
+    });
+  }
+  offerConsent.checked = values.consent === true;
+
+  const restoredFiles = (Array.isArray(draft.files) ? draft.files : [])
+    .map(restoreDraftFile)
+    .filter(Boolean)
+    .slice(0, MAX_OFFER_PHOTOS);
+  state.offerFiles = restoredFiles;
+  renderPhotoPreview(state.offerFiles);
+
+  let refreshState = null;
+  try {
+    refreshState = JSON.parse(readSessionStorage(AUTH_REFRESH_STORAGE_KEY) || "null");
+  } catch {
+    refreshState = null;
+  }
+  state.publishRetryAfterRefresh = refreshState?.retry === true;
+
+  if (state.publishRetryAfterRefresh) {
+    setFormState("Actualizando la sesión…", "pending");
+    schedulePublishRetryIfReady();
+  } else if (restoredFiles.length > 0) {
+    setFormState("Hemos recuperado el borrador de tu publicación.", "connected");
+  }
+}
+
+function isTelegramInitDataExpired(value) {
+  const candidates = [
+    typeof value === "string" ? value : "",
+    value?.error_code,
+    value?.error,
+    value?.code,
+  ];
+  return candidates.includes("telegram_init_data_expired");
+}
+
+async function refreshTelegramSession() {
+  if (!telegramRuntime.isTelegram || typeof window.location?.reload !== "function") {
+    return false;
+  }
+
+  let previous = null;
+  try {
+    previous = JSON.parse(readSessionStorage(AUTH_REFRESH_STORAGE_KEY) || "null");
+  } catch {
+    previous = null;
+  }
+  if (previous?.requestedAt && Date.now() - previous.requestedAt < AUTH_REFRESH_WINDOW_MS) {
+    return false;
+  }
+
+  writeSessionStorage(AUTH_REFRESH_STORAGE_KEY, JSON.stringify({
+    requestedAt: Date.now(),
+    retry: true,
+  }));
+  await savePublishDraft();
+  setFormState("Actualizando la sesión…", "pending");
+  window.setTimeout(() => window.location.reload(), 150);
+  return true;
 }
 
 function revokePhotoPreviewUrls() {
@@ -1405,6 +1632,14 @@ async function handleOfferSubmit(event) {
     return;
   }
 
+  if (auth?.isInitDataExpired?.()) {
+    const refreshed = await refreshTelegramSession();
+    if (!refreshed) {
+      setFormState("La sesión de Telegram ha caducado. Cierra y vuelve a abrir esta mini app para continuar.", "error");
+    }
+    return;
+  }
+
   if (offerSubmitButton) {
     offerSubmitButton.disabled = true;
     offerSubmitButton.textContent = state.offerFiles.length ? "Optimizando…" : "Publicando…";
@@ -1441,6 +1676,14 @@ async function handleOfferSubmit(event) {
     setFormState("Publicando…", "pending");
     const result = await api.publishItem(payload, optimizedFiles);
 
+    if (isTelegramInitDataExpired(result)) {
+      const refreshed = await refreshTelegramSession();
+      if (!refreshed) {
+        setFormState("La sesión de Telegram ha caducado. Cierra y vuelve a abrir esta mini app para continuar.", "error");
+      }
+      return;
+    }
+
     if (!result.ok || !result.item_id) {
       setFormState(result.error ?? "No se ha podido publicar.", "error");
       return;
@@ -1464,6 +1707,7 @@ async function handleOfferSubmit(event) {
     };
 
     rememberOwnItem(publishedItem);
+    removeSessionStorage(AUTH_REFRESH_STORAGE_KEY);
     offerForm.reset();
     resetOfferPhotos();
     await loadCatalog();
@@ -1472,6 +1716,13 @@ async function handleOfferSubmit(event) {
     rememberOwnItem(finalItem);
     showPublishSuccess(finalItem);
   } catch (error) {
+    if (isTelegramInitDataExpired(error)) {
+      const refreshed = await refreshTelegramSession();
+      if (!refreshed) {
+        setFormState("La sesión de Telegram ha caducado. Cierra y vuelve a abrir esta mini app para continuar.", "error");
+      }
+      return;
+    }
     setFormState(error.message || "No se ha podido publicar.", "error");
   } finally {
     if (offerSubmitButton) {
@@ -1716,5 +1967,6 @@ state.staticItem = getStaticItem();
 prepareHistoryState();
 window.SecondaVidaAnalytics?.trackPageView();
 configureOfferAuth();
+void restorePublishDraft();
 checkIdentity();
 loadCatalog();

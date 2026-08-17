@@ -163,8 +163,12 @@ async function publishItem(payload, files = []) {
     result = null;
   }
 
+  result = Array.isArray(result) ? result[0] ?? null : result;
+
   if (!response.ok) {
-    throw new Error(result?.error ?? `n8n respondió con HTTP ${response.status}`);
+    const error = new Error(result?.error ?? `n8n respondió con HTTP ${response.status}`);
+    error.code = result?.error_code ?? result?.error ?? `http_${response.status}`;
+    throw error;
   }
 
   return result ?? { ok: false, error: "Respuesta vacía del endpoint de publicación." };
