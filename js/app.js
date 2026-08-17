@@ -11,8 +11,9 @@ const api = window.SecondaVidaApi;
 const CONSENT_VERSION = "sv-publish-2026-08-16-v1";
 const MAX_OFFER_PHOTOS = 2;
 const MAX_PHOTO_BYTES = 5 * 1024 * 1024;
-const PHOTO_MAX_EDGE = 1600;
-const PHOTO_JPEG_QUALITY = 0.82;
+const PHOTO_OPTIMIZE_THRESHOLD = 1.5 * 1024 * 1024;
+const PHOTO_MAX_EDGE = 1280;
+const PHOTO_JPEG_QUALITY = 0.74;
 const ALLOWED_PHOTO_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 const OWN_ITEMS_STORAGE_KEY = "segundavida:my-items:v1";
 const THEME_STORAGE_KEY = "segundavida:theme:v1";
@@ -95,6 +96,7 @@ const telegramUsernameDialogClose = document.querySelector("#telegram-username-d
 const telegramUsernameRetry = document.querySelector("#telegram-username-retry");
 const offerForm = document.querySelector("#offer-form");
 const offerSubmitButton = offerForm?.querySelector('button[type="submit"]');
+const offerSubmitLabel = offerSubmitButton?.textContent?.trim() || "Publicar";
 const offerImages = document.querySelector("#offer-images");
 const offerPreview = document.querySelector("#offer-preview");
 const offerFormState = document.querySelector("#offer-form-state");
@@ -433,13 +435,11 @@ function createItemCard(item, index) {
   card.style.animationDelay = `${Math.min(index * 60, 240)}ms`;
   card.dataset.itemId = item.id;
 
-  if (item.imageUrl) {
-    const image = document.createElement("img");
-    image.className = "item-card__media";
-    image.src = item.imageUrl;
-    image.alt = item.title;
-    image.loading = "lazy";
-    card.append(image);
+  if (getItemImageUrls(item).length) {
+    card.append(createPhotoCarousel(item, {
+      className: "photo-carousel--card",
+      openLightbox: false,
+    }));
   } else {
     const placeholder = document.createElement("div");
     placeholder.className = "item-card__placeholder";
@@ -480,6 +480,135 @@ function createItemCard(item, index) {
     }
   });
   return card;
+}
+
+function createPhotoCarousel(item, { className = "", openLightbox = true } = {}) {
+  const urls = getItemImageUrls(item);
+  const carousel = document.createElement("div");
+  carousel.className = `photo-carousel${className ? ` ${className}` : ""}`;
+  carousel.setAttribute("role", "group");
+  carousel.setAttribute("aria-label", urls.length > 1 ? `${urls.length} fotos` : "Foto");
+
+  const viewport = document.createElement("div");
+  viewport.className = "photo-carousel__viewport";
+  const track = document.createElement("div");
+  track.className = "photo-carousel__track";
+
+  let currentIndex = 0;
+  let touchStartX = 0;
+  let touchStartY = 0;
+  let swipeHappened = false;
+  let swipeResetTimer = null;
+
+  const counter = document.createElement("span");
+  counter.className = "photo-carousel__counter";
+  counter.setAttribute("aria-live", "polite");
+
+  const indicators = document.createElement("div");
+  indicators.className = "photo-carousel__indicators";
+  indicators.setAttribute("aria-label", "Seleccionar foto");
+
+  const indicatorButtons = urls.map((url, index) => {
+    const indicator = document.createElement("button");
+    indicator.className = "photo-carousel__indicator";
+    indicator.type = "button";
+    indicator.setAttribute("aria-label", `Ver foto ${index + 1}`);
+    indicator.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      setIndex(index);
+    });
+    indicators.append(indicator);
+    return indicator;
+  });
+
+  const setIndex = (nextIndex) => {
+    currentIndex = (nextIndex + urls.length) % urls.length;
+    track.style.transform = `translate3d(-${currentIndex * 100}%, 0, 0)`;
+    counter.textContent = urls.length > 1 ? `${currentIndex + 1} / ${urls.length}` : "";
+    indicatorButtons.forEach((indicator, index) => {
+      const active = index === currentIndex;
+      indicator.classList.toggle("is-active", active);
+      indicator.setAttribute("aria-current", active ? "true" : "false");
+    });
+  };
+
+  urls.forEach((url, index) => {
+    const slide = document.createElement("button");
+    slide.className = "photo-carousel__slide";
+    slide.type = "button";
+    slide.setAttribute(
+      "aria-label",
+      openLightbox ? `Abrir foto ${index + 1} en grande` : `Ver ficha, foto ${index + 1}`,
+    );
+    slide.addEventListener("click", (event) => {
+      if (!openLightbox) return;
+      event.preventDefault();
+      event.stopPropagation();
+      if (swipeHappened) return;
+      openPhotoLightbox(item, index, slide);
+    });
+
+    const image = document.createElement("img");
+    image.className = "photo-carousel__image";
+    image.src = url;
+    image.alt = item.title;
+    image.loading = index === 0 ? "eager" : "lazy";
+    image.draggable = false;
+    slide.append(image);
+    track.append(slide);
+  });
+
+  viewport.append(track);
+  carousel.append(viewport);
+
+  if (urls.length > 1) {
+    const makeArrow = (direction, label, icon, step) => {
+      const button = document.createElement("button");
+      button.className = `photo-carousel__nav photo-carousel__nav--${direction}`;
+      button.type = "button";
+      button.setAttribute("aria-label", label);
+      button.title = label;
+      button.innerHTML = `<i class="fa-solid ${icon} fa-icon" data-fallback="${direction === "previous" ? "‹" : "›"}" aria-hidden="true"></i>`;
+      button.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        setIndex(currentIndex + step);
+      });
+      return button;
+    };
+
+    carousel.append(
+      makeArrow("previous", "Foto anterior", "fa-chevron-left", -1),
+      makeArrow("next", "Foto siguiente", "fa-chevron-right", 1),
+      counter,
+      indicators,
+    );
+
+    viewport.addEventListener("touchstart", (event) => {
+      const touch = event.changedTouches[0];
+      touchStartX = touch.clientX;
+      touchStartY = touch.clientY;
+      swipeHappened = false;
+    }, { passive: true });
+
+    viewport.addEventListener("touchend", (event) => {
+      const touch = event.changedTouches[0];
+      const deltaX = touch.clientX - touchStartX;
+      const deltaY = touch.clientY - touchStartY;
+      if (Math.abs(deltaX) < 36 || Math.abs(deltaX) <= Math.abs(deltaY)) return;
+
+      swipeHappened = true;
+      setIndex(currentIndex + (deltaX < 0 ? 1 : -1));
+      window.clearTimeout(swipeResetTimer);
+      swipeResetTimer = window.setTimeout(() => {
+        swipeHappened = false;
+      }, 350);
+    }, { passive: true });
+  }
+
+  setIndex(0);
+  return carousel;
 }
 
 function createOwnedItemCard(item) {
@@ -649,41 +778,10 @@ function renderDetail(item, { live = true, error = "" } = {}) {
   const imageUrls = getItemImageUrls(item);
 
   if (imageUrls.length) {
-    const trigger = document.createElement("button");
-    trigger.className = "detail-media__trigger";
-    trigger.type = "button";
-    trigger.setAttribute("aria-label", "Abrir foto en grande");
-    trigger.addEventListener("click", () => openPhotoLightbox(item, 0, trigger));
-
-    const image = document.createElement("img");
-    image.className = "detail-media__image";
-    image.src = imageUrls[0];
-    image.alt = item.title;
-    trigger.append(image);
-    detailMedia.append(trigger);
-
-    if (imageUrls.length > 1) {
-      const gallery = document.createElement("div");
-      gallery.className = "detail-media__gallery";
-      gallery.setAttribute("aria-label", `${imageUrls.length} fotos disponibles`);
-
-      imageUrls.forEach((url, index) => {
-        const thumbnail = document.createElement("button");
-        thumbnail.className = "detail-media__thumbnail";
-        thumbnail.type = "button";
-        thumbnail.setAttribute("aria-label", `Abrir foto ${index + 1}`);
-        thumbnail.addEventListener("click", () => openPhotoLightbox(item, index, thumbnail));
-
-        const thumbnailImage = document.createElement("img");
-        thumbnailImage.src = url;
-        thumbnailImage.alt = "";
-        thumbnailImage.loading = "lazy";
-        thumbnail.append(thumbnailImage);
-        gallery.append(thumbnail);
-      });
-
-      detailMedia.append(gallery);
-    }
+    detailMedia.append(createPhotoCarousel(item, {
+      className: "photo-carousel--detail",
+      openLightbox: true,
+    }));
   } else {
     const placeholder = document.createElement("div");
     placeholder.className = "detail-media__placeholder";
@@ -1200,7 +1298,15 @@ function handlePhotoSelection(event) {
   setFormState("");
 }
 
-function loadPhoto(file) {
+async function loadPhoto(file) {
+  if (typeof window.createImageBitmap === "function") {
+    try {
+      return await window.createImageBitmap(file);
+    } catch {
+      // Algunos WebViews no aceptan todos los formatos con createImageBitmap.
+    }
+  }
+
   return new Promise((resolve, reject) => {
     const objectUrl = URL.createObjectURL(file);
     const image = new Image();
@@ -1217,17 +1323,25 @@ function loadPhoto(file) {
 }
 
 async function optimizePhoto(file) {
+  // Las fotos que ya son ligeras no necesitan pasar por canvas. Esto evita
+  // trabajo innecesario con las fotos pequeñas de la cámara o de WhatsApp.
+  if (file.size <= PHOTO_OPTIMIZE_THRESHOLD) return file;
+
   const image = await loadPhoto(file);
   const sourceWidth = image.naturalWidth || image.width;
   const sourceHeight = image.naturalHeight || image.height;
-  const scale = Math.min(1, PHOTO_MAX_EDGE / Math.max(sourceWidth, sourceHeight));
-  let width = Math.max(1, Math.round(sourceWidth * scale));
-  let height = Math.max(1, Math.round(sourceHeight * scale));
   const canvas = document.createElement("canvas");
   const context = canvas.getContext("2d", { alpha: false });
-  if (!context) return file;
+  if (!context) {
+    if (typeof image.close === "function") image.close();
+    if (file.size <= MAX_PHOTO_BYTES) return file;
+    throw new Error(`No se ha podido optimizar ${file.name}.`);
+  }
 
-  async function render(quality) {
+  async function render(maxEdge, quality) {
+    const scale = Math.min(1, maxEdge / Math.max(sourceWidth, sourceHeight));
+    const width = Math.max(1, Math.round(sourceWidth * scale));
+    const height = Math.max(1, Math.round(sourceHeight * scale));
     canvas.width = width;
     canvas.height = height;
     context.fillStyle = "#ffffff";
@@ -1238,23 +1352,17 @@ async function optimizePhoto(file) {
     });
   }
 
-  let quality = PHOTO_JPEG_QUALITY;
-  let blob = await render(quality);
-
-  // La compresión inicial suele bastar. Si no, baja calidad y dimensiones
-  // hasta cumplir también el límite del backend, no solo el de resolución.
-  while (blob && blob.size > MAX_PHOTO_BYTES && quality > 0.45) {
-    quality = Math.max(0.45, quality - 0.08);
-    blob = await render(quality);
+  // Una pasada normal y solo dos planes de emergencia. En la mayoría de los
+  // móviles la primera pasada ya deja la imagen por debajo de 5 MB.
+  let blob = await render(PHOTO_MAX_EDGE, PHOTO_JPEG_QUALITY);
+  if (blob && blob.size > MAX_PHOTO_BYTES) {
+    blob = await render(960, 0.58);
+  }
+  if (blob && blob.size > MAX_PHOTO_BYTES) {
+    blob = await render(720, 0.45);
   }
 
-  while (blob && blob.size > MAX_PHOTO_BYTES && Math.max(width, height) > 900) {
-    width = Math.max(1, Math.round(width * 0.85));
-    height = Math.max(1, Math.round(height * 0.85));
-    quality = 0.7;
-    blob = await render(quality);
-  }
-
+  if (typeof image.close === "function") image.close();
   if (!blob) return file;
   if (blob.size > MAX_PHOTO_BYTES) {
     throw new Error(`La foto ${file.name} no se puede reducir por debajo de 5 MB.`);
@@ -1292,7 +1400,11 @@ async function handleOfferSubmit(event) {
     return;
   }
 
-  if (offerSubmitButton) offerSubmitButton.disabled = true;
+  if (offerSubmitButton) {
+    offerSubmitButton.disabled = true;
+    offerSubmitButton.textContent = state.offerFiles.length ? "Optimizando…" : "Publicando…";
+  }
+  offerForm.setAttribute("aria-busy", "true");
 
   const formData = new FormData(offerForm);
   const draftItem = {
@@ -1320,6 +1432,7 @@ async function handleOfferSubmit(event) {
 
   try {
     const optimizedFiles = await Promise.all(state.offerFiles.map(optimizePhoto));
+    if (offerSubmitButton) offerSubmitButton.textContent = "Publicando…";
     setFormState("Publicando…", "pending");
     const result = await api.publishItem(payload, optimizedFiles);
 
@@ -1356,7 +1469,11 @@ async function handleOfferSubmit(event) {
   } catch (error) {
     setFormState(error.message || "No se ha podido publicar.", "error");
   } finally {
-    if (offerSubmitButton) offerSubmitButton.disabled = false;
+    if (offerSubmitButton) {
+      offerSubmitButton.disabled = false;
+      offerSubmitButton.textContent = offerSubmitLabel;
+    }
+    offerForm.removeAttribute("aria-busy");
   }
 }
 

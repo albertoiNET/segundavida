@@ -87,7 +87,9 @@ class StaticContractTests(unittest.TestCase):
         self.assertNotIn('url.hash = `item=', app_source)
         self.assertIn('body.append("payload"', api_source)
         self.assertIn('body.append(`photo_${index}`', api_source)
-        self.assertIn("PHOTO_MAX_EDGE = 1600", app_source)
+        self.assertIn("PHOTO_MAX_EDGE = 1280", app_source)
+        self.assertIn("function createPhotoCarousel", app_source)
+        self.assertIn('"Optimizando…"', app_source)
         self.assertIn("state.offerFiles = [...state.offerFiles, ...filesToAdd]", app_source)
 
     def test_publish_workflow_writes_opaque_public_id_and_keeps_legacy_alias(self):
