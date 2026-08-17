@@ -1227,6 +1227,24 @@ function setFormState(message, stateName = "") {
   offerFormState.dataset.state = stateName;
 }
 
+function setOfferSubmitLoading(label) {
+  if (!offerSubmitButton) return;
+
+  const spinner = document.createElement("span");
+  spinner.className = "button-loading";
+  spinner.setAttribute("aria-hidden", "true");
+  const text = document.createElement("span");
+  text.textContent = label;
+  offerSubmitButton.replaceChildren(spinner, text);
+  offerSubmitButton.classList.add("is-loading");
+}
+
+function resetOfferSubmitButton() {
+  if (!offerSubmitButton) return;
+  offerSubmitButton.classList.remove("is-loading");
+  offerSubmitButton.textContent = offerSubmitLabel;
+}
+
 function setPhotoFieldError(hasError) {
   if (!offerPhotoPicker || !offerImages) return;
   offerPhotoPicker.dataset.state = hasError ? "error" : "";
@@ -1671,7 +1689,7 @@ async function handleOfferSubmit(event) {
 
   if (offerSubmitButton) {
     offerSubmitButton.disabled = true;
-    offerSubmitButton.textContent = state.offerFiles.length ? "Optimizando…" : "Publicando…";
+    setOfferSubmitLoading(state.offerFiles.length ? "Optimizando…" : "Publicando…");
   }
   offerForm.setAttribute("aria-busy", "true");
 
@@ -1692,17 +1710,12 @@ async function handleOfferSubmit(event) {
     },
   };
 
-  setFormState(
-    state.offerFiles.length
-      ? `Optimizando ${state.offerFiles.length === 1 ? "foto" : "fotos"}…`
-      : "Publicando…",
-    "pending",
-  );
+  setFormState("");
 
   try {
     const optimizedFiles = await Promise.all(state.offerFiles.map(optimizePhoto));
-    if (offerSubmitButton) offerSubmitButton.textContent = "Publicando…";
-    setFormState("Publicando…", "pending");
+    setOfferSubmitLoading("Publicando…");
+    setFormState("");
     const result = await api.publishItem(payload, optimizedFiles);
 
     if (isPhotoRequiredError(result)) {
@@ -1769,7 +1782,7 @@ async function handleOfferSubmit(event) {
   } finally {
     if (offerSubmitButton) {
       offerSubmitButton.disabled = false;
-      offerSubmitButton.textContent = offerSubmitLabel;
+      resetOfferSubmitButton();
     }
     offerForm.removeAttribute("aria-busy");
   }
