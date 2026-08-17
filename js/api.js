@@ -1,6 +1,6 @@
 // Endpoint de producción del catálogo público en n8n.
 const N8N_DATA_URL = "https://tasks.nukeador.com/webhook/segundavida/data";
-const N8N_ITEM_URL = "https://tasks.nukeador.com/webhook/segundavida/item";
+const N8N_ITEM_URL = "https://tasks.nukeador.com/webhook/c2b5eab6-9f26-48e9-9561-81dc6d3347ec/segundavida/item";
 const N8N_PUBLISH_URL = "https://tasks.nukeador.com/webhook/segundavida/publish";
 const N8N_COMPLETE_URL = "https://tasks.nukeador.com/webhook/segundavida/complete";
 const N8N_MINE_URL = "https://tasks.nukeador.com/webhook/segundavida/mine";
