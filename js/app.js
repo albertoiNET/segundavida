@@ -113,6 +113,13 @@ const offerImages = document.querySelector("#offer-images");
 const offerCamera = document.querySelector("#offer-camera");
 const offerCameraButton = document.querySelector("#offer-camera-button");
 const offerPhotoPicker = document.querySelector("#offer-photo-picker");
+const cameraDialog = document.querySelector("#camera-dialog");
+const cameraPreview = document.querySelector("#camera-preview");
+const cameraCanvas = document.querySelector("#camera-canvas");
+const cameraDialogState = document.querySelector("#camera-dialog-state");
+const cameraDialogClose = document.querySelector("#camera-dialog-close");
+const cameraDialogCancel = document.querySelector("#camera-dialog-cancel");
+const cameraCaptureButton = document.querySelector("#camera-capture-button");
 const offerPreview = document.querySelector("#offer-preview");
 const offerFormState = document.querySelector("#offer-form-state");
 const offerConsent = document.querySelector("#offer-consent");
@@ -1605,14 +1612,118 @@ function resetOfferPhotos() {
   setPhotoFieldError(false);
 }
 
-function handleCameraRequest() {
-  if (!offerCamera) {
-    setFormState("No se puede abrir la cámara en este dispositivo. Elige una foto existente.", "error");
+let cameraStream = null;
+
+function stopCameraStream() {
+  if (cameraStream) {
+    cameraStream.getTracks().forEach((track) => track.stop());
+    cameraStream = null;
+  }
+  if (cameraPreview) cameraPreview.srcObject = null;
+}
+
+function setCameraDialogState(message = "", stateName = "") {
+  if (!cameraDialogState) return;
+  cameraDialogState.textContent = message;
+  cameraDialogState.dataset.state = stateName;
+}
+
+function closeCameraDialog() {
+  stopCameraStream();
+  if (cameraCaptureButton) cameraCaptureButton.disabled = true;
+  setCameraDialogState();
+
+  if (cameraDialog?.open && typeof cameraDialog.close === "function") {
+    cameraDialog.close();
+  } else {
+    cameraDialog?.removeAttribute("open");
+  }
+}
+
+function addCapturedPhoto(blob) {
+  if (state.offerFiles.length >= MAX_OFFER_PHOTOS) {
+    setPhotoFieldError(true);
+    setFormState(`Puedes añadir hasta ${MAX_OFFER_PHOTOS} fotos.`, "error");
+    return false;
+  }
+
+  const capturedAt = Date.now();
+  const capturedFile = new File([blob], `camara-${capturedAt}.jpg`, {
+    type: "image/jpeg",
+    lastModified: capturedAt,
+  });
+  state.offerFiles = [...state.offerFiles, capturedFile];
+  renderPhotoPreview(state.offerFiles);
+  setPhotoFieldError(false);
+  setFormState("");
+  return true;
+}
+
+async function captureCameraPhoto() {
+  if (!cameraPreview?.videoWidth || !cameraPreview.videoHeight || !cameraCanvas) {
+    setCameraDialogState("La cámara todavía no está lista.", "error");
     return;
   }
 
-  setFormState("Si no se abre la cámara, elige una foto existente.", "pending");
-  offerCamera.click();
+  const sourceWidth = cameraPreview.videoWidth;
+  const sourceHeight = cameraPreview.videoHeight;
+  const scale = Math.min(1, PHOTO_MAX_EDGE / Math.max(sourceWidth, sourceHeight));
+  cameraCanvas.width = Math.max(1, Math.round(sourceWidth * scale));
+  cameraCanvas.height = Math.max(1, Math.round(sourceHeight * scale));
+
+  const context = cameraCanvas.getContext("2d", { alpha: false });
+  if (!context) {
+    setCameraDialogState("No se ha podido capturar la foto.", "error");
+    return;
+  }
+
+  context.drawImage(cameraPreview, 0, 0, cameraCanvas.width, cameraCanvas.height);
+  const blob = await new Promise((resolve) => {
+    cameraCanvas.toBlob(resolve, "image/jpeg", PHOTO_JPEG_QUALITY);
+  });
+  if (!blob || !addCapturedPhoto(blob)) return;
+  closeCameraDialog();
+}
+
+async function handleCameraRequest() {
+  if (state.offerFiles.length >= MAX_OFFER_PHOTOS) {
+    setPhotoFieldError(true);
+    setFormState(`Puedes añadir hasta ${MAX_OFFER_PHOTOS} fotos.`, "error");
+    return;
+  }
+
+  if (!cameraDialog || !cameraPreview || !navigator.mediaDevices?.getUserMedia) {
+    setFormState("La cámara no está disponible en este dispositivo. Elige una foto existente.", "error");
+    return;
+  }
+
+  setFormState("");
+  setCameraDialogState("Preparando cámara…", "pending");
+  if (typeof cameraDialog.showModal === "function") {
+    cameraDialog.showModal();
+  } else {
+    cameraDialog.setAttribute("open", "");
+  }
+
+  try {
+    cameraStream = await navigator.mediaDevices.getUserMedia({
+      audio: false,
+      video: { facingMode: { ideal: "environment" } },
+    });
+    cameraPreview.srcObject = cameraStream;
+    await cameraPreview.play();
+    if (cameraCaptureButton) cameraCaptureButton.disabled = false;
+    setCameraDialogState();
+  } catch (error) {
+    closeCameraDialog();
+    const permissionDenied = ["NotAllowedError", "PermissionDeniedError", "SecurityError"].includes(error?.name);
+    setFormState(
+      permissionDenied
+        ? "No se ha concedido permiso para usar la cámara. Puedes elegir una foto existente."
+        : "No se ha podido abrir la cámara. Puedes elegir una foto existente.",
+      "error",
+    );
+  }
 }
 
 function handleGalleryRequest() {
@@ -2084,6 +2195,15 @@ offerImages.addEventListener("change", handlePhotoSelection);
 offerPhotoPicker?.addEventListener("click", handleGalleryRequest);
 offerCamera?.addEventListener("change", handlePhotoSelection);
 offerCameraButton?.addEventListener("click", handleCameraRequest);
+cameraDialogClose?.addEventListener("click", closeCameraDialog);
+cameraDialogCancel?.addEventListener("click", closeCameraDialog);
+cameraCaptureButton?.addEventListener("click", () => {
+  void captureCameraPhoto();
+});
+cameraDialog?.addEventListener("cancel", (event) => {
+  event.preventDefault();
+  closeCameraDialog();
+});
 offerForm.addEventListener("submit", handleOfferSubmit);
 telegramUsernameHelp.addEventListener("click", openTelegramUsernameDialog);
 telegramUsernameDialogClose.addEventListener("click", closeTelegramUsernameDialog);

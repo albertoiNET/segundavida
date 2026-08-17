@@ -39,7 +39,7 @@
     />
     <link rel="stylesheet" href="/css/icon-fallback.css?v=sv-20260817-40" />
     <link rel="stylesheet" href="/css/tokens.css?v=sv-20260817-41" />
-    <link rel="stylesheet" href="/css/app.css?v=sv-20260817-55" />
+    <link rel="stylesheet" href="/css/app.css?v=sv-20260817-56" />
     <script src="https://telegram.org/js/telegram-web-app.js?63"></script>
   </head>
   <body>
@@ -346,7 +346,7 @@
                 <span class="photo-picker__icon" aria-hidden="true"><i class="fa-solid fa-images fa-icon" data-fallback="▧"></i></span>
                 <span><strong>Elegir fotos</strong></span>
               </button>
-              <button class="photo-picker photo-picker--camera" id="offer-camera-button" type="button" aria-controls="offer-camera">
+              <button class="photo-picker photo-picker--camera" id="offer-camera-button" type="button" aria-controls="camera-dialog">
                 <span class="photo-picker__icon" aria-hidden="true"><i class="fa-solid fa-camera fa-icon" data-fallback="◎"></i></span>
                 <span><strong>Hacer foto</strong></span>
               </button>
@@ -407,6 +407,29 @@
           <li>Elige uno disponible y vuelve a esta Mini App.</li>
         </ol>
         <button class="primary-button" id="telegram-username-retry" type="button">Ya lo he configurado</button>
+      </dialog>
+
+      <dialog class="camera-dialog" id="camera-dialog" aria-labelledby="camera-dialog-title">
+        <div class="camera-dialog__panel">
+          <div class="camera-dialog__topline">
+            <h2 id="camera-dialog-title">Hacer foto</h2>
+            <button class="icon-button" id="camera-dialog-close" type="button" aria-label="Cerrar" title="Cerrar">
+              <i class="fa-solid fa-xmark fa-icon" data-fallback="×" aria-hidden="true"></i>
+            </button>
+          </div>
+          <div class="camera-dialog__stage">
+            <video id="camera-preview" autoplay playsinline muted></video>
+            <canvas id="camera-canvas" hidden></canvas>
+          </div>
+          <p class="camera-dialog__state" id="camera-dialog-state" aria-live="polite"></p>
+          <div class="camera-dialog__actions">
+            <button class="secondary-button" id="camera-dialog-cancel" type="button">Cancelar</button>
+            <button class="primary-button" id="camera-capture-button" type="button" disabled>
+              <i class="fa-solid fa-camera fa-icon" data-fallback="◎" aria-hidden="true"></i>
+              <span>Usar esta foto</span>
+            </button>
+          </div>
+        </div>
       </dialog>
 
       <dialog class="photo-lightbox" id="photo-lightbox" aria-labelledby="photo-lightbox-title">
@@ -514,6 +537,6 @@
     <script src="/js/auth.js?v=sv-20260817-42"></script>
     <script src="/js/api.js?v=sv-20260817-43"></script>
     <script src="/js/analytics.js?v=sv-20260817-41"></script>
-    <script src="/js/app.js?v=sv-20260817-55"></script>
+    <script src="/js/app.js?v=sv-20260817-56"></script>
   </body>
 </html>
