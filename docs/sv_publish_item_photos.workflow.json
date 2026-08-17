@@ -79,7 +79,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const source = $('Validate Telegram and item').first() ?? {};\nconst created = $('Create NocoDB row').first() ?? {};\nconst binary = source.binary ?? {};\nconst createdJson = created.json ?? {};\nconst rowId = createdJson.id ?? createdJson.Id ?? createdJson.fields?.id ?? createdJson.fields?.Id ?? '';\nif (!rowId) throw new Error('NocoDB no devolvió el ID de la fila creada.');\nconst names = Object.keys(binary).filter((name) => /^photo_[01]$/.test(name) && binary[name]?.data).sort();\nreturn names.map((name, index) => ({ json: { ...createdJson, row_id: rowId, photo_index: index, photo_binary_name: name }, binary: { data: binary[name] } }));"
+        "jsCode": "const source = $input.first() ?? {};\nconst sourceJson = source.json ?? {};\nconst binary = source.binary ?? {};\nconst names = Object.keys(binary).filter((name) => /^photo_[01]$/.test(name) && binary[name]).sort();\nconst photoPayloads = [];\n\nfor (const [index, name] of names.entries()) {\n  const file = binary[name];\n  const buffer = await this.helpers.getBinaryDataBuffer(0, name);\n  photoPayloads.push({\n    base64: buffer.toString('base64'),\n    filename: file.fileName ?? `photo_${index}.jpg`,\n    mimeType: file.mimeType ?? file.mimetype ?? 'image/jpeg',\n  });\n}\n\nreturn [{\n  json: {\n    ...sourceJson,\n    photo_payloads: photoPayloads,\n  },\n  binary,\n}];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -89,6 +89,19 @@
       ],
       "id": "4ee8f69a-7f2a-4e78-a4ef-54f9f9e947db",
       "name": "Prepare photo uploads"
+    },
+    {
+      "parameters": {
+        "jsCode": "const prepared = $('Prepare photo uploads').first()?.json ?? {};\nconst created = $('Create NocoDB row').first()?.json ?? {};\nconst rowId = created.id ?? created.Id ?? created.fields?.id ?? created.fields?.Id ?? '';\nif (!rowId) throw new Error('NocoDB no devolvió el ID de la fila creada.');\nconst photos = Array.isArray(prepared.photo_payloads) ? prepared.photo_payloads : [];\n\nreturn photos.map((photo, index) => ({\n  json: {\n    ...created,\n    row_id: rowId,\n    photo_index: index,\n    photo_base64: photo.base64,\n    photo_filename: photo.filename ?? `photo_${index}.jpg`,\n    photo_mime_type: photo.mimeType ?? 'image/jpeg',\n  },\n}));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -64,
+        144
+      ],
+      "id": "d1a0d4e7-9de0-4e7d-b8a3-7c76ac5ad41e",
+      "name": "Explode photo uploads"
     },
     {
       "parameters": {
@@ -162,9 +175,9 @@
           "mode": "list",
           "cachedResultName": "photos"
         },
-        "filename": "={{ $binary.data.fileName }}",
-        "contentType": "={{ $binary.data.mimeType }}",
-        "base64value": "={{ $binary.data.data }}",
+        "filename": "={{ $json.photo_filename }}",
+        "contentType": "={{ $json.photo_mime_type }}",
+        "base64value": "={{ $json.photo_base64 }}",
         "workspaceId": {
           "__rl": true,
           "value": "wfrogvq8",
@@ -521,7 +534,7 @@
       "main": [
         [
           {
-            "node": "Create NocoDB row",
+            "node": "Prepare photo uploads",
             "type": "main",
             "index": 0
           }
@@ -539,7 +552,7 @@
       "main": [
         [
           {
-            "node": "Prepare photo uploads",
+            "node": "Explode photo uploads",
             "type": "main",
             "index": 0
           }
@@ -554,6 +567,17 @@
       ]
     },
     "Prepare photo uploads": {
+      "main": [
+        [
+          {
+            "node": "Create NocoDB row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Explode photo uploads": {
       "main": [
         [
           {
