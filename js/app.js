@@ -1068,23 +1068,44 @@ async function optimizePhoto(file) {
   const sourceWidth = image.naturalWidth || image.width;
   const sourceHeight = image.naturalHeight || image.height;
   const scale = Math.min(1, PHOTO_MAX_EDGE / Math.max(sourceWidth, sourceHeight));
-  const width = Math.max(1, Math.round(sourceWidth * scale));
-  const height = Math.max(1, Math.round(sourceHeight * scale));
+  let width = Math.max(1, Math.round(sourceWidth * scale));
+  let height = Math.max(1, Math.round(sourceHeight * scale));
   const canvas = document.createElement("canvas");
-  canvas.width = width;
-  canvas.height = height;
-
   const context = canvas.getContext("2d", { alpha: false });
   if (!context) return file;
 
-  context.fillStyle = "#ffffff";
-  context.fillRect(0, 0, width, height);
-  context.drawImage(image, 0, 0, width, height);
+  async function render(quality) {
+    canvas.width = width;
+    canvas.height = height;
+    context.fillStyle = "#ffffff";
+    context.fillRect(0, 0, width, height);
+    context.drawImage(image, 0, 0, width, height);
+    return new Promise((resolve) => {
+      canvas.toBlob(resolve, "image/jpeg", quality);
+    });
+  }
 
-  const blob = await new Promise((resolve) => {
-    canvas.toBlob(resolve, "image/jpeg", PHOTO_JPEG_QUALITY);
-  });
+  let quality = PHOTO_JPEG_QUALITY;
+  let blob = await render(quality);
+
+  // La compresión inicial suele bastar. Si no, baja calidad y dimensiones
+  // hasta cumplir también el límite del backend, no solo el de resolución.
+  while (blob && blob.size > MAX_PHOTO_BYTES && quality > 0.45) {
+    quality = Math.max(0.45, quality - 0.08);
+    blob = await render(quality);
+  }
+
+  while (blob && blob.size > MAX_PHOTO_BYTES && Math.max(width, height) > 900) {
+    width = Math.max(1, Math.round(width * 0.85));
+    height = Math.max(1, Math.round(height * 0.85));
+    quality = 0.7;
+    blob = await render(quality);
+  }
+
   if (!blob) return file;
+  if (blob.size > MAX_PHOTO_BYTES) {
+    throw new Error(`La foto ${file.name} no se puede reducir por debajo de 5 MB.`);
+  }
 
   const baseName = file.name.replace(/\.[^.]+$/, "") || "foto";
   return new File([blob], `${baseName}.jpg`, {
