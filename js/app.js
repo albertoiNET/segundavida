@@ -64,6 +64,7 @@ const successItemStatus = document.querySelector("#success-item-status");
 const viewPublishedButton = document.querySelector("#view-published-button");
 const goPostsButton = document.querySelector("#go-posts-button");
 const telegramAuthCard = document.querySelector("#telegram-auth-card");
+const brandHomeLink = document.querySelector("#brand-home-link");
 const telegramAuthTitle = document.querySelector("#telegram-auth-title");
 const telegramAuthMessage = document.querySelector("#telegram-auth-message");
 const telegramAuthPrivacy = document.querySelector("#telegram-auth-privacy");
@@ -1168,6 +1169,10 @@ postsTabs.forEach((tab) => {
 });
 appBackButton.addEventListener("click", goBack);
 appForwardButton.addEventListener("click", goForward);
+brandHomeLink.addEventListener("click", (event) => {
+  event.preventDefault();
+  setView("explore");
+});
 window.addEventListener("popstate", handleHistoryChange);
 
 const telegramBackButton = window.Telegram?.WebApp?.BackButton;
