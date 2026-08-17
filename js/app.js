@@ -1936,18 +1936,42 @@ async function completeItem(item, triggerButton = markDeliveredButton, feedbackE
   }
 }
 
-function showInterestFeedback(url, opened) {
+function openTelegramChat(url) {
+  const webApp = window.Telegram?.WebApp;
+
+  if (typeof webApp?.openTelegramLink === "function") {
+    try {
+      webApp.openTelegramLink(url);
+      return true;
+    } catch {
+      // Continuamos con el enlace normal como fallback.
+    }
+  }
+
+  try {
+    return Boolean(window.open(url, "_blank", "noopener,noreferrer"));
+  } catch {
+    return false;
+  }
+}
+
+function showInterestFeedback(url) {
   detailActionState.replaceChildren();
-  detailActionState.append(document.createTextNode(
-    opened ? "Hemos abierto el chat de Telegram. " : "Abre el chat de Telegram para contactar. ",
-  ));
+  detailActionState.append(document.createTextNode("Si no aparece el chat, "));
 
   const link = document.createElement("a");
   link.className = "inline-action-link";
   link.href = url;
   link.target = "_blank";
   link.rel = "noopener noreferrer";
-  link.textContent = opened ? "Abrir chat de nuevo" : "Abrir chat";
+  link.textContent = "pulsa aquí para abrirlo";
+  link.addEventListener("click", (event) => {
+    const webApp = window.Telegram?.WebApp;
+    if (typeof webApp?.openTelegramLink !== "function") return;
+
+    event.preventDefault();
+    openTelegramChat(url);
+  });
   detailActionState.append(link);
   detailActionState.dataset.state = "connected";
 }
@@ -1964,21 +1988,8 @@ function handleInterest() {
   }
 
   const telegramUrl = `https://t.me/${username}?text=${encodeURIComponent(getInterestMessage(item))}`;
-  const webApp = window.Telegram?.WebApp;
-  let opened = false;
-
-  if (typeof webApp?.openTelegramLink === "function") {
-    try {
-      webApp.openTelegramLink(telegramUrl);
-      opened = true;
-    } catch {
-      opened = false;
-    }
-  } else {
-    opened = Boolean(window.open(telegramUrl, "_blank", "noopener,noreferrer"));
-  }
-
-  showInterestFeedback(telegramUrl, opened);
+  openTelegramChat(telegramUrl);
+  showInterestFeedback(telegramUrl);
 }
 
 async function shareSelectedItem() {

@@ -110,6 +110,8 @@ class StaticContractTests(unittest.TestCase):
         self.assertIn("PHOTO_MAX_EDGE = 1280", app_source)
         self.assertIn("function createPhotoCarousel", app_source)
         self.assertIn("function sortNewestFirst", app_source)
+        self.assertIn("function openTelegramChat", app_source)
+        self.assertIn('pulsa aquí para abrirlo', app_source)
         self.assertIn("createdAt", app_source)
         self.assertIn('"Optimizando…"', app_source)
         self.assertIn("state.offerFiles = [...state.offerFiles, ...filesToAdd]", app_source)
