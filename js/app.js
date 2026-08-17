@@ -960,14 +960,26 @@ function renderCategories() {
   });
 }
 
+function sortNewestFirst(items) {
+  return [...items].sort((left, right) => {
+    const leftDate = Date.parse(String(left.createdAt ?? "").replace(" ", "T"));
+    const rightDate = Date.parse(String(right.createdAt ?? "").replace(" ", "T"));
+    const leftTimestamp = Number.isFinite(leftDate) ? leftDate : 0;
+    const rightTimestamp = Number.isFinite(rightDate) ? rightDate : 0;
+
+    if (leftTimestamp !== rightTimestamp) return rightTimestamp - leftTimestamp;
+    return String(right.id ?? "").localeCompare(String(left.id ?? ""));
+  });
+}
+
 function renderItems() {
   const query = state.query.trim().toLocaleLowerCase("es");
-  const visibleItems = state.items.filter((item) => {
+  const visibleItems = sortNewestFirst(state.items.filter((item) => {
     const matchesCategory = state.category === "Todo" || item.category === state.category;
     const searchableText = `${item.title} ${item.description} ${item.category} ${item.zone}`
       .toLocaleLowerCase("es");
     return matchesCategory && (!query || searchableText.includes(query));
-  });
+  }));
 
   itemsCount.textContent = `${visibleItems.length} ${visibleItems.length === 1 ? "cosa" : "cosas"}`;
   itemsGrid.replaceChildren(...visibleItems.map(createItemCard));
