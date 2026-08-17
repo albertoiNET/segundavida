@@ -191,14 +191,15 @@ input[type="search"] {
   line-height: 1.5;
 }
 
-.catalog-intro__copy span {
-  display: block;
-  margin-top: 0.45rem;
+.catalog-intro__credit {
+  max-width: 40rem;
+  margin: 0.45rem 0 0;
   color: var(--text-muted);
-  font-size: 0.84em;
+  font-size: 0.84rem;
+  line-height: 1.4;
 }
 
-.catalog-intro__copy a {
+.catalog-intro__credit a {
   color: var(--color-primary-dark);
   font-weight: 750;
   text-underline-offset: 0.15em;
