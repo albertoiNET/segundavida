@@ -692,6 +692,22 @@ async function loadCatalog() {
   }
 }
 
+async function loadMineItems() {
+  if (!auth?.hasInitData() || !api?.isMineConfigured || typeof api.listMineItems !== "function") {
+    return;
+  }
+
+  try {
+    const records = await api.listMineItems(auth.getInitData());
+    state.myItems = records.filter(isOwnItem);
+    saveOwnItems();
+    renderMyItems();
+    openItemFromHash();
+  } catch {
+    // Conservamos la copia local si el endpoint privado aún no está disponible.
+  }
+}
+
 function openItemFromHash() {
   if (!window.location.hash.startsWith("#item=")) return;
 
@@ -738,6 +754,7 @@ async function checkIdentity() {
       state.telegramUser = result;
       configureOfferAuth(result);
       renderMyItems();
+      await loadMineItems();
       openItemFromHash();
       const firstName = result.first_name ? `Hola ${result.first_name}` : "Telegram";
       identityStatus.querySelector("span:nth-child(2)").textContent = firstName;

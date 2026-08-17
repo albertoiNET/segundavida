@@ -2,6 +2,7 @@
 const N8N_DATA_URL = "https://tasks.nukeador.com/webhook/segundavida/data";
 const N8N_PUBLISH_URL = "https://tasks.nukeador.com/webhook/segundavida/publish";
 const N8N_COMPLETE_URL = "https://tasks.nukeador.com/webhook/segundavida/complete";
+const N8N_MINE_URL = "https://tasks.nukeador.com/webhook/segundavida/mine";
 
 function normalizeItem(record) {
   const fields = record?.fields ?? record ?? {};
@@ -20,10 +21,39 @@ function normalizeItem(record) {
     ownerTelegramId: fields.owner_telegram_id ?? "",
     status: fields.status ?? "hidden",
     createdAt: fields.created_at ?? fields.CreatedAt ?? null,
+    completedAt: fields.completed_at ?? null,
     expiresAt: fields.expires_at ?? null,
     imageUrl: fields.image_url ?? null,
     interestCount: Number(fields.interest_count ?? 0),
   };
+}
+
+async function listMineItems(initData) {
+  if (!N8N_MINE_URL) {
+    return [];
+  }
+
+  const response = await fetch(N8N_MINE_URL, {
+    method: "POST",
+    headers: {
+      Accept: "application/json",
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ initData }),
+  });
+
+  const payload = await response.json();
+  const records = Array.isArray(payload)
+    ? payload
+    : Array.isArray(payload?.items)
+      ? payload.items
+      : null;
+
+  if (!response.ok || !payload?.ok || !records) {
+    throw new Error(payload?.error ?? `n8n respondió con HTTP ${response.status}`);
+  }
+
+  return records.map(normalizeItem);
 }
 
 async function listItems() {
@@ -115,7 +145,9 @@ window.SecondaVidaApi = Object.freeze({
   isDataConfigured: Boolean(N8N_DATA_URL),
   isPublishConfigured: Boolean(N8N_PUBLISH_URL),
   isCompleteConfigured: Boolean(N8N_COMPLETE_URL),
+  isMineConfigured: Boolean(N8N_MINE_URL),
   listItems,
+  listMineItems,
   publishItem,
   completeItem,
 });
