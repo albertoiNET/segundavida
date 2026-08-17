@@ -625,7 +625,7 @@ function showDetail(item, { syncHistory = true, live = true, error = "" } = {}) 
 function configurePostsView() {
   if (!postsContent || !postsAuthGate || !postsOpenTelegramLink) return;
 
-  const miniAppUrl = telegramRuntime.miniAppUrl || "https://t.me/pucelobot?startapp=segundavida";
+  const miniAppUrl = telegramRuntime.miniAppUrl || "https://t.me/pucelobot/segundavida";
   const verified = Boolean(auth?.hasInitData() && state.telegramUser?.valid);
   postsOpenTelegramLink.href = miniAppUrl;
   postsContent.hidden = !verified;
@@ -904,7 +904,7 @@ function setOfferFormEnabled(enabled) {
 function configureOfferAuth(user = state.telegramUser) {
   if (!telegramAuthCard || !offerForm) return;
 
-  const miniAppUrl = telegramRuntime.miniAppUrl || "https://t.me/pucelobot?startapp=segundavida";
+  const miniAppUrl = telegramRuntime.miniAppUrl || "https://t.me/pucelobot/segundavida";
   telegramOpenLink.href = miniAppUrl;
   const verified = Boolean(auth?.hasInitData() && user?.valid);
   const username = normalizeTelegramUsername(user?.username);

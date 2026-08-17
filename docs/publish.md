@@ -181,13 +181,11 @@ La configuración actual permite probar desde `localhost:8000` y desde
 
 ## Enlace para abrir la Mini App
 
-El botón del formulario usa `https://t.me/pucelobot?startapp=segundavida`,
-configurado en `js/telegram.js`. Este formato abre directamente la Main Mini
-App; por tanto, si mantienes la Main App desactivada, Telegram abrirá el chat
-del bot y la persona tendrá que pulsar el botón `SegundaVida` del menú.
+El botón del formulario usa `https://t.me/pucelobot/segundavida`, configurado
+en `js/telegram.js`. Es el enlace directo de la Mini App independiente
+`SegundaVida`, creada en BotFather con el `short_name` `segundavida`; no
+requiere activar la Main Mini App. El botón de menú que ya has configurado
+sigue siendo válido y es la ruta principal para entrar.
 
-Si quieres un enlace directo sin convertirla en la app principal, crea un
-`short_name` para la Mini App en BotFather y usa el formato
-`https://t.me/pucelobot/<short_name>?startapp=offer`. Después solo hay que
-actualizar una línea en `js/telegram.js`. El botón de menú que ya has
-configurado sigue siendo válido y es la ruta principal para entrar.
+Las futuras Mini Apps del bot pueden tener sus propios enlaces directos con el
+formato `https://t.me/pucelobot/<short_name>?startapp=offer`.
