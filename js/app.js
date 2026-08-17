@@ -110,6 +110,8 @@ const offerForm = document.querySelector("#offer-form");
 const offerSubmitButton = offerForm?.querySelector('button[type="submit"]');
 const offerSubmitLabel = offerSubmitButton?.textContent?.trim() || "Publicar";
 const offerImages = document.querySelector("#offer-images");
+const offerCamera = document.querySelector("#offer-camera");
+const offerCameraButton = document.querySelector("#offer-camera-button");
 const offerPhotoPicker = document.querySelector("#offer-photo-picker");
 const offerPreview = document.querySelector("#offer-preview");
 const offerFormState = document.querySelector("#offer-form-state");
@@ -1597,9 +1599,20 @@ function removePhoto(index) {
 function resetOfferPhotos() {
   state.offerFiles = [];
   offerImages.value = "";
+  if (offerCamera) offerCamera.value = "";
   offerPreview.replaceChildren();
   revokePhotoPreviewUrls();
   setPhotoFieldError(false);
+}
+
+function handleCameraRequest() {
+  if (!offerCamera) {
+    setFormState("No se puede abrir la cámara en este dispositivo. Elige una foto existente.", "error");
+    return;
+  }
+
+  setFormState("Si no se abre la cámara, elige una foto existente.", "pending");
+  offerCamera.click();
 }
 
 function handlePhotoSelection(event) {
@@ -2064,6 +2077,8 @@ detailShare.addEventListener("click", shareSelectedItem);
 interestButton.addEventListener("click", handleInterest);
 markDeliveredButton.addEventListener("click", () => completeItem(state.selectedItem));
 offerImages.addEventListener("change", handlePhotoSelection);
+offerCamera?.addEventListener("change", handlePhotoSelection);
+offerCameraButton?.addEventListener("click", handleCameraRequest);
 offerForm.addEventListener("submit", handleOfferSubmit);
 telegramUsernameHelp.addEventListener("click", openTelegramUsernameDialog);
 telegramUsernameDialogClose.addEventListener("click", closeTelegramUsernameDialog);

@@ -2431,6 +2431,19 @@ body.photo-lightbox-open {
   cursor: pointer;
 }
 
+.photo-picker-actions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0.55rem;
+}
+
+.photo-picker--camera {
+  display: none;
+  width: 100%;
+  font: inherit;
+  text-align: left;
+}
+
 .photo-picker[data-state="error"] {
   border-color: #c57878;
   background: color-mix(in srgb, #c57878 7%, var(--bg-card));
@@ -2474,6 +2487,16 @@ body.photo-lightbox-open {
   height: 1px;
   overflow: hidden;
   opacity: 0;
+}
+
+@media (max-width: 560px) {
+  .photo-picker-actions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .photo-picker--camera {
+    display: flex;
+  }
 }
 
 .photo-preview {
