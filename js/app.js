@@ -417,7 +417,6 @@ function createItemCard(item, index) {
     availability.append(createTextElement("span", "availability__date", formatDate(item.expiresAt)));
   }
   meta.append(availability);
-  meta.append(createIconElement("fa-arrow-right", "→", "item-card__arrow"));
   body.append(meta);
 
   card.append(body);

@@ -443,13 +443,6 @@ h2 {
   content: "";
 }
 
-.item-card__arrow {
-  flex: 0 0 auto;
-  color: var(--color-primary);
-  font-size: 1.4rem;
-  line-height: 1;
-}
-
 .items-state {
   margin-top: 1.25rem;
   padding: 1.25rem;
@@ -1165,11 +1158,6 @@ h2 {
 .availability::before {
   width: 0.35rem;
   height: 0.35rem;
-}
-
-.item-card__arrow {
-  color: var(--text-muted);
-  font-size: 1.15rem;
 }
 
 .items-state {
@@ -2018,10 +2006,10 @@ h2 {
 @media (max-width: 719px) {
   .item-card__meta {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-columns: minmax(0, 1fr);
     grid-template-areas:
-      "category arrow"
-      "availability arrow";
+      "category"
+      "availability";
     align-items: end;
     gap: 0.35rem 0.45rem;
     overflow: visible;
@@ -2041,8 +2029,4 @@ h2 {
     text-align: left;
   }
 
-  .item-card__arrow {
-    grid-area: arrow;
-    align-self: end;
-  }
 }
