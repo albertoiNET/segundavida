@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://segundavida.aldeapucela.org/sitemap.xml
