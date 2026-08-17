@@ -1385,6 +1385,11 @@ async function handleOfferSubmit(event) {
     return;
   }
 
+  if (state.offerFiles.length < 1) {
+    setFormState("Añade al menos una foto para publicar.", "error");
+    return;
+  }
+
   if (!auth?.hasInitData()) {
     setFormState("Abre la mini app desde Telegram para poder publicar.", "error");
     return;
