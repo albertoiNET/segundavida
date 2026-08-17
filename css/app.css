@@ -288,6 +288,10 @@ h1 {
   overflow-x: auto;
   padding: 0.1rem 0 0.35rem;
   scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x proximity;
+  touch-action: pan-x;
 }
 
 .filter-list::-webkit-scrollbar {
@@ -304,6 +308,7 @@ h1 {
   cursor: pointer;
   font-size: 0.9rem;
   font-weight: 650;
+  scroll-snap-align: start;
   transition: background 180ms ease, color 180ms ease, transform 180ms ease;
 }
 
