@@ -36,24 +36,13 @@
     {
       "parameters": {
         "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "strict",
-            "version": 2
-          },
-          "conditions": [
+          "boolean": [
             {
               "id": "9eb65f2b-132e-442a-801c-ccc5c617aa52",
-              "leftValue": "={{ $json.valid }}",
-              "rightValue": true,
-              "operator": {
-                "type": "boolean",
-                "operation": "equals"
-              }
+              "value1": "={{ $json.valid }}",
+              "operation": "isTrue"
             }
-          ],
-          "combinator": "and"
+          ]
         },
         "options": {}
       },
@@ -69,24 +58,13 @@
     {
       "parameters": {
         "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "strict",
-            "version": 2
-          },
-          "conditions": [
+          "boolean": [
             {
               "id": "a502e9f5-e105-41a5-9eb4-7b6c2bfdf733",
-              "leftValue": "={{ $('Validate Telegram and item').first().json.photo_count > 0 }}",
-              "rightValue": true,
-              "operator": {
-                "type": "boolean",
-                "operation": "equals"
-              }
+              "value1": "={{ $('Validate Telegram and item').first().json.photo_count > 0 }}",
+              "operation": "isTrue"
             }
-          ],
-          "combinator": "and"
+          ]
         },
         "options": {}
       },
