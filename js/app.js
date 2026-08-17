@@ -66,14 +66,13 @@ const goPostsButton = document.querySelector("#go-posts-button");
 const telegramAuthCard = document.querySelector("#telegram-auth-card");
 const telegramAuthTitle = document.querySelector("#telegram-auth-title");
 const telegramAuthMessage = document.querySelector("#telegram-auth-message");
+const telegramAuthPrivacy = document.querySelector("#telegram-auth-privacy");
 const telegramDownloadLink = document.querySelector("#telegram-download-link");
 const telegramOpenLink = document.querySelector("#telegram-open-link");
 const telegramUsernameHelp = document.querySelector("#telegram-username-help");
-const telegramIdentityField = document.querySelector("#telegram-identity-field");
 const telegramUsernameDialog = document.querySelector("#telegram-username-dialog");
 const telegramUsernameDialogClose = document.querySelector("#telegram-username-dialog-close");
 const telegramUsernameRetry = document.querySelector("#telegram-username-retry");
-const offerTelegramUsername = document.querySelector("#offer-telegram-username");
 const offerForm = document.querySelector("#offer-form");
 const offerImages = document.querySelector("#offer-images");
 const offerPreview = document.querySelector("#offer-preview");
@@ -805,12 +804,10 @@ function configureOfferAuth(user = state.telegramUser) {
       : "Publica desde Telegram";
   telegramDownloadLink.hidden = verified;
   telegramOpenLink.hidden = verified;
-  telegramIdentityField.hidden = !verified || Boolean(username);
+  telegramAuthPrivacy.hidden = !verified || !username;
   telegramUsernameHelp.hidden = !verified || Boolean(username);
 
   if (verified) {
-    offerTelegramUsername.value = username ? `@${username}` : "Sin usuario público";
-    offerTelegramUsername.readOnly = true;
     if (username) {
       telegramAuthMessage.textContent = "";
       telegramAuthMessage.hidden = true;
@@ -823,8 +820,6 @@ function configureOfferAuth(user = state.telegramUser) {
     return;
   }
 
-  offerTelegramUsername.value = "";
-  offerTelegramUsername.readOnly = true;
   telegramAuthMessage.textContent = "Abre esta aplicación dentro de Telegram para continuar.";
   telegramAuthMessage.hidden = false;
   setOfferFormEnabled(false);

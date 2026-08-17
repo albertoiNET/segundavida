@@ -1626,6 +1626,11 @@ h2 {
   line-height: 1.45;
 }
 
+.telegram-auth-privacy {
+  color: var(--color-secondary-dark) !important;
+  font-size: 0.76rem !important;
+}
+
 .telegram-auth-card__badge {
   flex: 0 0 auto;
   padding: 0.3rem 0.55rem;
@@ -1680,8 +1685,7 @@ h2 {
   color: var(--bg-container);
 }
 
-.telegram-help-link,
-.telegram-faq-link {
+.telegram-help-link {
   width: fit-content;
   border: 0;
   background: transparent;
@@ -1735,20 +1739,6 @@ h2 {
   color: var(--text-secondary);
   font-size: 0.82rem;
   line-height: 1.45;
-}
-
-.telegram-username-dialog .telegram-faq-link {
-  display: inline-block;
-  margin-bottom: 1rem;
-}
-
-.telegram-identity-field {
-  margin-top: 0.1rem;
-}
-
-.telegram-identity-field input[readonly] {
-  background: var(--bg-card-hover);
-  color: var(--text-secondary);
 }
 
 .offer-form[data-auth="locked"] {

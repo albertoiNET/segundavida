@@ -15,9 +15,9 @@
       crossorigin="anonymous"
       onerror="document.documentElement.classList.add('icons-fallback')"
     />
-    <link rel="stylesheet" href="./css/icon-fallback.css?v=sv-20260816-24" />
-    <link rel="stylesheet" href="./css/tokens.css?v=sv-20260816-24" />
-    <link rel="stylesheet" href="./css/app.css?v=sv-20260816-24" />
+    <link rel="stylesheet" href="./css/icon-fallback.css?v=sv-20260816-25" />
+    <link rel="stylesheet" href="./css/tokens.css?v=sv-20260816-25" />
+    <link rel="stylesheet" href="./css/app.css?v=sv-20260816-25" />
     <script src="https://telegram.org/js/telegram-web-app.js?63"></script>
   </head>
   <body>
@@ -137,6 +137,9 @@
             </div>
           </div>
           <p id="telegram-auth-message">Abre esta aplicación dentro de Telegram para continuar.</p>
+          <p class="telegram-auth-privacy" id="telegram-auth-privacy" hidden>
+            Solo se compartirá tu nombre de usuario. Tu número de teléfono no es visible para nadie.
+          </p>
           <div class="telegram-auth-card__actions">
             <a class="primary-button telegram-open-link" id="telegram-open-link" href="https://t.me/pucelobot?startapp=segundavida" target="_blank" rel="noopener" hidden>
               <i class="fa-brands fa-telegram fa-icon" data-fallback="✈" aria-hidden="true"></i>
@@ -150,10 +153,6 @@
           <button class="telegram-help-link" id="telegram-username-help" type="button" hidden>
             Cómo configurar un username
           </button>
-          <label class="form-field telegram-identity-field" id="telegram-identity-field" for="offer-telegram-username" hidden>
-            <span>Usuario de Telegram detectado</span>
-            <input id="offer-telegram-username" type="text" readonly placeholder="@usuario" aria-describedby="telegram-auth-message" />
-          </label>
         </section>
         <form class="offer-form" id="offer-form" novalidate>
           <label class="form-field">
@@ -315,7 +314,6 @@
           </div>
           <button class="primary-button" type="submit">Publicar</button>
           <p class="form-state" id="offer-form-state" aria-live="polite"></p>
-          <p class="form-note">Tu publicación se asociará a tu identidad de Telegram. No mostramos tu ubicación exacta.</p>
         </form>
       </section>
 
@@ -329,14 +327,11 @@
         </div>
         <p>Para que otras personas puedan ponerse en contacto contigo, SegundaVida necesita un nombre de usuario público.</p>
         <ol>
-          <li>Abre Telegram y entra en <strong>Ajustes</strong>.</li>
-          <li>Pulsa <strong>Editar</strong> y después <strong>Nombre de usuario</strong>.</li>
-          <li>Elige uno disponible de al menos 5 caracteres y guárdalo.</li>
-          <li>Vuelve a esta Mini App y pulsa el botón de abajo.</li>
+          <li>Abre Telegram y pulsa el <strong>menú</strong>.</li>
+          <li>Entra en <strong>Ajustes</strong>.</li>
+          <li>Pulsa <strong>Cuenta</strong> y después <strong>Añadir nombre de usuario</strong>.</li>
+          <li>Elige uno disponible y vuelve a esta Mini App.</li>
         </ol>
-        <a class="telegram-faq-link" href="https://telegram.org/faq/es" target="_blank" rel="noopener">
-          Más información en Telegram
-        </a>
         <button class="primary-button" id="telegram-username-retry" type="button">Ya lo he configurado</button>
       </dialog>
 
@@ -409,10 +404,10 @@
       </button>
     </main>
 
-    <script src="./js/telegram.js?v=sv-20260816-24"></script>
-    <script src="./js/auth.js?v=sv-20260816-24"></script>
-    <script src="./js/api.js?v=sv-20260816-24"></script>
-    <script src="./js/analytics.js?v=sv-20260816-24"></script>
-    <script src="./js/app.js?v=sv-20260816-24"></script>
+    <script src="./js/telegram.js?v=sv-20260816-25"></script>
+    <script src="./js/auth.js?v=sv-20260816-25"></script>
+    <script src="./js/api.js?v=sv-20260816-25"></script>
+    <script src="./js/analytics.js?v=sv-20260816-25"></script>
+    <script src="./js/app.js?v=sv-20260816-25"></script>
   </body>
 </html>
