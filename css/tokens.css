@@ -7,6 +7,9 @@
   --color-secondary: #1e9e8a;
   --color-secondary-dark: #147a6b;
   --color-secondary-soft: #dff4ef;
+  --color-telegram: #229ed9;
+  --color-telegram-dark: #168ac0;
+  --color-telegram-soft: #e7f6fd;
   --color-tertiary: #5c6472;
 
   /* Superficies y texto */
@@ -48,6 +51,9 @@
     --color-secondary: #78c1b2;
     --color-secondary-dark: #9ad5ca;
     --color-secondary-soft: #1d322e;
+    --color-telegram: #49b7e7;
+    --color-telegram-dark: #78c9ef;
+    --color-telegram-soft: #12394b;
     --color-tertiary: #b5beb9;
     --bg-body: #111412;
     --bg-container: #171b19;
@@ -70,6 +76,9 @@
   --color-secondary: #78c1b2;
   --color-secondary-dark: #9ad5ca;
   --color-secondary-soft: #1d322e;
+  --color-telegram: #49b7e7;
+  --color-telegram-dark: #78c9ef;
+  --color-telegram-soft: #12394b;
   --color-tertiary: #b5beb9;
   --bg-body: #111412;
   --bg-container: #171b19;

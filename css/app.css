@@ -1947,8 +1947,8 @@ body.photo-lightbox-open {
 }
 
 .telegram-auth-card[data-state="error"] {
-  border-color: color-mix(in srgb, var(--color-secondary) 38%, var(--border-light));
-  background: color-mix(in srgb, var(--color-secondary-soft) 55%, var(--bg-card));
+  border-color: color-mix(in srgb, var(--color-telegram) 58%, var(--border-light));
+  background: color-mix(in srgb, var(--color-telegram-soft) 76%, var(--bg-card));
 }
 
 .telegram-auth-card[data-state="warning"] {
@@ -1981,8 +1981,8 @@ body.photo-lightbox-open {
   height: 2.65rem;
   place-items: center;
   border-radius: 0.85rem;
-  background: var(--color-secondary-soft);
-  color: var(--color-secondary-dark);
+  background: var(--color-telegram-soft);
+  color: var(--color-telegram-dark);
   font-size: 1.45rem;
 }
 
@@ -2048,6 +2048,7 @@ body.photo-lightbox-open {
   padding: 0.6rem 0.85rem;
   border: 0;
   border-radius: 0.75rem;
+  background: var(--color-telegram);
   color: var(--bg-container);
   font-size: 0.8rem;
   font-weight: 750;
@@ -2055,6 +2056,7 @@ body.photo-lightbox-open {
 }
 
 .telegram-open-link:hover {
+  background: var(--color-telegram-dark);
   color: var(--bg-container);
 }
 
