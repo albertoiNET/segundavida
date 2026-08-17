@@ -1019,9 +1019,23 @@ h2 {
   line-height: 1.45;
 }
 
+.site-footer__links {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.55rem;
+  white-space: nowrap;
+}
+
+.site-footer__separator {
+  color: var(--text-muted);
+  font-weight: 400;
+}
+
 .site-footer a {
-  color: var(--color-primary-dark);
-  font-weight: 750;
+  color: var(--text-muted);
+  font-weight: 600;
+  text-decoration: none;
   text-underline-offset: 0.15em;
 }
 
@@ -1888,19 +1902,36 @@ body.photo-lightbox-open {
   padding: 1.15rem 0.1rem 1rem;
 }
 
-.detail-availability {
-  color: var(--color-secondary-dark);
-  font-size: 0.78rem;
-  font-weight: 750;
-}
-
 .detail-content h1 {
   margin-top: 0.45rem;
   font-size: clamp(1.75rem, 7vw, 2.4rem);
 }
 
+.detail-subline {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.45rem 0.9rem;
+  margin-top: 0.55rem;
+}
+
+.detail-availability {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+.detail-availability .fa-icon {
+  font-size: 0.8rem;
+}
+
 .detail-category {
-  margin: 0.55rem 0 0;
+  margin: 0;
   color: var(--color-primary-dark);
   font-size: 0.9rem;
   font-weight: 700;
@@ -2011,6 +2042,80 @@ body.photo-lightbox-open {
   color: var(--color-primary-dark);
   font-size: 0.78rem;
   font-weight: 750;
+}
+
+.community-promo {
+  display: grid;
+  grid-template-columns: 3.5rem minmax(0, 1fr);
+  gap: 0.9rem;
+  margin-top: 1.45rem;
+  padding: 1rem;
+  border: 1px solid var(--border-light);
+  border-radius: 1rem;
+  background: var(--bg-card);
+}
+
+.community-promo__mark {
+  display: grid;
+  width: 3.5rem;
+  height: 3.5rem;
+  place-items: center;
+  overflow: hidden;
+  border: 0;
+  border-radius: 0.9rem;
+  background: transparent;
+}
+
+.community-promo__mark img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.community-promo__content {
+  min-width: 0;
+}
+
+.community-promo h2 {
+  margin: 0;
+  color: var(--text-main);
+  font-size: 0.98rem;
+  line-height: 1.2;
+}
+
+.community-promo__content > p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+
+.community-promo__link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin-top: 0.65rem;
+  padding: 0.4rem 0.65rem;
+  border: 1px solid color-mix(in srgb, var(--color-primary) 28%, var(--border-light));
+  border-radius: 0.65rem;
+  background: transparent;
+  color: var(--color-primary);
+  font-size: 0.76rem;
+  font-weight: 750;
+  text-decoration: none;
+  transition: border-color 180ms ease, background-color 180ms ease, transform 180ms ease;
+}
+
+.community-promo__link:hover {
+  border-color: color-mix(in srgb, var(--color-primary) 45%, var(--border-light));
+  background: color-mix(in srgb, var(--color-primary) 6%, transparent);
+  transform: translateY(-1px);
+}
+
+.community-promo__link:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
 }
 
 .action-state,

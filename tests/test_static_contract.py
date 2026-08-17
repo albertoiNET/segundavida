@@ -110,6 +110,10 @@ class StaticContractTests(unittest.TestCase):
         self.assertIn("createdAt", app_source)
         self.assertIn('"Optimizando…"', app_source)
         self.assertIn("state.offerFiles = [...state.offerFiles, ...filesToAdd]", app_source)
+        index_source = (ROOT / "index.html").read_text(encoding="utf-8")
+        self.assertIn("community-promo", index_source)
+        self.assertIn("https://aldeapucela.org/", index_source)
+        self.assertTrue((ROOT / "assets" / "aldea-pucela-mark.jpg").exists())
 
     def test_publish_workflow_writes_opaque_public_id_and_keeps_legacy_alias(self):
         workflow = json.loads((ROOT / "docs" / "sv_publish_item.workflow.json").read_text(encoding="utf-8"))

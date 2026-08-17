@@ -36,7 +36,7 @@
     />
     <link rel="stylesheet" href="/css/icon-fallback.css?v=sv-20260817-40" />
     <link rel="stylesheet" href="/css/tokens.css?v=sv-20260817-41" />
-    <link rel="stylesheet" href="/css/app.css?v=sv-20260817-49" />
+    <link rel="stylesheet" href="/css/app.css?v=sv-20260817-53" />
     <script src="https://telegram.org/js/telegram-web-app.js?63"></script>
   </head>
   <body>
@@ -105,9 +105,14 @@
       <section class="detail-view" id="detail-view" hidden aria-labelledby="detail-title">
         <div class="detail-media" id="detail-media"></div>
         <div class="detail-content">
-          <div class="detail-availability" id="detail-availability">Disponible</div>
           <h1 id="detail-title">Objeto</h1>
-          <p class="detail-category" id="detail-category"></p>
+          <div class="detail-subline">
+            <p class="detail-category" id="detail-category"></p>
+            <p class="detail-availability" id="detail-availability">
+              <i class="fa-regular fa-calendar-days fa-icon" data-fallback="▣" aria-hidden="true"></i>
+              <span id="detail-availability-label">Disponible</span>
+            </p>
+          </div>
           <p class="detail-description" id="detail-description"></p>
           <dl class="detail-facts">
             <div>
@@ -129,6 +134,16 @@
             </button>
             <p class="action-state" id="detail-owner-action-state" aria-live="polite"></p>
           </div>
+          <aside class="community-promo" aria-labelledby="community-promo-title">
+            <div class="community-promo__mark">
+              <img src="/assets/aldea-pucela-mark.jpg" alt="Logo de Aldea Pucela" />
+            </div>
+            <div class="community-promo__content">
+              <h2 id="community-promo-title">Segunda Vida forma parte de Aldea Pucela</h2>
+              <p>Debates, iniciativas y eventos de la mayor comunidad vecinal de Valladolid.</p>
+              <a class="community-promo__link" href="https://aldeapucela.org/" target="_blank" rel="noopener noreferrer"><i class="fa-solid fa-arrow-up-right-from-square fa-icon" data-fallback="↗" aria-hidden="true"></i> Conocer la comunidad</a>
+            </div>
+          </aside>
         </div>
       </section>
 
@@ -456,8 +471,13 @@
       </section>
 
       <footer class="site-footer">
-        <p>Una iniciativa de <a href="https://aldeapucela.org/" target="_blank" rel="noopener noreferrer">Aldea Pucela</a>.</p>
-        <p>Web bajo licencia <a href="https://www.gnu.org/licenses/agpl-3.0.html" target="_blank" rel="noopener noreferrer">AGPL v3</a> · Contenido bajo <a href="https://creativecommons.org/licenses/by-sa/4.0/deed.es" target="_blank" rel="noopener noreferrer">CC BY-SA 4.0</a>.</p>
+        <p class="site-footer__links">
+          <a href="https://aldeapucela.org/" target="_blank" rel="noopener noreferrer">Aldea Pucela</a>
+          <span class="site-footer__separator" aria-hidden="true">·</span>
+          <a href="https://github.com/aldeapucela/segundavida" target="_blank" rel="noopener noreferrer">Código</a>
+          <span class="site-footer__separator" aria-hidden="true">·</span>
+          <a href="https://www.gnu.org/licenses/agpl-3.0.html" target="_blank" rel="noopener noreferrer">Licencia</a>
+        </p>
       </footer>
 
       <nav class="bottom-nav" aria-label="Navegación principal">

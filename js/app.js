@@ -75,6 +75,7 @@ const photoLightboxClose = document.querySelector("#photo-lightbox-close");
 const photoLightboxPrevious = document.querySelector("#photo-lightbox-previous");
 const photoLightboxNext = document.querySelector("#photo-lightbox-next");
 const detailAvailability = document.querySelector("#detail-availability");
+const detailAvailabilityLabel = document.querySelector("#detail-availability-label");
 const detailTitle = document.querySelector("#detail-title");
 const detailCategory = document.querySelector("#detail-category");
 const detailDescription = document.querySelector("#detail-description");
@@ -816,7 +817,7 @@ function renderDetail(item, { live = true, error = "" } = {}) {
     detailMedia.append(placeholder);
   }
 
-  detailAvailability.textContent = item.status === "completed"
+  const availabilityLabel = item.status === "completed"
     ? "Entregado"
     : item.status === "expired"
       ? "Ya no disponible"
@@ -825,6 +826,11 @@ function renderDetail(item, { live = true, error = "" } = {}) {
         : item.expiresAt
       ? `Disponible hasta ${formatDate(item.expiresAt)}`
       : "Disponible";
+  if (detailAvailabilityLabel) {
+    detailAvailabilityLabel.textContent = availabilityLabel;
+  } else {
+    detailAvailability.textContent = availabilityLabel;
+  }
   detailTitle.textContent = item.title;
   detailCategory.replaceChildren(createCategoryIcon(item.category), document.createTextNode(` ${item.category}`));
   detailDescription.textContent = item.description || "";
