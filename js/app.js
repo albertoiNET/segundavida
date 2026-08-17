@@ -416,10 +416,7 @@ function createItemCard(item, index) {
   }
   const availability = document.createElement("span");
   availability.className = "availability";
-  availability.append(createTextElement("span", "availability__label", item.expiresAt ? "Hasta" : "Disponible"));
-  if (item.expiresAt) {
-    availability.append(createTextElement("span", "availability__date", formatDate(item.expiresAt)));
-  }
+  availability.textContent = item.expiresAt ? `Hasta ${formatDate(item.expiresAt)}` : "Disponible";
   meta.append(availability);
   body.append(meta);
 
