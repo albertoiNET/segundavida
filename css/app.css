@@ -554,6 +554,20 @@ h2 {
   background: var(--bg-card-hover);
 }
 
+.telegram-posts-gate {
+  margin-top: 1.2rem;
+  text-align: center;
+}
+
+.telegram-posts-gate .telegram-auth-card__identity {
+  justify-content: center;
+  width: 100%;
+}
+
+.telegram-posts-gate .telegram-auth-card__actions {
+  justify-items: stretch;
+}
+
 .posts-tab {
   min-height: 2.55rem;
   padding: 0.55rem 0.7rem;

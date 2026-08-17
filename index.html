@@ -7,8 +7,8 @@
       name="description"
       content="SegundaVida, una iniciativa de Aldea Pucela."
     />
-    <link rel="icon" type="image/png" sizes="1254x1254" href="./assets/segundavida-mark.png?v=sv-20260816-32" />
-    <link rel="apple-touch-icon" href="./assets/segundavida-mark.png?v=sv-20260816-32" />
+    <link rel="icon" type="image/png" sizes="1254x1254" href="./assets/segundavida-mark.png?v=sv-20260816-33" />
+    <link rel="apple-touch-icon" href="./assets/segundavida-mark.png?v=sv-20260816-33" />
     <title>SegundaVida · Aldea Pucela</title>
     <!-- Bump this version whenever static assets change to bypass Mini App caches. -->
     <link
@@ -17,9 +17,9 @@
       crossorigin="anonymous"
       onerror="document.documentElement.classList.add('icons-fallback')"
     />
-    <link rel="stylesheet" href="./css/icon-fallback.css?v=sv-20260816-32" />
-    <link rel="stylesheet" href="./css/tokens.css?v=sv-20260816-32" />
-    <link rel="stylesheet" href="./css/app.css?v=sv-20260816-32" />
+    <link rel="stylesheet" href="./css/icon-fallback.css?v=sv-20260816-33" />
+    <link rel="stylesheet" href="./css/tokens.css?v=sv-20260816-33" />
+    <link rel="stylesheet" href="./css/app.css?v=sv-20260816-33" />
     <script src="https://telegram.org/js/telegram-web-app.js?63"></script>
   </head>
   <body>
@@ -340,26 +340,47 @@
       </dialog>
 
       <section class="secondary-view" id="posts-view" hidden aria-labelledby="posts-title">
-        <h1 id="posts-title">Mis publicaciones</h1>
-        <p class="view-copy">Gestiona tus objetos y marca cuándo ya han encontrado otra casa.</p>
-        <div class="posts-tabs" role="tablist" aria-label="Estado de tus publicaciones">
-          <button class="posts-tab is-active" id="posts-active-tab" type="button" role="tab" aria-selected="true" aria-controls="posts-list" data-posts-filter="active">
-            Activas <span id="posts-active-count">0</span>
-          </button>
-          <button class="posts-tab" id="posts-completed-tab" type="button" role="tab" aria-selected="false" aria-controls="posts-list" data-posts-filter="completed">
-            Entregadas <span id="posts-completed-count">0</span>
-          </button>
+        <div id="posts-content" hidden>
+          <h1 id="posts-title">Mis publicaciones</h1>
+          <p class="view-copy">Gestiona tus objetos y marca cuándo ya han encontrado otra casa.</p>
+          <div class="posts-tabs" role="tablist" aria-label="Estado de tus publicaciones">
+            <button class="posts-tab is-active" id="posts-active-tab" type="button" role="tab" aria-selected="true" aria-controls="posts-list" data-posts-filter="active">
+              Activas <span id="posts-active-count">0</span>
+            </button>
+            <button class="posts-tab" id="posts-completed-tab" type="button" role="tab" aria-selected="false" aria-controls="posts-list" data-posts-filter="completed">
+              Entregadas <span id="posts-completed-count">0</span>
+            </button>
+          </div>
+          <div class="posts-list" id="posts-list" aria-live="polite"></div>
+          <div class="empty-state" id="posts-empty-state">
+            <span class="empty-state__icon" aria-hidden="true"><i class="fa-solid fa-box-open fa-icon" data-fallback="⌂"></i></span>
+            <strong id="posts-empty-title">Aún no tienes publicaciones activas</strong>
+            <p id="posts-empty-copy">Cuando ofrezcas algo, aparecerá en esta sección.</p>
+            <button class="primary-button empty-state__action" id="offer-empty-button" type="button" hidden>
+              <i class="fa-solid fa-plus fa-icon" data-fallback="+" aria-hidden="true"></i>
+              <span>Ofrece algo que te sobre</span>
+            </button>
+          </div>
         </div>
-        <div class="posts-list" id="posts-list" aria-live="polite"></div>
-        <div class="empty-state" id="posts-empty-state">
-          <span class="empty-state__icon" aria-hidden="true"><i class="fa-solid fa-box-open fa-icon" data-fallback="⌂"></i></span>
-          <strong id="posts-empty-title">Aún no tienes publicaciones activas</strong>
-          <p id="posts-empty-copy">Cuando ofrezcas algo, aparecerá en esta sección.</p>
-          <button class="primary-button empty-state__action" id="offer-empty-button" type="button" hidden>
-            <i class="fa-solid fa-plus fa-icon" data-fallback="+" aria-hidden="true"></i>
-            <span>Ofrece algo que te sobre</span>
-          </button>
-        </div>
+        <section class="telegram-auth-card telegram-posts-gate" id="posts-auth-gate" hidden aria-labelledby="posts-auth-title">
+          <div class="telegram-auth-card__topline">
+            <div class="telegram-auth-card__identity">
+              <span class="telegram-auth-card__icon" aria-hidden="true">
+                <i class="fa-brands fa-telegram fa-icon" data-fallback="✈"></i>
+              </span>
+              <div>
+                <h2 id="posts-auth-title">Abre SegundaVida desde Telegram</h2>
+              </div>
+            </div>
+          </div>
+          <p>Para ver tus publicaciones, abre esta aplicación desde Telegram.</p>
+          <div class="telegram-auth-card__actions">
+            <a class="primary-button telegram-open-link" id="posts-open-telegram-link" href="https://t.me/pucelobot?startapp=segundavida" target="_blank" rel="noopener">
+              <i class="fa-brands fa-telegram fa-icon" data-fallback="✈" aria-hidden="true"></i>
+              <span>Abrir en Telegram</span>
+            </a>
+          </div>
+        </section>
       </section>
 
       <details class="diagnostics">
@@ -408,10 +429,10 @@
       </button>
     </main>
 
-    <script src="./js/telegram.js?v=sv-20260816-32"></script>
-    <script src="./js/auth.js?v=sv-20260816-32"></script>
-    <script src="./js/api.js?v=sv-20260816-32"></script>
-    <script src="./js/analytics.js?v=sv-20260816-32"></script>
-    <script src="./js/app.js?v=sv-20260816-32"></script>
+    <script src="./js/telegram.js?v=sv-20260816-33"></script>
+    <script src="./js/auth.js?v=sv-20260816-33"></script>
+    <script src="./js/api.js?v=sv-20260816-33"></script>
+    <script src="./js/analytics.js?v=sv-20260816-33"></script>
+    <script src="./js/app.js?v=sv-20260816-33"></script>
   </body>
 </html>

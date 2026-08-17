@@ -79,6 +79,9 @@ const offerImages = document.querySelector("#offer-images");
 const offerPreview = document.querySelector("#offer-preview");
 const offerFormState = document.querySelector("#offer-form-state");
 const offerConsent = document.querySelector("#offer-consent");
+const postsContent = document.querySelector("#posts-content");
+const postsAuthGate = document.querySelector("#posts-auth-gate");
+const postsOpenTelegramLink = document.querySelector("#posts-open-telegram-link");
 const postsList = document.querySelector("#posts-list");
 const postsEmptyState = document.querySelector("#posts-empty-state");
 const postsEmptyTitle = document.querySelector("#posts-empty-title");
@@ -567,6 +570,18 @@ function showDetail(item, { syncHistory = true } = {}) {
   window.SecondaVidaAnalytics?.trackEvent("catalog", "open-item", item.id);
 }
 
+function configurePostsView() {
+  if (!postsContent || !postsAuthGate || !postsOpenTelegramLink) return;
+
+  const miniAppUrl = telegramRuntime.miniAppUrl || "https://t.me/pucelobot?startapp=segundavida";
+  const verified = Boolean(auth?.hasInitData() && state.telegramUser?.valid);
+  postsOpenTelegramLink.href = miniAppUrl;
+  postsContent.hidden = !verified;
+  postsAuthGate.hidden = verified;
+
+  if (verified) renderMyItems();
+}
+
 function setView(viewName, { syncHistory = true, itemId = "" } = {}) {
   const shouldPushHistory = syncHistory && (
     state.currentView !== viewName ||
@@ -592,7 +607,7 @@ function setView(viewName, { syncHistory = true, itemId = "" } = {}) {
   detailShare.hidden = !isDetail;
 
   if (isOffer) configureOfferAuth();
-  if (isPosts) renderMyItems();
+  if (isPosts) configurePostsView();
 
   if (!isDetail && window.location.hash.startsWith("#item=")) {
     const url = new URL(window.location.href);
@@ -765,7 +780,7 @@ async function checkIdentity() {
     if (result.valid) {
       state.telegramUser = result;
       configureOfferAuth(result);
-      renderMyItems();
+      configurePostsView();
       await loadMineItems();
       openItemFromHash();
       const firstName = result.first_name ? `Hola ${result.first_name}` : "Telegram";
@@ -776,10 +791,12 @@ async function checkIdentity() {
 
     state.telegramUser = null;
     configureOfferAuth();
+    configurePostsView();
     setServiceState(identityStatus, identityStatusLabel, "error", "No verificada");
   } catch {
     state.telegramUser = null;
     configureOfferAuth();
+    configurePostsView();
     setServiceState(identityStatus, identityStatusLabel, "error", "No disponible");
   }
 }
