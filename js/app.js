@@ -38,12 +38,16 @@ const state = {
   historyMaxIndex: 0,
   staticItem: null,
   selectedItemLive: false,
+  catalogNeedsRefresh: false,
+  catalogRequestVersion: 0,
   publishRetryAfterRefresh: false,
 };
 
 let photoLightboxUrls = [];
 let photoLightboxIndex = 0;
 let photoLightboxReturnFocus = null;
+let routeOpenInFlight = null;
+let routeOpenItemId = "";
 
 const runtimeName = document.querySelector("#runtime-name");
 const telegramSdkState = document.querySelector("#telegram-sdk-state");
@@ -922,6 +926,9 @@ function setView(viewName, { syncHistory = true, itemId = "" } = {}) {
 
   if (isOffer) configureOfferAuth();
   if (isPosts) configurePostsView();
+  if (isExplore && state.catalogNeedsRefresh && !getRouteItemId()) {
+    void loadCatalog();
+  }
 
   if (!isDetail && getRouteItemId()) {
     const url = new URL(window.location.href);
@@ -1012,6 +1019,11 @@ function isNotExpired(item) {
 }
 
 async function loadCatalog() {
+  if (getRouteItemId()) {
+    void openItemFromRoute();
+    return;
+  }
+
   if (!api?.isDataConfigured) {
     setServiceState(n8nStatus, n8nStatusLabel, "error", "No configurado");
     itemsState.textContent = "El catálogo todavía no está configurado.";
@@ -1021,16 +1033,21 @@ async function loadCatalog() {
   }
 
   if (n8nStatusLabel) n8nStatusLabel.textContent = "Comprobando...";
+  const requestVersion = state.catalogRequestVersion;
 
   try {
     const records = await api.listItems();
+    if (requestVersion !== state.catalogRequestVersion) return;
     setServiceState(n8nStatus, n8nStatusLabel, "connected", "Conectado ✓");
+    state.catalogNeedsRefresh = false;
     state.items = records.filter((item) => item.status === "available" && isNotExpired(item));
     renderCategories();
     renderItems();
     renderMyItems();
     void openItemFromRoute();
   } catch {
+    if (requestVersion !== state.catalogRequestVersion) return;
+    state.catalogNeedsRefresh = true;
     setServiceState(n8nStatus, n8nStatusLabel, "error", "No disponible");
     itemsState.textContent = "No hemos podido cargar los objetos. Inténtalo de nuevo en unos instantes.";
     itemsState.dataset.state = "error";
@@ -1079,7 +1096,6 @@ async function loadMineItems() {
     renderCategories();
     renderItems();
     renderMyItems();
-    void openItemFromRoute();
     return records;
   } catch {
     // Conservamos la copia local si el endpoint privado aún no está disponible.
@@ -1091,48 +1107,65 @@ async function openItemFromRoute() {
   const itemId = getRouteItemId();
   if (!itemId) return;
 
-  const staticItem = state.staticItem?.id === itemId ? state.staticItem : null;
-  const catalogItem = state.items.find((candidate) => candidate.id === itemId)
-    ?? state.myItems.find((candidate) => candidate.id === itemId && isOwnItem(candidate));
-  const initialItem = staticItem ?? catalogItem ?? {
-    id: itemId,
-    title: "Cargando publicación…",
-    description: "",
-    category: "Otros",
-    zone: "Valladolid",
-    ownerDisplayName: "Vecindad",
-    ownerUsername: "",
-    status: "available",
-    expiresAt: null,
-    imageUrl: null,
-    interestCount: 0,
-  };
-
-  showDetail(initialItem, { syncHistory: false, live: Boolean(catalogItem && !staticItem) });
-
-  if (!api?.isItemConfigured || typeof api.getItem !== "function") {
-    showDetail(initialItem, { syncHistory: false, live: false, error: "api_unavailable" });
-    return;
+  if (routeOpenInFlight && routeOpenItemId === itemId) {
+    return routeOpenInFlight;
   }
 
-  try {
-    const liveItem = await api.getItem(itemId);
-    showDetail(liveItem, { syncHistory: false, live: true });
-  } catch (error) {
-    if (error?.code === "not_found") {
-      showDetail({
-        ...initialItem,
-        title: "Publicación no encontrada",
-        description: "",
-        status: "not_found",
-        ownerDisplayName: "Vecindad",
-        ownerUsername: "",
-        imageUrl: null,
-      }, { syncHistory: false, live: false, error: "not_found" });
+  const request = (async () => {
+    const staticItem = state.staticItem?.id === itemId ? state.staticItem : null;
+    const catalogItem = state.items.find((candidate) => candidate.id === itemId)
+      ?? state.myItems.find((candidate) => candidate.id === itemId && isOwnItem(candidate));
+    const initialItem = staticItem ?? catalogItem ?? {
+      id: itemId,
+      title: "Cargando publicación…",
+      description: "",
+      category: "Otros",
+      zone: "Valladolid",
+      ownerDisplayName: "Vecindad",
+      ownerUsername: "",
+      status: "available",
+      expiresAt: null,
+      imageUrl: null,
+      interestCount: 0,
+    };
+
+    showDetail(initialItem, { syncHistory: false, live: Boolean(catalogItem && !staticItem) });
+
+    if (!api?.isItemConfigured || typeof api.getItem !== "function") {
+      showDetail(initialItem, { syncHistory: false, live: false, error: "api_unavailable" });
       return;
     }
 
-    showDetail(initialItem, { syncHistory: false, live: false, error: "api_unavailable" });
+    try {
+      const liveItem = await api.getItem(itemId);
+      showDetail(liveItem, { syncHistory: false, live: true });
+    } catch (error) {
+      if (error?.code === "not_found") {
+        showDetail({
+          ...initialItem,
+          title: "Publicación no encontrada",
+          description: "",
+          status: "not_found",
+          ownerDisplayName: "Vecindad",
+          ownerUsername: "",
+          imageUrl: null,
+        }, { syncHistory: false, live: false, error: "not_found" });
+        return;
+      }
+
+      showDetail(initialItem, { syncHistory: false, live: false, error: "api_unavailable" });
+    }
+  })();
+
+  routeOpenInFlight = request;
+  routeOpenItemId = itemId;
+  try {
+    return await request;
+  } finally {
+    if (routeOpenInFlight === request) {
+      routeOpenInFlight = null;
+      routeOpenItemId = "";
+    }
   }
 }
 
@@ -1146,7 +1179,6 @@ function handleHistoryChange(event) {
       ?? state.myItems.find((candidate) => candidate.id === nextItemId && isOwnItem(candidate));
     if (item) {
       showDetail(item, { syncHistory: false, live: true });
-      return;
     }
     void openItemFromRoute();
     return;
@@ -1170,7 +1202,6 @@ async function checkIdentity() {
       configureOfferAuth(result);
       configurePostsView();
       await loadMineItems();
-      void openItemFromRoute();
       schedulePublishRetryIfReady();
       const firstName = result.first_name ? `Hola ${result.first_name}` : "Telegram";
       const identityName = identityStatus?.querySelector("span:nth-child(2)");
@@ -1684,6 +1715,16 @@ async function optimizePhoto(file) {
   });
 }
 
+async function preparePhotoForUpload(file) {
+  try {
+    return await optimizePhoto(file);
+  } catch {
+    // Si el WebView no puede decodificar la foto, dejamos que n8n la
+    // normalice en servidor antes de guardarla. No se almacena el original.
+    return file;
+  }
+}
+
 async function handleOfferSubmit(event) {
   event.preventDefault();
 
@@ -1750,7 +1791,7 @@ async function handleOfferSubmit(event) {
   setFormState("");
 
   try {
-    const optimizedFiles = await Promise.all(state.offerFiles.map(optimizePhoto));
+    const optimizedFiles = await Promise.all(state.offerFiles.map(preparePhotoForUpload));
     setOfferSubmitLoading("Publicando…");
     setFormState("");
     const result = await api.publishItem(payload, optimizedFiles);
@@ -1796,11 +1837,17 @@ async function handleOfferSubmit(event) {
     removeSessionStorage(AUTH_REFRESH_STORAGE_KEY);
     offerForm.reset();
     resetOfferPhotos();
-    await loadCatalog();
-    const catalogItem = state.items.find((item) => item.id === publishedItem.id);
-    const finalItem = catalogItem ? { ...publishedItem, ...catalogItem } : publishedItem;
-    rememberOwnItem(finalItem);
-    showPublishSuccess(finalItem);
+    api.invalidateCatalog?.();
+    state.catalogRequestVersion += 1;
+    state.catalogNeedsRefresh = true;
+    state.items = [
+      ...state.items.filter((item) => item.id !== publishedItem.id),
+      publishedItem,
+    ];
+    renderCategories();
+    renderItems();
+    renderMyItems();
+    showPublishSuccess(publishedItem);
   } catch (error) {
     if (isPhotoRequiredError(error)) {
       setPhotoFieldError(true);
@@ -1860,18 +1907,18 @@ async function completeItem(item, triggerButton = markDeliveredButton, feedbackE
       throw new Error(result.error || "No se ha podido actualizar la publicación.");
     }
 
-    const mineItems = await loadMineItems();
-    const syncedItem = mineItems?.find((candidate) => candidate.id === item.id) ?? null;
-    const nextStatus = syncedItem?.status
-      || result.status
+    api.invalidateMine?.();
+    api.invalidateCatalog?.();
+    state.catalogRequestVersion += 1;
+    state.catalogNeedsRefresh = true;
+    const nextStatus = result.status
       || (item.status === "completed" ? "available" : "completed");
     const updatedItem = {
       ...item,
-      ...(syncedItem ?? {}),
       status: nextStatus,
       expiresAt: result.expires_at ?? item.expiresAt ?? null,
       completedAt: nextStatus === "completed"
-        ? syncedItem?.completedAt || result.completed_at || new Date().toISOString()
+        ? result.completed_at || new Date().toISOString()
         : null,
     };
     rememberOwnItem(updatedItem);

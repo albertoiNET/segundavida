@@ -5,6 +5,11 @@ const N8N_PUBLISH_URL = "https://tasks.nukeador.com/webhook/segundavida/publish"
 const N8N_COMPLETE_URL = "https://tasks.nukeador.com/webhook/segundavida/complete";
 const N8N_MINE_URL = "https://tasks.nukeador.com/webhook/segundavida/mine";
 
+let catalogInFlight = null;
+const itemInFlight = new Map();
+let mineInFlight = null;
+let mineInFlightSession = "";
+
 function extractImageUrls(value) {
   if (!Array.isArray(value)) return [];
 
@@ -63,23 +68,41 @@ async function listMineItems(initData) {
     return [];
   }
 
-  const response = await fetch(N8N_MINE_URL, {
-    method: "POST",
-    headers: {
-      Accept: "application/json",
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ initData }),
-  });
-
-  const payload = await response.json();
-  const records = parseItemsPayload(payload, { privateFields: true });
-
-  if (!response.ok || !payload?.ok) {
-    throw new Error(payload?.error ?? `n8n respondió con HTTP ${response.status}`);
+  const sessionKey = String(initData ?? "");
+  if (mineInFlight && mineInFlightSession === sessionKey) {
+    return mineInFlight;
   }
 
-  return records;
+  const request = (async () => {
+    const response = await fetch(N8N_MINE_URL, {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ initData }),
+    });
+
+    const payload = await response.json();
+    const records = parseItemsPayload(payload, { privateFields: true });
+
+    if (!response.ok || !payload?.ok) {
+      throw new Error(payload?.error ?? `n8n respondió con HTTP ${response.status}`);
+    }
+
+    return records;
+  })();
+
+  mineInFlight = request;
+  mineInFlightSession = sessionKey;
+  try {
+    return await request;
+  } finally {
+    if (mineInFlight === request) {
+      mineInFlight = null;
+      mineInFlightSession = "";
+    }
+  }
 }
 
 async function listItems() {
@@ -87,23 +110,38 @@ async function listItems() {
     return [];
   }
 
-  const response = await fetch(N8N_DATA_URL, {
-    method: "GET",
-    headers: { Accept: "application/json" },
-  });
-
-  if (!response.ok) {
-    throw new Error(`n8n respondió con HTTP ${response.status}`);
+  if (catalogInFlight) {
+    return catalogInFlight;
   }
 
-  const payload = await response.json();
-  const records = parseItemsPayload(payload);
+  const request = (async () => {
+    const response = await fetch(N8N_DATA_URL, {
+      method: "GET",
+      headers: { Accept: "application/json" },
+    });
 
-  if (!Array.isArray(payload) && payload.ok !== true) {
-    throw new Error("Respuesta de catálogo no válida");
+    if (!response.ok) {
+      throw new Error(`n8n respondió con HTTP ${response.status}`);
+    }
+
+    const payload = await response.json();
+    const records = parseItemsPayload(payload);
+
+    if (!Array.isArray(payload) && payload.ok !== true) {
+      throw new Error("Respuesta de catálogo no válida");
+    }
+
+    return records;
+  })();
+
+  catalogInFlight = request;
+  try {
+    return await request;
+  } finally {
+    if (catalogInFlight === request) {
+      catalogInFlight = null;
+    }
   }
-
-  return records;
 }
 
 async function getItem(itemId) {
@@ -112,29 +150,53 @@ async function getItem(itemId) {
     throw new Error("Identificador público vacío");
   }
 
-  const response = await fetch(`${N8N_ITEM_URL}/${encodeURIComponent(publicId)}`, {
-    method: "GET",
-    headers: { Accept: "application/json" },
-  });
+  if (itemInFlight.has(publicId)) {
+    return itemInFlight.get(publicId);
+  }
 
-  let payload = null;
+  const request = (async () => {
+    const response = await fetch(`${N8N_ITEM_URL}/${encodeURIComponent(publicId)}`, {
+      method: "GET",
+      headers: { Accept: "application/json" },
+    });
+
+    let payload = null;
+    try {
+      payload = await response.json();
+    } catch {
+      payload = null;
+    }
+
+    if (response.status === 404 || payload?.error === "not_found") {
+      const error = new Error("not_found");
+      error.code = "not_found";
+      throw error;
+    }
+
+    if (!response.ok || payload?.ok !== true || !payload?.item) {
+      throw new Error(payload?.error ?? `n8n respondió con HTTP ${response.status}`);
+    }
+
+    return normalizeItem(payload.item);
+  })();
+
+  itemInFlight.set(publicId, request);
   try {
-    payload = await response.json();
-  } catch {
-    payload = null;
+    return await request;
+  } finally {
+    if (itemInFlight.get(publicId) === request) {
+      itemInFlight.delete(publicId);
+    }
   }
+}
 
-  if (response.status === 404 || payload?.error === "not_found") {
-    const error = new Error("not_found");
-    error.code = "not_found";
-    throw error;
-  }
+function invalidateCatalog() {
+  // The catalog cache only contains the pending promise. Keep it alive so an
+  // invalidation cannot create a second request while the first is running.
+}
 
-  if (!response.ok || payload?.ok !== true || !payload?.item) {
-    throw new Error(payload?.error ?? `n8n respondió con HTTP ${response.status}`);
-  }
-
-  return normalizeItem(payload.item);
+function invalidateMine() {
+  // Private data is not persisted; pending-request deduplication remains active.
 }
 
 async function publishItem(payload, files = []) {
@@ -213,6 +275,8 @@ window.SecondaVidaApi = Object.freeze({
   listItems,
   getItem,
   listMineItems,
+  invalidateCatalog,
+  invalidateMine,
   publishItem,
   completeItem,
 });
