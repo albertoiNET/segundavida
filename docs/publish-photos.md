@@ -17,6 +17,9 @@ El navegador conserva las selecciones sucesivas hasta dos fotos, permite quitar
 cualquiera de ellas y las redimensiona a un máximo de 1600 px por lado antes de
 enviarlas.
 
+El formulario informa y solicita aceptar que el texto y las fotos compartidos
+se publiquen bajo la licencia [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/deed.es).
+
 ## Cambios en el workflow de n8n
 
 El Webhook puede conservar el mismo método, ruta y CORS. Hay que cambiar el
@@ -69,7 +72,7 @@ if (typeof multipartPayload === 'string') {
 const consent = body.consent && typeof body.consent === 'object' ? body.consent : {};
 const consentVersion = typeof consent.version === 'string' ? consent.version.trim() : '';
 if (consent.accepted !== true) return invalid('consent_required');
-if (consentVersion !== 'sv-publish-2026-08-16-v1') {
+if (consentVersion !== 'sv-publish-2026-08-17-v2') {
   return invalid('consent_version_invalid');
 }
 

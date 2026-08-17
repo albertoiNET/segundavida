@@ -45,7 +45,7 @@ campo multipart `payload`:
   },
   "consent": {
     "accepted": true,
-    "version": "sv-publish-2026-08-16-v1"
+    "version": "sv-publish-2026-08-17-v2"
   }
 }
 ```
@@ -57,6 +57,8 @@ NocoDB y no se devuelve al catálogo público.
 
 El workflow también exige el consentimiento explícito, comprueba su versión y
 genera `consent_at` en n8n. La fecha no se acepta desde el navegador.
+El consentimiento informa además de que el texto y las fotos compartidos se
+publican bajo la licencia [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/deed.es).
 
 El identificador público se genera en un nodo separado con bytes aleatorios:
 `crypto.randomBytes(6).toString('base64url')`. Nunca se construye a partir
