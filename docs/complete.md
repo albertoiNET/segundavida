@@ -1,7 +1,7 @@
-# Marcar y reactivar una publicación
+# Gestionar el estado de una publicación
 
 Importa [`sv_complete_item.workflow.json`](./sv_complete_item.workflow.json) en
-n8n. El workflow crea un único endpoint para las dos acciones:
+n8n. El workflow crea un único endpoint para las tres acciones:
 
 Si solo necesitas reemplazar el nodo NocoDB, puedes importar
 [`sv_complete_update_node.json`](./sv_complete_update_node.json). Debe recibir
@@ -16,7 +16,7 @@ POST https://tasks.nukeador.com/webhook/segundavida/complete
 El workflow usa la credencial existente `NocoDB Token account`, busca la fila
 en la tabla `Segunda Vida`, comprueba la firma de `Telegram.WebApp.initData` y
 solo permite cambiar la publicación si `owner_telegram_id` coincide con la
-persona autenticada. La acción recibida puede ser `complete` o `reopen`. En el
+persona autenticada. La acción recibida puede ser `complete`, `reopen` o `hide`. En el
 nodo `Update NocoDB row`, el campo **Row ID Value** debe quedar exactamente así:
 
 ```text
@@ -33,23 +33,37 @@ Al reabrir escribe:
 - `status = available`
 - `completed_at = null`
 
-El nodo de validación contiene la constante `BOT_TOKEN`. Pega ahí el mismo
-token privado que ya tienes en el nodo Code de `/whoami`; no lo pegues en el
-repositorio ni en el navegador. La credencial `Pucelo Bot` no se puede leer
-desde un nodo Code de n8n, por lo que no puede recuperarse automáticamente
-desde esa credencial. Como el nodo Code necesita HMAC, n8n también debe tener
-permitido el módulo `crypto` con `NODE_FUNCTION_ALLOW_BUILTIN=crypto`.
+Al borrar escribe:
+
+- `status = hidden`
+- conserva `completed_at` si la publicación ya estaba entregada
+
+El borrado es una ocultación reversible para administración y auditoría: la
+fila no se elimina físicamente. Las publicaciones ocultas dejan de aparecer
+en el catálogo, en su ficha pública y en `Mis publicaciones`. El workflow
+dispara además la regeneración de las fichas estáticas mediante GitHub Actions.
+
+El nodo de validación lee `TELEGRAM_BOT_TOKEN` desde `$vars` y, como fallback,
+desde `$env`; no hay que repetir el secreto en cada nodo. La credencial
+`Pucelo Bot` sigue disponible para nodos Telegram, pero n8n no la expone
+automáticamente al sandbox de un nodo Code. Como el nodo Code necesita HMAC,
+n8n también debe tener permitido el módulo `crypto` con
+`NODE_FUNCTION_ALLOW_BUILTIN=crypto`.
 
 Después de importar:
 
-1. Abre `Validate Telegram initData` y sustituye
-   `PEGA_AQUI_EL_TOKEN_REAL_DE_PUCELO_BOT` por el token privado de `Pucelo Bot`.
+1. Configura una variable privada de proyecto llamada `TELEGRAM_BOT_TOKEN` con
+   el valor actual del token de `Pucelo Bot` (o la variable de entorno con ese
+   nombre) y no la guardes en este repositorio.
 2. Comprueba que la credencial del nodo `Search rows` y `Update NocoDB row` es
    `NocoDB Token account`.
 3. Comprueba que la tabla seleccionada es `Segunda Vida` y que contiene los
    campos `Id`, `item-id`, `owner_telegram_id`, `status` y `completed_at`.
    En `Update NocoDB row`, pon `{{ $json.Id }}` en **Row ID Value**.
-4. Activa el workflow.
+4. Comprueba que `Dispatch static page regeneration` usa la credencial
+   `GitHub account`. Si no quieres regenerar fichas estáticas desde este
+   workflow, puedes desactivar ese nodo y mantener la regeneración programada.
+5. Activa el workflow.
 
 El frontend ya envía este cuerpo:
 
@@ -63,6 +77,9 @@ El frontend ya envía este cuerpo:
 
 Para marcarla de nuevo como disponible, el frontend envía la misma petición
 con `"action": "reopen"`.
+
+Para ocultarla sin marcarla como entregada, el frontend envía la misma petición
+con `"action": "hide"`.
 
 Respuesta correcta al completar:
 
@@ -85,5 +102,17 @@ Respuesta correcta al reactivar:
   "status": "available",
   "completed_at": null,
   "message": "Publicación reactivada"
+}
+```
+
+Respuesta correcta al ocultar:
+
+```json
+{
+  "ok": true,
+  "item_id": "k8Qm2LxP",
+  "status": "hidden",
+  "completed_at": null,
+  "message": "Publicación borrada"
 }
 ```

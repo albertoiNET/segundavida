@@ -48,6 +48,8 @@ let photoLightboxIndex = 0;
 let photoLightboxReturnFocus = null;
 let routeOpenInFlight = null;
 let routeOpenItemId = "";
+let deleteDialogItem = null;
+let deleteDialogTriggerButton = null;
 
 const runtimeName = document.querySelector("#runtime-name");
 const telegramSdkState = document.querySelector("#telegram-sdk-state");
@@ -90,7 +92,15 @@ const interestButton = document.querySelector("#interest-button");
 const detailActionState = document.querySelector("#detail-action-state");
 const detailOwnerActions = document.querySelector("#detail-owner-actions");
 const markDeliveredButton = document.querySelector("#mark-delivered-button");
+const deleteItemButton = document.querySelector("#delete-item-button");
 const detailOwnerActionState = document.querySelector("#detail-owner-action-state");
+const deleteItemDialog = document.querySelector("#delete-item-dialog");
+const deleteItemDialogTitle = document.querySelector("#delete-item-dialog-title");
+const deleteItemDialogCopy = document.querySelector("#delete-item-dialog-copy");
+const deleteItemDialogState = document.querySelector("#delete-item-dialog-state");
+const deleteItemDialogClose = document.querySelector("#delete-item-dialog-close");
+const deleteItemDialogCancel = document.querySelector("#delete-item-dialog-cancel");
+const deleteItemDialogConfirm = document.querySelector("#delete-item-dialog-confirm");
 const publishSuccessView = document.querySelector("#publish-success-view");
 const successItemTitle = document.querySelector("#success-item-title");
 const successItemStatus = document.querySelector("#success-item-status");
@@ -131,6 +141,7 @@ const postsList = document.querySelector("#posts-list");
 const postsEmptyState = document.querySelector("#posts-empty-state");
 const postsEmptyTitle = document.querySelector("#posts-empty-title");
 const postsEmptyCopy = document.querySelector("#posts-empty-copy");
+const postsActionState = document.querySelector("#posts-action-state");
 const offerEmptyButton = document.querySelector("#offer-empty-button");
 const postsTabs = [...document.querySelectorAll(".posts-tab")];
 const postsActiveCount = document.querySelector("#posts-active-count");
@@ -389,6 +400,15 @@ function configureDeliveryButton(button, status) {
   button.setAttribute("aria-label", actionLabel);
 
   button.replaceChildren(createIconElement(actionIcon, fallback), document.createTextNode(actionLabel));
+}
+
+function configureDeleteButton(button) {
+  if (!button) return;
+  button.setAttribute("aria-label", "Borrar publicación");
+  button.replaceChildren(
+    createIconElement("fa-trash-can", "⌫"),
+    document.createTextNode("Borrar"),
+  );
 }
 
 function normalizeTelegramUsername(value) {
@@ -697,9 +717,15 @@ function createOwnedItemCard(item) {
   deliveredButton.className = "secondary-button secondary-button--compact delivery-action-button";
   deliveredButton.type = "button";
   configureDeliveryButton(deliveredButton, item.status);
+  const deleteButton = document.createElement("button");
+  deleteButton.className = "quiet-action quiet-action--delete owned-item-card__delete";
+  deleteButton.type = "button";
+  configureDeleteButton(deleteButton);
   const actionState = createTextElement("p", "owned-item-card__state", "");
   deliveredButton.addEventListener("click", () => completeItem(item, deliveredButton, actionState));
+  deleteButton.addEventListener("click", () => openDeleteItemDialog(item, deleteButton));
   actions.append(deliveredButton);
+  actions.append(deleteButton);
   card.append(actions);
   card.append(actionState);
 
@@ -907,6 +933,9 @@ function renderDetail(item, { live = true, error = "" } = {}) {
   detailOwnerActions.hidden = !ownItem || !live;
   markDeliveredButton.disabled = false;
   configureDeliveryButton(markDeliveredButton, item.status);
+  deleteItemButton.hidden = !ownItem || !live;
+  deleteItemButton.disabled = false;
+  configureDeleteButton(deleteItemButton);
   detailOwnerActionState.textContent = item.status === "completed"
     ? "Si vuelve a estar disponible, puedes reactivar esta publicación."
     : "Cuando se lo entregues a otra persona, márcalo aquí.";
@@ -2047,6 +2076,98 @@ function showPublishSuccess(item) {
   setView("publish-success");
 }
 
+function openDeleteItemDialog(item, triggerButton = deleteItemButton) {
+  if (!item?.id || !deleteItemDialog) return;
+
+  deleteDialogItem = item;
+  deleteDialogTriggerButton = triggerButton;
+  deleteItemDialogTitle.textContent = item.title || "esta publicación";
+  deleteItemDialogCopy.textContent = `«${item.title || "Esta publicación"}» dejará de aparecer en SegundaVida. No se marcará como entregada.`;
+  deleteItemDialogState.textContent = "";
+  deleteItemDialogState.dataset.state = "";
+  deleteItemDialogConfirm.disabled = false;
+  deleteItemDialogConfirm.textContent = "Borrar publicación";
+
+  if (typeof deleteItemDialog.showModal === "function") {
+    deleteItemDialog.showModal();
+  } else {
+    deleteItemDialog.setAttribute("open", "");
+  }
+  deleteItemDialogCancel?.focus();
+}
+
+function closeDeleteItemDialog({ restoreFocus = true } = {}) {
+  if (!deleteItemDialog) return;
+
+  if (typeof deleteItemDialog.close === "function" && deleteItemDialog.open) {
+    deleteItemDialog.close();
+  } else {
+    deleteItemDialog.removeAttribute("open");
+  }
+
+  const triggerButton = deleteDialogTriggerButton;
+  deleteDialogItem = null;
+  deleteDialogTriggerButton = null;
+  if (restoreFocus && triggerButton?.isConnected) triggerButton.focus();
+}
+
+async function hideItem() {
+  const item = deleteDialogItem;
+  if (!item?.id || !deleteItemDialogConfirm) return;
+
+  if (!auth?.hasInitData()) {
+    deleteItemDialogState.textContent = "Abre la Mini App desde Telegram para gestionar esta publicación.";
+    deleteItemDialogState.dataset.state = "error";
+    return;
+  }
+
+  if (!api?.isCompleteConfigured || typeof api.completeItem !== "function") {
+    deleteItemDialogState.textContent = "La opción de borrar todavía no está conectada en n8n.";
+    deleteItemDialogState.dataset.state = "error";
+    return;
+  }
+
+  deleteItemDialogConfirm.disabled = true;
+  deleteItemDialogCancel.disabled = true;
+  deleteItemDialogConfirm.textContent = "Borrando…";
+  deleteItemDialogState.textContent = "";
+  deleteItemDialogState.dataset.state = "pending";
+
+  try {
+    const result = await api.completeItem({
+      initData: auth.getInitData(),
+      item_id: item.id,
+      action: "hide",
+    });
+
+    if (!result.ok) {
+      throw new Error(result.error || "No se ha podido borrar la publicación.");
+    }
+
+    api.invalidateMine?.();
+    api.invalidateCatalog?.();
+    state.catalogRequestVersion += 1;
+    state.catalogNeedsRefresh = true;
+    state.items = state.items.filter((candidate) => candidate.id !== item.id);
+    state.myItems = state.myItems.filter((candidate) => candidate.id !== item.id);
+    saveOwnItems();
+    renderItems();
+    renderMyItems();
+    closeDeleteItemDialog({ restoreFocus: false });
+    setView("posts");
+    if (postsActionState) {
+      postsActionState.textContent = "Publicación borrada. Ya no aparece en SegundaVida.";
+      postsActionState.dataset.state = "success";
+    }
+  } catch (error) {
+    deleteItemDialogConfirm.disabled = false;
+    deleteItemDialogCancel.disabled = false;
+    deleteItemDialogConfirm.textContent = "Borrar publicación";
+    deleteItemDialogState.textContent = error.message || "No se ha podido borrar la publicación.";
+    deleteItemDialogState.dataset.state = "error";
+  }
+}
+
 async function completeItem(item, triggerButton = markDeliveredButton, feedbackElement = detailOwnerActionState) {
   if (!item?.id) return;
 
@@ -2232,6 +2353,17 @@ offerEmptyButton.addEventListener("click", () => setView("offer"));
 detailShare.addEventListener("click", shareSelectedItem);
 interestButton.addEventListener("click", handleInterest);
 markDeliveredButton.addEventListener("click", () => completeItem(state.selectedItem));
+deleteItemButton.addEventListener("click", () => openDeleteItemDialog(state.selectedItem));
+deleteItemDialogClose?.addEventListener("click", () => closeDeleteItemDialog());
+deleteItemDialogCancel?.addEventListener("click", () => closeDeleteItemDialog());
+deleteItemDialogConfirm?.addEventListener("click", () => void hideItem());
+deleteItemDialog?.addEventListener("cancel", (event) => {
+  event.preventDefault();
+  closeDeleteItemDialog();
+});
+deleteItemDialog?.addEventListener("click", (event) => {
+  if (event.target === deleteItemDialog) closeDeleteItemDialog();
+});
 offerImages.addEventListener("change", handlePhotoSelection);
 offerPhotoPicker?.addEventListener("click", handleGalleryRequest);
 offerCamera?.addEventListener("change", handlePhotoSelection);

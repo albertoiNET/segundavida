@@ -823,6 +823,43 @@ h2 {
   font-size: 0.74rem;
 }
 
+.quiet-action {
+  display: inline-flex;
+  width: auto;
+  min-height: 2.1rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.45rem;
+  border: 1px solid transparent;
+  border-radius: 0.55rem;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 0.74rem;
+  font-weight: 650;
+}
+
+.quiet-action:hover {
+  background: var(--bg-card-hover);
+  color: var(--text-secondary);
+}
+
+.quiet-action:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.quiet-action:disabled {
+  color: var(--text-muted);
+  cursor: default;
+  opacity: 0.6;
+}
+
+.quiet-action--delete {
+  color: var(--text-muted);
+}
+
 .secondary-button {
   width: 100%;
   min-height: 3rem;
@@ -1950,6 +1987,17 @@ body.photo-lightbox-open {
   border-top: 1px solid var(--border-light);
 }
 
+.detail-owner-actions__controls {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+}
+
+.detail-owner-actions__controls .delivery-action-button {
+  width: auto;
+}
+
 .detail-owner-actions__label {
   color: var(--color-primary-dark);
   font-size: 0.78rem;
@@ -2042,6 +2090,10 @@ body.photo-lightbox-open {
 .action-state[data-state="error"],
 .form-state[data-state="error"] {
   color: #c57878;
+}
+
+.action-state[data-state="success"] {
+  color: var(--color-secondary-dark);
 }
 
 .action-state[data-state="pending"],
@@ -2241,6 +2293,81 @@ body.photo-lightbox-open {
   color: var(--text-secondary);
   font-size: 0.82rem;
   line-height: 1.45;
+}
+
+.delete-item-dialog {
+  width: min(calc(100% - 2rem), 28rem);
+  padding: 0;
+  border: 0;
+  border-radius: 1.1rem;
+  background: transparent;
+  color: var(--text-main);
+}
+
+.delete-item-dialog::backdrop {
+  background: rgb(17 20 18 / 48%);
+  -webkit-backdrop-filter: blur(3px);
+  backdrop-filter: blur(3px);
+}
+
+.delete-item-dialog__panel {
+  display: grid;
+  gap: 0.85rem;
+  padding: 1.2rem;
+  border: 1px solid var(--border-light);
+  border-radius: 1.1rem;
+  background: var(--bg-container);
+  box-shadow: 0 1rem 3rem rgb(0 0 0 / 22%);
+}
+
+.delete-item-dialog__topline {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.delete-item-dialog h2 {
+  margin: 0.2rem 0 0;
+  font-size: 1.2rem;
+}
+
+.delete-item-dialog p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.84rem;
+  line-height: 1.5;
+}
+
+.delete-item-dialog__item {
+  padding: 0.7rem 0.8rem;
+  border-left: 3px solid var(--border-strong);
+  background: var(--bg-card-hover);
+  color: var(--text-main) !important;
+  font-weight: 750;
+}
+
+.delete-item-dialog__state {
+  min-height: 1.2rem;
+}
+
+.delete-item-dialog__state[data-state="error"] {
+  color: #c57878;
+}
+
+.delete-item-dialog__state[data-state="pending"] {
+  color: var(--color-secondary-dark);
+}
+
+.delete-item-dialog__actions {
+  display: flex;
+  gap: 0.55rem;
+  margin-top: 0.25rem;
+}
+
+.delete-item-dialog__actions button {
+  width: auto;
+  flex: 1;
 }
 
 .camera-dialog {

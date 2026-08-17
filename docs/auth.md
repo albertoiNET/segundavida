@@ -66,9 +66,10 @@ http://localhost:8000
 http://127.0.0.1:8000
 ```
 
-El workflow importable espera el token en la variable privada de entorno
-`TELEGRAM_BOT_TOKEN`. Nunca debe pegarse en `index.html`, `js/`, NocoDB, el CSV
-o el repositorio. El nodo Code usa el módulo nativo `crypto`; si tu instancia
+El workflow importable espera el token en la variable privada de n8n
+`TELEGRAM_BOT_TOKEN`, disponible como variable de proyecto (`$vars`) o de
+entorno (`$env`). Nunca debe pegarse en `index.html`, `js/`, NocoDB, el CSV o
+el repositorio. El nodo Code usa el módulo nativo `crypto`; si tu instancia
 self-hosted lo bloquea, permite únicamente ese módulo con
 `NODE_FUNCTION_ALLOW_BUILTIN=crypto` y reinicia n8n.
 

@@ -39,7 +39,7 @@
     />
     <link rel="stylesheet" href="/css/icon-fallback.css?v=sv-20260817-40" />
     <link rel="stylesheet" href="/css/tokens.css?v=sv-20260817-41" />
-    <link rel="stylesheet" href="/css/app.css?v=sv-20260817-56" />
+    <link rel="stylesheet" href="/css/app.css?v=sv-20260817-57" />
     <script src="https://telegram.org/js/telegram-web-app.js?63"></script>
   </head>
   <body>
@@ -135,10 +135,16 @@
           <p class="action-state" id="detail-action-state" aria-live="polite"></p>
           <div class="detail-owner-actions" id="detail-owner-actions" hidden>
             <span class="detail-owner-actions__label">Es tu publicación</span>
-            <button class="secondary-button delivery-action-button secondary-button--complete" id="mark-delivered-button" type="button">
-              <i class="fa-solid fa-check fa-icon" data-fallback="✓" aria-hidden="true"></i>
-              <span>Marcar como entregado</span>
-            </button>
+            <div class="detail-owner-actions__controls">
+              <button class="secondary-button delivery-action-button secondary-button--complete" id="mark-delivered-button" type="button">
+                <i class="fa-solid fa-check fa-icon" data-fallback="✓" aria-hidden="true"></i>
+                <span>Marcar como entregado</span>
+              </button>
+              <button class="quiet-action quiet-action--delete" id="delete-item-button" type="button" aria-label="Borrar publicación">
+                <i class="fa-solid fa-trash-can fa-icon" data-fallback="⌫" aria-hidden="true"></i>
+                <span>Borrar</span>
+              </button>
+            </div>
             <p class="action-state" id="detail-owner-action-state" aria-live="polite"></p>
           </div>
           <aside class="community-promo" aria-labelledby="community-promo-title">
@@ -436,6 +442,27 @@
         </div>
       </dialog>
 
+      <dialog class="delete-item-dialog" id="delete-item-dialog" aria-labelledby="delete-item-dialog-heading" aria-describedby="delete-item-dialog-copy">
+        <div class="delete-item-dialog__panel">
+          <div class="delete-item-dialog__topline">
+            <div>
+              <span class="eyebrow">Tu publicación</span>
+              <h2 id="delete-item-dialog-heading">¿Borrar esta publicación?</h2>
+            </div>
+            <button class="icon-button" id="delete-item-dialog-close" type="button" aria-label="Cancelar borrado" title="Cancelar borrado">
+              <i class="fa-solid fa-xmark fa-icon" data-fallback="×" aria-hidden="true"></i>
+            </button>
+          </div>
+          <p class="delete-item-dialog__item" id="delete-item-dialog-title"></p>
+          <p id="delete-item-dialog-copy"></p>
+          <p class="delete-item-dialog__state" id="delete-item-dialog-state" aria-live="polite"></p>
+          <div class="delete-item-dialog__actions">
+            <button class="secondary-button" id="delete-item-dialog-cancel" type="button">Cancelar</button>
+            <button class="primary-button delete-item-dialog__confirm" id="delete-item-dialog-confirm" type="button">Borrar publicación</button>
+          </div>
+        </div>
+      </dialog>
+
       <dialog class="photo-lightbox" id="photo-lightbox" aria-labelledby="photo-lightbox-title">
         <div class="photo-lightbox__panel">
           <div class="photo-lightbox__topline">
@@ -475,6 +502,7 @@
               Finalizadas <span id="posts-completed-count">0</span>
             </button>
           </div>
+          <p class="action-state posts-action-state" id="posts-action-state" aria-live="polite"></p>
           <div class="posts-list" id="posts-list" aria-live="polite"></div>
           <div class="empty-state" id="posts-empty-state">
             <span class="empty-state__icon" aria-hidden="true"><i class="fa-solid fa-box-open fa-icon" data-fallback="⌂"></i></span>
@@ -541,6 +569,6 @@
     <script src="/js/auth.js?v=sv-20260817-42"></script>
     <script src="/js/api.js?v=sv-20260817-43"></script>
     <script src="/js/analytics.js?v=sv-20260817-41"></script>
-    <script src="/js/app.js?v=sv-20260817-58"></script>
+    <script src="/js/app.js?v=sv-20260818-59"></script>
   </body>
 </html>

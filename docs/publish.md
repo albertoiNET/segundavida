@@ -14,16 +14,16 @@ contenido y subir hasta dos fotos mediante la credencial existente
 
 Antes de activarlo:
 
-1. Abrir el nodo `Validate Telegram and item`.
-2. Sustituir `PEGA_AQUI_EL_TOKEN_REAL_DE_PUCELO_BOT` por el token real de
-   `Pucelo Bot`. El token solo debe existir dentro de n8n; no se debe guardar en
+1. Configurar una variable privada de proyecto llamada `TELEGRAM_BOT_TOKEN` con
+   el valor actual del token de `Pucelo Bot` (o la variable de entorno con ese
+   nombre). El token solo debe existir dentro de n8n; no se debe guardar en
    este repositorio ni en el navegador.
-3. Confirmar que el nodo `Create NocoDB row` conserva la credencial y la tabla
+2. Confirmar que el nodo `Create NocoDB row` conserva la credencial y la tabla
    `Segunda Vida`.
-4. En NocoDB, crear estos campos en `sv_items` antes de activar el workflow:
+3. En NocoDB, crear estos campos en `sv_items` antes de activar el workflow:
    `consent_accepted` (Checkbox), `consent_version` (SingleLineText) y
    `consent_at` (DateTime).
-5. Activar el workflow.
+4. Activar el workflow.
 
 El endpoint de producción será:
 
@@ -66,12 +66,13 @@ no permitidas, además de contenido ofensivo o spam.
 
 El identificador público se genera en un nodo separado con bytes aleatorios:
 `crypto.randomBytes(6).toString('base64url')`. Nunca se construye a partir
-del Telegram user ID. El valor se escribe en `public_id` y, mientras dure la
-compatibilidad, también en `item-id`.
+del Telegram user ID. El valor se escribe en `item-id`, que es el único campo
+de identificador público existente en la tabla actual; la respuesta mantiene
+`public_id` como alias temporal para clientes antiguos.
 
 Las filas antiguas que tengan un `item-id` como
 `sv-2191395-1786900112374` deben editarse una vez en NocoDB y recibir un valor
-opaco, por ejemplo `k8Qm2LxP`, en ambos campos. Las URLs antiguas se aceptan
+opaco, por ejemplo `k8Qm2LxP`, en ese campo. Las URLs antiguas se aceptan
 solo como fallback de navegación y se normalizan a `/i/<public_id>/`; no se
 generan enlaces nuevos con el valor antiguo.
 

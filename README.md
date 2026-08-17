@@ -45,6 +45,8 @@ de nuevo la identidad, los datos y las condiciones de moderación.
 - **Mis publicaciones** permite consultar publicaciones activas y entregadas.
 - La persona propietaria puede marcar un objeto como entregado o volver a
   publicarlo si sigue disponible.
+- La persona propietaria puede borrar una publicación con confirmación. El
+  borrado la oculta de la plataforma sin marcarla como entregada.
 - Las publicaciones sin nombre de usuario público se mantienen visibles, pero
   no habilitan el contacto directo.
 
@@ -104,7 +106,7 @@ publicar con fotografías, utiliza el workflow de fotos:
 | `POST /segundavida/whoami` | Validación de identidad Telegram | [`sv_validate_telegram_user.workflow.json`](docs/sv_validate_telegram_user.workflow.json) |
 | `POST /segundavida/publish` | Publicación con fotos y consentimiento | [`sv_publish_item_photos.workflow.json`](docs/sv_publish_item_photos.workflow.json) |
 | `POST /segundavida/mine` | Publicaciones de la persona autenticada | [`sv_mine_items.workflow.json`](docs/sv_mine_items.workflow.json) |
-| `POST /segundavida/complete` | Marcar entregado o reabrir | [`sv_complete_item.workflow.json`](docs/sv_complete_item.workflow.json) |
+| `POST /segundavida/complete` | Marcar entregado, reabrir u ocultar | [`sv_complete_item.workflow.json`](docs/sv_complete_item.workflow.json) |
 
 Configura en n8n la credencial de NocoDB y la variable privada
 `TELEGRAM_BOT_TOKEN`. El token nunca debe guardarse en este repositorio, en el

@@ -119,6 +119,9 @@ class StaticContractTests(unittest.TestCase):
         self.assertIn("const catalogImageUrls = getItemImageUrls(item)", app_source)
         self.assertIn("function openTelegramChat", app_source)
         self.assertIn('pulsa aquí para abrirlo', app_source)
+        self.assertIn('action: "hide"', app_source)
+        self.assertIn("function openDeleteItemDialog", app_source)
+        self.assertIn("function hideItem", app_source)
         self.assertIn("createdAt", app_source)
         self.assertIn('"Optimizando…"', app_source)
         self.assertIn("state.offerFiles = [...state.offerFiles, ...filesToAdd]", app_source)
@@ -126,11 +129,17 @@ class StaticContractTests(unittest.TestCase):
         self.assertIn('id="offer-camera-button"', index_source)
         self.assertIn('id="camera-dialog"', index_source)
         self.assertIn('id="camera-preview"', index_source)
+        self.assertIn('id="delete-item-button"', index_source)
+        self.assertIn('id="delete-item-dialog"', index_source)
+        self.assertIn('quiet-action--delete', index_source)
         self.assertIn('id="detail-created-at"', index_source)
         self.assertIn('capture="environment"', index_source)
         self.assertIn("community-promo", index_source)
         self.assertIn("https://aldeapucela.org/", index_source)
         self.assertTrue((ROOT / "assets" / "aldea-pucela-mark.jpg").exists())
+        fallback_source = (ROOT / "404.html").read_text(encoding="utf-8")
+        self.assertIn('id="delete-item-button"', fallback_source)
+        self.assertIn('id="delete-item-dialog"', fallback_source)
 
     def test_publish_workflow_writes_opaque_public_id_and_keeps_legacy_alias(self):
         workflow = json.loads((ROOT / "docs" / "sv_publish_item.workflow.json").read_text(encoding="utf-8"))
@@ -158,6 +167,23 @@ class StaticContractTests(unittest.TestCase):
         self.assertEqual(upload["parameters"]["uploadMode"], "base64")
         self.assertEqual(upload["parameters"]["uploadFieldName"]["value"], "photos")
         self.assertEqual(upload["credentials"]["nocoDbApiToken"]["name"], "NocoDB Token account")
+
+    def test_complete_workflow_supports_owner_only_hide_without_deleting_rows(self):
+        workflow_path = ROOT / "docs" / "sv_complete_item.workflow.json"
+        workflow = json.loads(workflow_path.read_text(encoding="utf-8"))
+        node_names = {node["name"] for node in workflow["nodes"]}
+        workflow_text = json.dumps(workflow)
+        code = "\n".join(
+            node.get("parameters", {}).get("jsCode", "") for node in workflow["nodes"]
+        )
+        self.assertIn("'hide'", code)
+        self.assertIn("status: nextStatus", code)
+        self.assertIn("item_already_hidden", code)
+        self.assertIn("owner_telegram_id", code)
+        self.assertIn("Publicación borrada", code)
+        self.assertIn("Dispatch static page regeneration", node_names)
+        self.assertIn('"type": "n8n-nodes-base.github"', workflow_text)
+        self.assertNotIn('"operation": "delete"', workflow_text)
 
 
 if __name__ == "__main__":

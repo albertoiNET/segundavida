@@ -35,6 +35,10 @@ deben entrar desde el workflow de publicación o desde una importación validada
 | `consent_version` | SingleLineText | Sí | Versión del texto aceptado por la persona |
 | `consent_at` | DateTime | Sí | Fecha generada por n8n al publicar |
 
+El estado `hidden` oculta la publicación del catálogo, de su ficha pública y
+de `Mis publicaciones` sin eliminar la fila. Puede utilizarse tanto para
+moderación como para el borrado solicitado por la persona propietaria.
+
 NocoDB ya aporta `CreatedAt` y `UpdatedAt`; no hay que crearlos ni rellenarlos
 desde el CSV. n8n los expondrá como `created_at` y `updated_at` en la respuesta
 pública. Telegram IDs se guardan como texto para evitar problemas de precisión o

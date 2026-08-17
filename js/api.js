@@ -238,7 +238,7 @@ async function publishItem(payload, files = []) {
 
 async function completeItem(payload) {
   if (!N8N_COMPLETE_URL) {
-    throw new Error("El endpoint de entrega todavía no está configurado.");
+    throw new Error("El endpoint de gestión todavía no está configurado.");
   }
 
   const response = await fetch(N8N_COMPLETE_URL, {
@@ -262,7 +262,7 @@ async function completeItem(payload) {
   }
 
   const result = Array.isArray(payloadResult) ? payloadResult[0] : payloadResult;
-  return result ?? { ok: false, error: "Respuesta vacía del endpoint de entrega." };
+  return result ?? { ok: false, error: "Respuesta vacía del endpoint de gestión." };
 }
 
 window.SecondaVidaApi = Object.freeze({
