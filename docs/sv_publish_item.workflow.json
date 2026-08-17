@@ -34,7 +34,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const crypto = require('crypto');\nconst input = $input.first()?.json ?? {};\nif (input.valid !== true) return [{ json: input }];\n\n// Identificador público opaco: nunca incluye el Telegram user ID.\nconst publicItemId = `sv-${crypto.randomBytes(6).toString('base64url')}`;\nreturn [{ json: { ...input, item_id: publicItemId } }];"
+        "jsCode": "const crypto = require('crypto');\nconst input = $input.first()?.json ?? {};\nif (input.valid !== true) return [{ json: input }];\n\n// Identificador público opaco: nunca incluye el Telegram user ID.\nconst publicItemId = `sv-${crypto.randomBytes(6).toString('base64url')}`;\nreturn [{ json: { ...input, public_id: publicItemId, item_id: publicItemId } }];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -107,6 +107,10 @@
         "dataToSend": "defineBelow",
         "fieldsUi": {
           "fieldValues": [
+            {
+              "fieldName": "public_id",
+              "fieldValue": "={{ $json.public_id }}"
+            },
             {
               "fieldName": "item-id",
               "fieldValue": "={{ $json.item_id }}"
@@ -183,7 +187,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const created = $input.first()?.json ?? {};\nconst fields = created.fields ?? created;\nreturn [{\n  json: {\n    ok: true,\n    item_id: fields['item-id'] ?? created['item-id'] ?? '',\n    title: fields.title ?? created.title ?? '',\n    status: fields.status ?? created.status ?? 'available',\n    message: 'Publicado correctamente',\n  },\n}];"
+        "jsCode": "const created = $input.first()?.json ?? {};\nconst fields = created.fields ?? created;\nconst publicId = fields.public_id ?? fields['item-id'] ?? created.public_id ?? created['item-id'] ?? '';\nreturn [{\n  json: {\n    ok: true,\n    public_id: publicId,\n    item_id: publicId,\n    title: fields.title ?? created.title ?? '',\n    status: fields.status ?? created.status ?? 'available',\n    message: 'Publicado correctamente',\n  },\n}];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,

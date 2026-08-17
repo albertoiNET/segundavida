@@ -24,6 +24,8 @@ const state = {
   currentView: "explore",
   currentItemId: "",
   historyMaxIndex: 0,
+  staticItem: null,
+  selectedItemLive: false,
 };
 
 const runtimeName = document.querySelector("#runtime-name");
@@ -202,7 +204,11 @@ function pushViewHistory(viewName, itemId = "") {
   const currentState = window.history.state ?? {};
   const nextIndex = getHistoryIndex(currentState) + 1;
   const url = new URL(window.location.href);
-  url.hash = itemId ? `item=${encodeURIComponent(itemId)}` : "";
+  url.search = "";
+  url.hash = "";
+  url.pathname = itemId
+    ? `/i/${encodeURIComponent(itemId)}/`
+    : "/";
 
   window.history.pushState({
     ...currentState,
@@ -231,37 +237,52 @@ function goForward() {
   }
 }
 
+function getRouteItemId() {
+  const path = window.location.pathname.replace(/\/+$/, "");
+  const modernMatch = path.match(/\/i\/([^/]+)$/);
+  if (modernMatch) return decodeRoutePart(modernMatch[1]);
+
+  const legacyPathMatch = path.match(/\/objetos\/([^/]+)$/);
+  if (legacyPathMatch) return decodeRoutePart(legacyPathMatch[1]);
+
+  if (window.location.hash.startsWith("#item=")) {
+    return decodeRoutePart(window.location.hash.slice("#item=".length));
+  }
+
+  return "";
+}
+
+function decodeRoutePart(value) {
+  try {
+    return decodeURIComponent(value).trim();
+  } catch {
+    return "";
+  }
+}
+
+function getStaticItem() {
+  const dataElement = document.querySelector("#static-item-data");
+  if (!dataElement) return null;
+
+  try {
+    const parsed = JSON.parse(dataElement.textContent || "{}");
+    return parsed && typeof parsed === "object" ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
 function prepareHistoryState() {
   const currentState = window.history.state ?? {};
-  let itemId = "";
-  if (window.location.hash.startsWith("#item=")) {
-    try {
-      itemId = decodeURIComponent(window.location.hash.slice("#item=".length));
-    } catch {
-      itemId = "";
-    }
-  }
+  const itemId = getRouteItemId();
   const view = itemId ? "detail" : "explore";
   const index = getHistoryIndex(currentState);
 
-  if (itemId && !currentState.svApp) {
-    const rootUrl = new URL(window.location.href);
-    rootUrl.hash = "";
-    window.history.replaceState({
-      ...currentState,
-      svApp: true,
-      svView: "explore",
-      svItemId: null,
-      svIndex: 0,
-    }, "", rootUrl);
-    state.currentView = "explore";
-    state.currentItemId = "";
-    state.historyMaxIndex = 0;
-    pushViewHistory("detail", itemId);
-    state.currentView = "detail";
-    state.currentItemId = itemId;
-    updateNavigationControls();
-    return;
+  const canonicalUrl = new URL(window.location.href);
+  if (itemId) {
+    canonicalUrl.pathname = `/i/${encodeURIComponent(itemId)}/`;
+    canonicalUrl.search = "";
+    canonicalUrl.hash = "";
   }
 
   window.history.replaceState({
@@ -270,7 +291,7 @@ function prepareHistoryState() {
     svView: view,
     svItemId: itemId || null,
     svIndex: index,
-  }, "", window.location.href);
+  }, "", canonicalUrl);
   state.currentView = view;
   state.currentItemId = itemId;
   state.historyMaxIndex = index;
@@ -368,6 +389,7 @@ function isOwnItem(item) {
 
 function getItemStatusLabel(item) {
   if (item?.status === "completed") return "Entregado";
+  if (item?.status === "expired") return "Ya no disponible";
   if (item?.expiresAt) return `Disponible hasta ${formatDate(item.expiresAt)}`;
   return "Disponible ahora";
 }
@@ -375,7 +397,8 @@ function getItemStatusLabel(item) {
 function getItemUrl(item) {
   const url = new URL(window.location.href);
   url.search = "";
-  url.hash = `item=${encodeURIComponent(item.id)}`;
+  url.hash = "";
+  url.pathname = `/i/${encodeURIComponent(item.id)}/`;
   return url.toString();
 }
 
@@ -515,8 +538,9 @@ function renderMyItems() {
     : "Cuando ofrezcas algo, aparecerá en esta sección.";
 }
 
-function renderDetail(item) {
+function renderDetail(item, { live = true, error = "" } = {}) {
   state.selectedItem = item;
+  state.selectedItemLive = live;
   detailMedia.replaceChildren();
 
   if (item.imageUrl) {
@@ -535,7 +559,11 @@ function renderDetail(item) {
 
   detailAvailability.textContent = item.status === "completed"
     ? "Entregado"
-    : item.expiresAt
+    : item.status === "expired"
+      ? "Ya no disponible"
+      : item.status === "not_found"
+        ? "No encontrada"
+        : item.expiresAt
       ? `Disponible hasta ${formatDate(item.expiresAt)}`
       : "Disponible";
   detailTitle.textContent = item.title;
@@ -546,8 +574,9 @@ function renderDetail(item) {
   detailOwner.textContent = item.ownerDisplayName || "Vecindad";
   const ownItem = isOwnItem(item);
   const ownerUsername = normalizeTelegramUsername(item.ownerUsername);
-  interestButton.hidden = ownItem;
-  interestButton.disabled = ownItem || !ownerUsername;
+  const isAvailable = item.status === "available" && isNotExpired(item);
+  interestButton.hidden = ownItem || !live || !isAvailable;
+  interestButton.disabled = ownItem || !live || !isAvailable || !ownerUsername;
   interestButton.textContent = "Me interesa";
   interestButton.setAttribute(
     "aria-label",
@@ -555,14 +584,22 @@ function renderDetail(item) {
       ? `Contactar con ${item.ownerDisplayName || "el vecino o la vecina"} por Telegram`
       : "Mostrar interés por este objeto",
   );
-  detailActionState.textContent = ownItem
-    ? "Gestiona el estado de tu publicación desde aquí."
-    : ownerUsername
-    ? "Se abrirá el chat de Telegram de quien lo ofrece."
-    : "Este vecino o vecina no tiene un nombre de usuario público para recibir contactos.";
-  detailActionState.dataset.state = ownItem || ownerUsername ? "" : "error";
+  detailActionState.textContent = !live
+    ? error === "not_found"
+      ? "Esta publicación ya no está disponible."
+      : "No se puede verificar ahora la disponibilidad ni las acciones."
+    : item.status === "completed"
+      ? "Esta publicación ya se ha entregado."
+      : item.status === "expired"
+        ? "Esta publicación ha caducado."
+        : ownItem
+          ? "Gestiona el estado de tu publicación desde aquí."
+          : ownerUsername
+            ? "Se abrirá el chat de Telegram de quien lo ofrece."
+            : "Este vecino o vecina no tiene un nombre de usuario público para recibir contactos.";
+  detailActionState.dataset.state = !live || (!ownItem && !ownerUsername && isAvailable) ? "error" : "";
 
-  detailOwnerActions.hidden = !ownItem;
+  detailOwnerActions.hidden = !ownItem || !live;
   markDeliveredButton.disabled = false;
   configureDeliveryButton(markDeliveredButton, item.status);
   detailOwnerActionState.textContent = item.status === "completed"
@@ -571,10 +608,13 @@ function renderDetail(item) {
   detailOwnerActionState.dataset.state = "";
 }
 
-function showDetail(item, { syncHistory = true } = {}) {
-  renderDetail(item);
+function showDetail(item, { syncHistory = true, live = true, error = "" } = {}) {
+  renderDetail(item, { live, error });
   setView("detail", { syncHistory, itemId: item.id });
   window.SecondaVidaAnalytics?.trackEvent("catalog", "open-item", item.id);
+  if (syncHistory && api?.isItemConfigured && typeof api.getItem === "function") {
+    void openItemFromRoute();
+  }
 }
 
 function configurePostsView() {
@@ -616,8 +656,10 @@ function setView(viewName, { syncHistory = true, itemId = "" } = {}) {
   if (isOffer) configureOfferAuth();
   if (isPosts) configurePostsView();
 
-  if (!isDetail && window.location.hash.startsWith("#item=")) {
+  if (!isDetail && getRouteItemId()) {
     const url = new URL(window.location.href);
+    url.pathname = "/";
+    url.search = "";
     url.hash = "";
     window.history.replaceState({
       ...window.history.state,
@@ -695,6 +737,7 @@ async function loadCatalog() {
     setServiceState(n8nStatus, n8nStatusLabel, "error", "No configurado");
     itemsState.textContent = "El catálogo todavía no está configurado.";
     itemsState.dataset.state = "error";
+    void openItemFromRoute();
     return;
   }
 
@@ -707,12 +750,13 @@ async function loadCatalog() {
     renderCategories();
     renderItems();
     renderMyItems();
-    openItemFromHash();
+    void openItemFromRoute();
   } catch {
     setServiceState(n8nStatus, n8nStatusLabel, "error", "No disponible");
     itemsState.textContent = "No hemos podido cargar los objetos. Inténtalo de nuevo en unos instantes.";
     itemsState.dataset.state = "error";
     itemsCount.textContent = "Sin datos";
+    void openItemFromRoute();
   }
 }
 
@@ -734,7 +778,7 @@ async function loadMineItems() {
     renderCategories();
     renderItems();
     renderMyItems();
-    openItemFromHash();
+    void openItemFromRoute();
     return records;
   } catch {
     // Conservamos la copia local si el endpoint privado aún no está disponible.
@@ -742,19 +786,53 @@ async function loadMineItems() {
   }
 }
 
-function openItemFromHash() {
-  if (!window.location.hash.startsWith("#item=")) return;
+async function openItemFromRoute() {
+  const itemId = getRouteItemId();
+  if (!itemId) return;
 
-  let itemId = "";
-  try {
-    itemId = decodeURIComponent(window.location.hash.slice("#item=".length));
-  } catch {
+  const staticItem = state.staticItem?.id === itemId ? state.staticItem : null;
+  const catalogItem = state.items.find((candidate) => candidate.id === itemId)
+    ?? state.myItems.find((candidate) => candidate.id === itemId && isOwnItem(candidate));
+  const initialItem = staticItem ?? catalogItem ?? {
+    id: itemId,
+    title: "Cargando publicación…",
+    description: "",
+    category: "Otros",
+    zone: "Valladolid",
+    ownerDisplayName: "Vecindad",
+    ownerUsername: "",
+    status: "available",
+    expiresAt: null,
+    imageUrl: null,
+    interestCount: 0,
+  };
+
+  showDetail(initialItem, { syncHistory: false, live: Boolean(catalogItem && !staticItem) });
+
+  if (!api?.isItemConfigured || typeof api.getItem !== "function") {
+    showDetail(initialItem, { syncHistory: false, live: false, error: "api_unavailable" });
     return;
   }
 
-  const item = state.items.find((candidate) => candidate.id === itemId)
-    ?? state.myItems.find((candidate) => candidate.id === itemId && isOwnItem(candidate));
-  if (item) showDetail(item, { syncHistory: false });
+  try {
+    const liveItem = await api.getItem(itemId);
+    showDetail(liveItem, { syncHistory: false, live: true });
+  } catch (error) {
+    if (error?.code === "not_found") {
+      showDetail({
+        ...initialItem,
+        title: "Publicación no encontrada",
+        description: "",
+        status: "not_found",
+        ownerDisplayName: "Vecindad",
+        ownerUsername: "",
+        imageUrl: null,
+      }, { syncHistory: false, live: false, error: "not_found" });
+      return;
+    }
+
+    showDetail(initialItem, { syncHistory: false, live: false, error: "api_unavailable" });
+  }
 }
 
 function handleHistoryChange(event) {
@@ -766,9 +844,11 @@ function handleHistoryChange(event) {
     const item = state.items.find((candidate) => candidate.id === nextItemId)
       ?? state.myItems.find((candidate) => candidate.id === nextItemId && isOwnItem(candidate));
     if (item) {
-      showDetail(item, { syncHistory: false });
+      showDetail(item, { syncHistory: false, live: true });
       return;
     }
+    void openItemFromRoute();
+    return;
   }
 
   setView(nextView, { syncHistory: false, itemId: nextItemId });
@@ -789,7 +869,7 @@ async function checkIdentity() {
       configureOfferAuth(result);
       configurePostsView();
       await loadMineItems();
-      openItemFromHash();
+      void openItemFromRoute();
       const firstName = result.first_name ? `Hola ${result.first_name}` : "Telegram";
       identityStatus.querySelector("span:nth-child(2)").textContent = firstName;
       setServiceState(identityStatus, identityStatusLabel, "connected", "Verificada ✓");
@@ -1205,6 +1285,7 @@ if (telegramBackButton && typeof telegramBackButton.onClick === "function") {
 }
 
 state.myItems = readOwnItems();
+state.staticItem = getStaticItem();
 prepareHistoryState();
 window.SecondaVidaAnalytics?.trackPageView();
 configureOfferAuth();

@@ -57,12 +57,62 @@ genera `consent_at` en n8n. La fecha no se acepta desde el navegador.
 
 El identificador público se genera en un nodo separado con bytes aleatorios:
 `sv-${crypto.randomBytes(6).toString('base64url')}`. Nunca se construye a partir
-del Telegram user ID.
+del Telegram user ID. El valor se escribe en `public_id` y, mientras dure la
+compatibilidad, también en `item-id`.
 
 Las filas antiguas que tengan un `item-id` como
 `sv-2191395-1786900112374` deben editarse una vez en NocoDB y recibir un valor
-opaco, por ejemplo `sv-k8Qm2LxP`. La URL antigua dejará de funcionar; así no se
-mantiene publicado el identificador sensible.
+opaco, por ejemplo `sv-k8Qm2LxP`, en ambos campos. Las URLs antiguas se aceptan
+solo como fallback de navegación y se normalizan a `/i/<public_id>/`; no se
+generan enlaces nuevos con el valor antiguo.
+
+## Generación de la ficha después de publicar
+
+El workflow de publicación debe responder primero con `public_id` (manteniendo
+`item_id` como alias temporal) y después dejar preparada una llamada al
+generador. Este repositorio no activa esa llamada desde n8n ni contiene
+credenciales reales.
+
+Contrato de llamada para n8n:
+
+```json
+{
+  "public_id": "sv-k8Qm2LxP",
+  "items": [{
+    "public_id": "sv-k8Qm2LxP",
+    "title": "Mesa auxiliar",
+    "description": "En buen estado.",
+    "category": "Hogar",
+    "zone": "Delicias - Canterac",
+    "status": "available",
+    "expires_at": "2026-09-01T12:00:00+02:00",
+    "image_url": null,
+    "owner_display_name": "Vecindad",
+    "owner_username": "vecino",
+    "interest_count": 0
+  }]
+}
+```
+
+El runner autorizado debe guardar ese JSON temporalmente y ejecutar:
+
+```bash
+python3 scripts/generate_static_pages.py \
+  --input public-item.json \
+  --output-dir generated-site \
+  --site-url https://segundavida.aldeapucela.org
+```
+
+El generador produce `i/<public_id>/index.html`, `sitemap.xml`, `robots.txt` y
+un `404.html` de fallback. Rechaza campos sensibles, escapa HTML y usa la
+marca de SegundaVida como imagen fallback. Para probar manualmente basta con
+usar el ejemplo anterior en un archivo local; no hace falta tocar NocoDB.
+
+La alternativa sin commits automáticos es ejecutar manualmente o por schedule
+`.github/workflows/generate-static-pages.yml`, configurando la variable de
+repositorio `SEGUNDAVIDA_PUBLIC_ITEMS_URL` con un endpoint público ya
+proyectado. El workflow prepara y despliega Pages cuando la fuente del sitio se
+ha cambiado a **GitHub Actions**; no llama a n8n por sí mismo.
 
 ## Respuestas
 

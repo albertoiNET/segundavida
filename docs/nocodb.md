@@ -14,7 +14,8 @@ público.
 | `Id` | System field, primary key | Automático | Identificador técnico interno de NocoDB |
 | `CreatedAt` | System DateTime | Automático | Fecha de creación de NocoDB |
 | `UpdatedAt` | System DateTime | Automático | Última modificación en NocoDB |
-| `item-id` | SingleLineText | Sí | Identificador público opaco y aleatorio generado por n8n; nunca contiene el Telegram user ID |
+| `public_id` | SingleLineText | Sí | Identificador público opaco, aleatorio y estable generado por n8n; nunca contiene el Telegram user ID |
+| `item-id` | SingleLineText | Transición | Alias legado compatible con los workflows existentes; debe copiar `public_id` durante la migración |
 | `title` | SingleLineText | Sí | Título visible |
 | `description` | LongText | Sí | Descripción del objeto |
 | `category` | SingleSelect | Sí | `Hogar`, `Muebles`, `Electrodomésticos`, `Infantil`, `Ropa`, `Libros`, `Música y cine`, `Tecnología`, `Móviles y telefonía`, `Informática`, `Deportes y ocio`, `Bicicletas`, `Juegos y videojuegos`, `Manualidades y coleccionismo`, `Jardín y bricolaje`, `Otros` |
@@ -53,13 +54,30 @@ necesitamos métricas o notificaciones más detalladas.
 3. Nombrar la tabla `sv_items`.
 4. Revisar los tipos según la tabla anterior, especialmente `DateTime`,
    `SingleSelect`, `URL` y `Number`.
-5. Mantener `Id` como clave técnica de NocoDB y usar `item-id` como identificador
+5. Mantener `Id` como clave técnica de NocoDB y usar `public_id` como identificador
    de negocio; crear una vista `Public catalog`.
 6. En esa vista filtrar `status = available` y ordenar por `created_at`
    descendente.
 
 Después de probar el flujo, puedes eliminar los dos registros `sv-demo-001` y
 `sv-demo-002`, o conservarlos mientras permanezcan ocultos.
+
+Antes de activar las fichas públicas, añade `public_id` y asigna a cada fila un
+valor opaco generado aleatoriamente. Durante la transición, copia el mismo
+valor a `item-id` para no romper `/data`, `/mine` ni `/complete`. Los fixtures
+`sv-demo-001` y `sv-demo-002` también deben tener `public_id`, aunque sigan en
+`hidden`.
+
+### Migración no destructiva
+
+1. Añade `public_id` como `SingleLineText` y hazlo único si NocoDB lo permite.
+2. Genera valores como `sv-k8Qm2LxP` desde n8n; nunca derives el valor de un
+   Telegram user ID, `chat_id`, timestamp u otro dato privado.
+3. Escribe el valor en `public_id` y en `item-id` durante la transición.
+4. Actualiza los workflows para leer `public_id` primero y `item-id` solo como
+   fallback de lectura.
+5. Cuando todos los consumidores usen `public_id`, `item-id` puede retirarse en
+   una migración posterior coordinada.
 
 Antes de activar el webhook de publicación, añade también los tres campos de
 consentimiento anteriores a la tabla existente. No hace falta volver a importar
@@ -77,6 +95,37 @@ GET /webhook/segundavida/data
 Devuelve una envoltura JSON con `ok`, `items` y `total`. n8n proyecta solo los
 campos públicos antes de responder; los campos privados de Telegram no salen al
 navegador.
+
+El endpoint individual que debe añadirse en n8n es:
+
+```text
+GET /webhook/segundavida/item/<public_id>
+```
+
+Debe buscar por `public_id` (y solo durante la transición por `item-id`),
+devolver `200` con `{ ok: true, item }` para `available`, `completed` o
+`expired`, y `404` con `{ ok: false, error: "not_found" }` si no existe o está
+`hidden`. La proyección debe usar solo los campos públicos documentados y no
+incluir IDs de Telegram, chats, hilos, `initData` ni credenciales.
+
+Puedes importarlo directamente desde
+[`sv_get_item.workflow.json`](./sv_get_item.workflow.json). Después de
+importarlo:
+
+1. Abre el nodo `Search rows` y selecciona la credencial existente de NocoDB.
+   El workflow no contiene ningún token.
+2. Comprueba que `workspaceId`, `projectId` y `table` apuntan a tu tabla
+   `sv_items`/`Segunda Vida`. Si tu instalación usa otros IDs, selecciónalos en
+   el nodo.
+3. Guarda y activa el workflow. La URL de producción será
+   `https://<tu-n8n>/webhook/segundavida/item/<public_id>`.
+4. Prueba primero con un registro `available`, después con `completed` y
+   `expired`, y finalmente con un ID inexistente: debe devolver HTTP 404 y
+   `{ "ok": false, "error": "not_found" }`.
+
+El nodo `Project public item` solo devuelve los campos públicos. Aunque NocoDB
+entregue una fila con `owner_telegram_id`, `telegram_chat_id`,
+`telegram_thread_id` o `telegram_message_id`, ninguno entra en la respuesta.
 
 Flujo previsto:
 
@@ -105,7 +154,7 @@ const publicItems = $input.all()
   .map(({ json }) => {
     const fields = json.fields ?? json;
     return {
-      id: fields["item-id"] ?? null,
+      id: fields.public_id ?? fields["item-id"] ?? null,
       title: fields.title ?? "",
       description: fields.description ?? "",
       category: fields.category ?? "Otros",
@@ -149,8 +198,9 @@ Webhook -> Search rows -> Code (public catalog) -> Respond to Webhook
 ```
 
 La respuesta no debe devolver Telegram IDs, chats, hilos ni mensajes. El
-identificador de negocio (`item-id`) es público, opaco y aleatorio; no contiene
-el Telegram user ID. Se transforma en `id` en la API pública. Contrato
+identificador de negocio (`public_id`, con `item-id` como alias temporal) es
+público, opaco y aleatorio; no contiene el Telegram user ID. Se transforma en
+`id` en la API pública. Contrato
 inicial de cada objeto:
 
 ```json
@@ -187,7 +237,7 @@ En el nodo Code de n8n, acceder al campo de NocoDB y normalizarlo así:
 
 ```javascript
 {
-  id: row["item-id"],
+  id: row.public_id || row["item-id"],
   title: row.title,
   description: row.description,
   category: row.category,

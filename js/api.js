@@ -1,24 +1,22 @@
 // Endpoint de producción del catálogo público en n8n.
 const N8N_DATA_URL = "https://tasks.nukeador.com/webhook/segundavida/data";
+const N8N_ITEM_URL = "https://tasks.nukeador.com/webhook/segundavida/item";
 const N8N_PUBLISH_URL = "https://tasks.nukeador.com/webhook/segundavida/publish";
 const N8N_COMPLETE_URL = "https://tasks.nukeador.com/webhook/segundavida/complete";
 const N8N_MINE_URL = "https://tasks.nukeador.com/webhook/segundavida/mine";
 
-function normalizeItem(record) {
+function normalizeItem(record, { privateFields = false } = {}) {
   const fields = record?.fields ?? record ?? {};
 
   return {
-    id: fields["item-id"] ?? record?.id ?? "",
+    id: fields.public_id ?? fields["item-id"] ?? record?.public_id ?? record?.id ?? "",
     title: fields.title ?? "Objeto sin título",
     description: fields.description ?? "",
     category: fields.category ?? "Otros",
     zone: fields.zone ?? "Valladolid",
     ownerDisplayName: fields.owner_display_name ?? "Vecindad",
-    ownerUsername: fields.owner_username
-      ?? fields.owner_telegram_username
-      ?? fields.telegram_username
-      ?? "",
-    ownerTelegramId: fields.owner_telegram_id ?? "",
+    ownerUsername: fields.owner_username ?? "",
+    ownerTelegramId: privateFields ? fields.owner_telegram_id ?? "" : "",
     status: fields.status ?? "hidden",
     createdAt: fields.created_at ?? fields.CreatedAt ?? null,
     completedAt: fields.completed_at ?? null,
@@ -26,6 +24,20 @@ function normalizeItem(record) {
     imageUrl: fields.image_url ?? null,
     interestCount: Number(fields.interest_count ?? 0),
   };
+}
+
+function parseItemsPayload(payload, options = {}) {
+  const records = Array.isArray(payload)
+    ? payload
+    : Array.isArray(payload?.items)
+      ? payload.items
+      : null;
+
+  if (!records) {
+    throw new Error("Respuesta de catálogo no válida");
+  }
+
+  return records.map((record) => normalizeItem(record, options));
 }
 
 async function listMineItems(initData) {
@@ -43,17 +55,13 @@ async function listMineItems(initData) {
   });
 
   const payload = await response.json();
-  const records = Array.isArray(payload)
-    ? payload
-    : Array.isArray(payload?.items)
-      ? payload.items
-      : null;
+  const records = parseItemsPayload(payload, { privateFields: true });
 
-  if (!response.ok || !payload?.ok || !records) {
+  if (!response.ok || !payload?.ok) {
     throw new Error(payload?.error ?? `n8n respondió con HTTP ${response.status}`);
   }
 
-  return records.map(normalizeItem);
+  return records;
 }
 
 async function listItems() {
@@ -71,17 +79,44 @@ async function listItems() {
   }
 
   const payload = await response.json();
-  const records = Array.isArray(payload)
-    ? payload
-    : Array.isArray(payload?.items)
-      ? payload.items
-      : null;
+  const records = parseItemsPayload(payload);
 
-  if (!records || (!Array.isArray(payload) && payload.ok !== true)) {
+  if (!Array.isArray(payload) && payload.ok !== true) {
     throw new Error("Respuesta de catálogo no válida");
   }
 
-  return records.map(normalizeItem);
+  return records;
+}
+
+async function getItem(itemId) {
+  const publicId = String(itemId ?? "").trim();
+  if (!publicId) {
+    throw new Error("Identificador público vacío");
+  }
+
+  const response = await fetch(`${N8N_ITEM_URL}/${encodeURIComponent(publicId)}`, {
+    method: "GET",
+    headers: { Accept: "application/json" },
+  });
+
+  let payload = null;
+  try {
+    payload = await response.json();
+  } catch {
+    payload = null;
+  }
+
+  if (response.status === 404 || payload?.error === "not_found") {
+    const error = new Error("not_found");
+    error.code = "not_found";
+    throw error;
+  }
+
+  if (!response.ok || payload?.ok !== true || !payload?.item) {
+    throw new Error(payload?.error ?? `n8n respondió con HTTP ${response.status}`);
+  }
+
+  return normalizeItem(payload.item);
 }
 
 async function publishItem(payload) {
@@ -144,10 +179,12 @@ async function completeItem(payload) {
 window.SecondaVidaApi = Object.freeze({
   isConfigured: Boolean(N8N_DATA_URL),
   isDataConfigured: Boolean(N8N_DATA_URL),
+  isItemConfigured: Boolean(N8N_ITEM_URL),
   isPublishConfigured: Boolean(N8N_PUBLISH_URL),
   isCompleteConfigured: Boolean(N8N_COMPLETE_URL),
   isMineConfigured: Boolean(N8N_MINE_URL),
   listItems,
+  getItem,
   listMineItems,
   publishItem,
   completeItem,

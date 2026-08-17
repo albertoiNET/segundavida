@@ -1,0 +1,61 @@
+name: Generate SegundaVida static item pages
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_url:
+        description: "Public JSON endpoint (optional; repository variable is used when empty)"
+        required: false
+        type: string
+  schedule:
+    - cron: "17 4 * * *"
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Select public source
+        id: source
+        env:
+          INPUT_SOURCE_URL: ${{ inputs.source_url }}
+          REPOSITORY_SOURCE_URL: ${{ vars.SEGUNDAVIDA_PUBLIC_ITEMS_URL }}
+        run: |
+          source_url="$INPUT_SOURCE_URL"
+          if [ -z "$source_url" ]; then source_url="$REPOSITORY_SOURCE_URL"; fi
+          echo "url=$source_url" >> "$GITHUB_OUTPUT"
+
+      - name: Generate pages
+        if: steps.source.outputs.url != ''
+        env:
+          SOURCE_URL: ${{ steps.source.outputs.url }}
+        run: |
+          mkdir -p generated-site
+          cp -R assets css js generated-site/
+          cp index.html generated-site/
+          python3 scripts/generate_static_pages.py \
+            --source-url "$SOURCE_URL" \
+            --output-dir generated-site \
+            --site-url "https://segundavida.aldeapucela.org"
+
+      - name: Explain skipped generation
+        if: steps.source.outputs.url == ''
+        run: |
+          echo "No source configured. Set repository variable SEGUNDAVIDA_PUBLIC_ITEMS_URL or pass source_url manually."
+
+      - name: Upload generated site for Pages
+        if: steps.source.outputs.url != ''
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: generated-site
+
+      - name: Deploy to GitHub Pages
+        if: steps.source.outputs.url != ''
+        uses: actions/deploy-pages@v4
