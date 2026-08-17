@@ -25,11 +25,11 @@ de prueba ni los endpoints existentes; las nuevas publicaciones deben escribir
 ambos campos con el mismo valor mientras se completa la migración. El
 generador rechaza IDs que parezcan contener datos sensibles.
 
-Los fixtures `sv-demo-001` y `sv-demo-002` se conservan como registros ocultos
-compatibles. Al activar el flujo, asigna a cada fila un `public_id` opaco (por
-ejemplo, `sv-k8Qm2LxP`, generado aleatoriamente) y deja `item-id` durante la
-transición. Nunca se debe poner un Telegram user ID en ninguno de los dos
-campos.
+No se generan fichas de prueba ni se incluyen objetos ficticios en el
+repositorio. Al activar el flujo, cada fila real debe recibir un `public_id`
+opaco (por ejemplo, `sv-k8Qm2LxP`, generado aleatoriamente) y conservar
+`item-id` durante la transición. Nunca se debe poner un Telegram user ID en
+ninguno de los dos campos.
 
 ## Contratos de API
 
@@ -77,7 +77,7 @@ Contrato de invocación local:
 
 ```bash
 python3 scripts/generate_static_pages.py \
-  --input examples/public-items.json \
+  --source-url https://tasks.nukeador.com/webhook/segundavida/data \
   --output-dir .generated-site \
   --site-url https://segundavida.aldeapucela.org
 ```

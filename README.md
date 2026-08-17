@@ -65,18 +65,21 @@ público de n8n proyecta solo los campos seguros del catálogo.
 ## Fichas estáticas y GitHub Pages
 
 El campo canónico es `public_id`, opaco y estable. `item-id` se mantiene como
-alias de lectura durante la migración de los fixtures y de las filas antiguas;
+alias de lectura durante la migración de filas antiguas;
 las nuevas publicaciones deben escribir ambos campos con el mismo valor
 aleatorio generado en n8n. Nunca uses un Telegram user ID para formar una URL.
 
-Para probar el generador sin servicios externos:
+Para generar fichas con datos reales:
 
 ```bash
 python3 scripts/generate_static_pages.py \
-  --input examples/public-items.json \
+  --source-url https://tasks.nukeador.com/webhook/segundavida/data \
   --output-dir .generated-site \
   --site-url https://segundavida.aldeapucela.org
 ```
+
+El repositorio no contiene objetos ficticios. La generación manual debe usar un
+JSON real proyectado por N8N o el endpoint público real.
 
 El contrato completo de NocoDB/n8n, incluido el endpoint individual
 `GET /webhook/segundavida/item/<public_id>`, está en

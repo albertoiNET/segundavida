@@ -3,9 +3,8 @@
 ## Tabla inicial: `sv_items`
 
 Importar [`data/sv_items.csv`](../data/sv_items.csv) para crear la tabla nueva.
-Incluye dos registros placeholder con `status=hidden`: sirven para que NocoDB
-detecte valores y para probar el flujo, pero nunca aparecerán en el catálogo
-público.
+El CSV contiene solo las cabeceras; no añade objetos ficticios. Las filas reales
+deben entrar desde el workflow de publicación o desde una importación validada.
 
 ### Campos y tipos recomendados
 
@@ -59,14 +58,11 @@ necesitamos métricas o notificaciones más detalladas.
 6. En esa vista filtrar `status = available` y ordenar por `created_at`
    descendente.
 
-Después de probar el flujo, puedes eliminar los dos registros `sv-demo-001` y
-`sv-demo-002`, o conservarlos mientras permanezcan ocultos.
-
 Antes de activar las fichas públicas, añade `public_id` y asigna a cada fila un
 valor opaco generado aleatoriamente. Durante la transición, copia el mismo
-valor a `item-id` para no romper `/data`, `/mine` ni `/complete`. Los fixtures
-`sv-demo-001` y `sv-demo-002` también deben tener `public_id`, aunque sigan en
-`hidden`.
+valor a `item-id` para no romper `/data`, `/mine` ni `/complete`. Las filas de
+prueba antiguas, si existieran en NocoDB, deben migrarse o eliminarse
+manualmente antes de activar el catálogo.
 
 ### Migración no destructiva
 
@@ -81,8 +77,8 @@ valor a `item-id` para no romper `/data`, `/mine` ni `/complete`. Los fixtures
 
 Antes de activar el webhook de publicación, añade también los tres campos de
 consentimiento anteriores a la tabla existente. No hace falta volver a importar
-el CSV ni rellenarlos en los registros placeholder: los completará n8n en cada
-nueva publicación.
+el CSV ni rellenarlos en las filas existentes: los completará n8n en cada nueva
+publicación.
 
 ## Contrato público de n8n
 
