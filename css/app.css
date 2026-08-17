@@ -513,11 +513,15 @@ h2 {
 }
 
 .item-card__title {
+  display: -webkit-box;
+  overflow: hidden;
   margin: 0;
   color: var(--text-main);
   font-size: 1rem;
   letter-spacing: -0.025em;
   line-height: 1.15;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 
 .item-card__description {
@@ -1049,19 +1053,6 @@ h2 {
   .item-card > .photo-carousel--card {
     aspect-ratio: 1.12;
     min-height: 0;
-  }
-
-  .item-card__body {
-    min-height: 8.35rem;
-  }
-
-  .item-card__meta {
-    display: flex;
-    flex-wrap: nowrap;
-    overflow: hidden;
-    column-gap: 0.35rem;
-    text-overflow: ellipsis;
-    white-space: nowrap;
   }
 
   .item-card__meta .item-card__zone {
@@ -2403,12 +2394,23 @@ body.photo-lightbox-open {
 }
 
 @media (max-width: 719px) {
+  .item-card {
+    align-self: start;
+  }
+
+  .item-card__body {
+    min-height: 0;
+    padding: 0.7rem 0.75rem 0.75rem;
+  }
+
   .item-card__meta {
     display: flex;
     align-items: center;
     flex-wrap: nowrap;
     gap: 0.35rem;
     overflow: hidden;
+    margin-top: 0.45rem;
+    padding-top: 0;
     white-space: nowrap;
   }
 
