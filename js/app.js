@@ -529,7 +529,8 @@ function renderDetail(item) {
       : "Disponible";
   detailTitle.textContent = item.title;
   detailCategory.replaceChildren(createCategoryIcon(item.category), document.createTextNode(` ${item.category}`));
-  detailDescription.textContent = item.description || "La persona que lo ofrece todavía no ha añadido una descripción.";
+  detailDescription.textContent = item.description || "";
+  detailDescription.hidden = !item.description;
   detailZone.textContent = item.zone || "Valladolid";
   detailOwner.textContent = item.ownerDisplayName || "Vecindad";
   const ownItem = isOwnItem(item);
