@@ -72,6 +72,22 @@ def safe_image_url(value: object, fallback: str) -> str:
     return fallback
 
 
+def first_safe_image_url(*values: object) -> str | None:
+    for value in values:
+        candidates = value if isinstance(value, list) else [value]
+        for candidate in candidates:
+            if isinstance(candidate, dict):
+                candidate = (
+                    candidate.get("url")
+                    or candidate.get("signedUrl")
+                    or candidate.get("signed_url")
+                )
+            image_url = safe_image_url(candidate, "")
+            if image_url:
+                return image_url
+    return None
+
+
 def normalize_item(raw: dict[str, object]) -> dict[str, object]:
     if not isinstance(raw, dict):
         raise fail("each item must be an object")
@@ -94,7 +110,7 @@ def normalize_item(raw: dict[str, object]) -> dict[str, object]:
         "status": status,
         "created_at": raw.get("created_at") or raw.get("CreatedAt") or None,
         "expires_at": raw.get("expires_at") or None,
-        "image_url": raw.get("image_url") or None,
+        "image_url": first_safe_image_url(raw.get("image_url"), raw.get("image_urls")),
         "owner_display_name": str(raw.get("owner_display_name") or "Vecindad").strip()[:120],
         "owner_username": str(raw.get("owner_username") or "").strip()[:40],
         "interest_count": int(raw.get("interest_count") or 0),
@@ -138,7 +154,7 @@ def canonical_url(site_url: str, public_id: str) -> str:
 
 def render_metadata(item: dict[str, object], site_url: str) -> str:
     title = f"{item['title']} · SegundaVida"
-    description = item["description"] or f"{item['title']} disponible en SegundaVida, Aldea Pucela."
+    description = (item["description"] or f"{item['title']} disponible en SegundaVida, Aldea Pucela.")[:200]
     canonical = canonical_url(site_url, str(item["id"]))
     fallback_image = f"{site_url.rstrip('/')}/assets/segundavida-mark.png"
     image = safe_image_url(item.get("image_url"), fallback_image)
@@ -146,14 +162,18 @@ def render_metadata(item: dict[str, object], site_url: str) -> str:
         f'<meta name="description" content="{html.escape(description, quote=True)}" />',
         f'<link rel="canonical" href="{html.escape(canonical, quote=True)}" />',
         f'<meta property="og:type" content="website" />',
+        f'<meta property="og:locale" content="es_ES" />',
+        f'<meta property="og:site_name" content="SegundaVida · Aldea Pucela" />',
         f'<meta property="og:title" content="{html.escape(title, quote=True)}" />',
         f'<meta property="og:description" content="{html.escape(description, quote=True)}" />',
         f'<meta property="og:url" content="{html.escape(canonical, quote=True)}" />',
         f'<meta property="og:image" content="{html.escape(image, quote=True)}" />',
+        f'<meta property="og:image:alt" content="{html.escape(str(item["title"]), quote=True)}" />',
         f'<meta name="twitter:card" content="summary_large_image" />',
         f'<meta name="twitter:title" content="{html.escape(title, quote=True)}" />',
         f'<meta name="twitter:description" content="{html.escape(description, quote=True)}" />',
         f'<meta name="twitter:image" content="{html.escape(image, quote=True)}" />',
+        f'<meta name="twitter:image:alt" content="{html.escape(str(item["title"]), quote=True)}" />',
     ]
     return "\n    ".join(fields)
 
@@ -178,6 +198,13 @@ def render_page(template: str, item: dict[str, object], site_url: str) -> str:
     title = html.escape(f"{item['title']} · SegundaVida")
     page = re.sub(r"<title>.*?</title>", f"<title>{title}</title>", template, count=1, flags=re.DOTALL)
     page = re.sub(r"\s*<meta\s+name=\"description\"[^>]*?/>", "", page, count=1)
+    page = re.sub(
+        r"\s*<!-- STATIC_HOME_METADATA -->.*?<!-- END_STATIC_HOME_METADATA -->",
+        "",
+        page,
+        count=1,
+        flags=re.DOTALL,
+    )
     page = page.replace("<!-- STATIC_ITEM_METADATA -->", render_metadata(item, site_url))
     page = page.replace(
         "<!-- STATIC_ITEM_DATA -->",

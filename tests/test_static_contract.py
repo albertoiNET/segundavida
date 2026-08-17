@@ -52,17 +52,34 @@ class StaticContractTests(unittest.TestCase):
             page = (output / "i" / "safe-001" / "index.html").read_text(encoding="utf-8")
             self.assertIn('rel="canonical" href="https://segundavida.aldeapucela.org/i/safe-001/"', page)
             self.assertIn('property="og:image"', page)
+            self.assertIn('property="og:image:alt"', page)
+            self.assertIn('name="twitter:image:alt"', page)
             self.assertIn("summary_large_image", page)
             self.assertIn("&lt;script&gt;alert(1)&lt;/script&gt;", page)
             self.assertNotIn("javascript:alert", page)
             self.assertNotIn("owner_telegram_id", page)
             self.assertNotIn("telegram_chat_id", page)
+            self.assertNotIn("STATIC_HOME_METADATA", page)
+            self.assertNotIn('property="og:title" content="SegundaVida · Aldea Pucela"', page)
             self.assertTrue((output / "sitemap.xml").exists())
             self.assertTrue((output / "robots.txt").exists())
             self.assertTrue((output / "404.html").exists())
 
             embedded = page.split('id="static-item-data">', 1)[1].split("</script>", 1)[0]
             self.assertEqual(json.loads(embedded)["id"], "safe-001")
+
+    def test_homepage_has_social_metadata_and_image_urls_feed_item_preview(self):
+        homepage = self.template.read_text(encoding="utf-8")
+        self.assertIn('property="og:title"', homepage)
+        self.assertIn('property="og:image"', homepage)
+        self.assertIn("https://segundavida.aldeapucela.org/assets/segundavida-mark.png", homepage)
+
+        item = normalize_item({
+            **self.item(),
+            "image_url": None,
+            "image_urls": ["https://images.example.test/first.jpg"],
+        })
+        self.assertEqual(item["image_url"], "https://images.example.test/first.jpg")
 
     def test_supported_operational_statuses_are_renderable_but_hidden_is_not_public(self):
         with tempfile.TemporaryDirectory() as directory:
