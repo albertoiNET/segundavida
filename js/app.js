@@ -712,7 +712,16 @@ function renderMyItems() {
   catalogOwnedItems.forEach((item) => {
     const index = state.myItems.findIndex((candidate) => candidate.id === item.id);
     if (index >= 0) {
-      state.myItems[index] = { ...state.myItems[index], ...item };
+      const currentItem = state.myItems[index];
+      const currentImageUrls = getItemImageUrls(currentItem);
+      const catalogImageUrls = getItemImageUrls(item);
+      const imageUrls = catalogImageUrls.length ? catalogImageUrls : currentImageUrls;
+      state.myItems[index] = {
+        ...currentItem,
+        ...item,
+        imageUrl: item.imageUrl || imageUrls[0] || null,
+        imageUrls,
+      };
       changed = true;
     }
   });
@@ -1093,6 +1102,7 @@ async function loadMineItems() {
     const catalogById = new Map(state.items.map((item) => [item.id, item]));
     const mergedRecords = records.map((item) => {
       const catalogItem = catalogById.get(item.id);
+      const localItem = state.myItems.find((candidate) => candidate.id === item.id);
       const itemImageUrls = Array.isArray(item.imageUrls) && item.imageUrls.length
         ? item.imageUrls
         : item.imageUrl
@@ -1103,7 +1113,12 @@ async function loadMineItems() {
         : catalogItem?.imageUrl
           ? [catalogItem.imageUrl]
           : [];
-      const imageUrls = itemImageUrls.length ? itemImageUrls : catalogImageUrls;
+      const localImageUrls = getItemImageUrls(localItem);
+      const imageUrls = itemImageUrls.length
+        ? itemImageUrls
+        : catalogImageUrls.length
+          ? catalogImageUrls
+          : localImageUrls;
 
       return {
         ...catalogItem,
@@ -1963,6 +1978,13 @@ async function handleOfferSubmit(event) {
     }
 
     const expiresAt = new Date(Date.now() + draftItem.duration_days * 24 * 60 * 60 * 1000).toISOString();
+    const returnedImageUrls = Array.isArray(result.image_urls)
+      ? result.image_urls.filter((url) => typeof url === "string" && url.trim())
+      : [];
+    const localImageUrls = result.image_url || returnedImageUrls.length
+      ? []
+      : optimizedFiles.map((file) => URL.createObjectURL(file));
+    const publishedImageUrls = returnedImageUrls.length ? returnedImageUrls : localImageUrls;
     const publishedItem = {
       id: result.item_id,
       title: result.title || draftItem.title,
@@ -1975,8 +1997,8 @@ async function handleOfferSubmit(event) {
       ownerDisplayName: state.telegramUser?.first_name || "Tú",
       ownerUsername: state.telegramUser?.username || "",
       ownerTelegramId: String(state.telegramUser?.telegram_id ?? state.telegramUser?.id ?? ""),
-      imageUrl: result.image_url ?? null,
-      imageUrls: Array.isArray(result.image_urls) ? result.image_urls : [],
+      imageUrl: result.image_url ?? publishedImageUrls[0] ?? null,
+      imageUrls: publishedImageUrls,
       interestCount: 0,
     };
 
@@ -2068,10 +2090,10 @@ async function completeItem(item, triggerButton = markDeliveredButton, feedbackE
         ? result.completed_at || new Date().toISOString()
         : null,
     };
-    rememberOwnItem(updatedItem);
     state.items = nextStatus === "available"
       ? [...state.items.filter((candidate) => candidate.id !== item.id), updatedItem]
       : state.items.filter((candidate) => candidate.id !== item.id);
+    rememberOwnItem(updatedItem);
     renderItems();
     renderMyItems();
     renderDetail(updatedItem);

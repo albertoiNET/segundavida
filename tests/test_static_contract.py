@@ -115,6 +115,8 @@ class StaticContractTests(unittest.TestCase):
         self.assertIn("function sortNewestFirst", app_source)
         self.assertIn("function formatShortDateTime", app_source)
         self.assertIn("createdAt: result.created_at ?? new Date().toISOString()", app_source)
+        self.assertIn("const localImageUrls", app_source)
+        self.assertIn("const catalogImageUrls = getItemImageUrls(item)", app_source)
         self.assertIn("function openTelegramChat", app_source)
         self.assertIn('pulsa aquí para abrirlo', app_source)
         self.assertIn("createdAt", app_source)
