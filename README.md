@@ -1,104 +1,181 @@
 # SegundaVida · Aldea Pucela
 
-Frontend público de SegundaVida, una iniciativa de Aldea Pucela para facilitar
-que objetos que ya no se necesitan puedan tener una segunda vida.
+SegundaVida es una aplicación web y una Mini App de Telegram para que las
+personas de Valladolid compartan gratis objetos que ya no necesitan. Su
+objetivo es alargar la vida útil de las cosas y facilitar que encuentren una
+nueva casa dentro de la comunidad de Aldea Pucela.
 
-## Estado
+- Aplicación: [segundavida.aldeapucela.org](https://segundavida.aldeapucela.org/)
+- Mini App: [t.me/pucelobot/segundavida](https://t.me/pucelobot/segundavida)
+- Código: [github.com/aldeapucela/segundavida](https://github.com/aldeapucela/segundavida)
 
-Proyecto en **HITO 8 — Autenticación Telegram** del plan técnico incremental.
-El catálogo público ya está conectado al workflow de n8n y la siguiente
-dependencia es validar la identidad antes de habilitar publicaciones.
+El repositorio contiene el frontend estático, el generador de fichas públicas,
+los contratos de integración y los workflows importables de n8n. La aplicación
+no utiliza un framework ni necesita un proceso de compilación.
 
-La estructura inicial contiene:
+## Funcionalidades
 
-- `index.html`: primera página técnica del frontend.
-- `css/app.css`: estilos base, tokens visuales iniciales y responsive.
-- `js/app.js`: punto de entrada JavaScript y actualización de estados.
-- `js/telegram.js`: detección mínima del entorno Telegram Mini App.
-- `js/auth.js`: envío controlado de `Telegram.WebApp.initData` al endpoint de identidad.
-- `js/api.js`: cliente del catálogo y de los webhooks de n8n.
-- `js/analytics.js`: wrapper de Matomo, inactivo hasta asignar un Site ID.
-- `css/tokens.css`: tokens compartidos de color, tipografía, geometría y tema.
-- `docs/design-system.md`: auditoría visual y reglas de uso.
-- `docs/analytics.md`: decisión y activación pendiente de Matomo.
-- `data/sv_items.csv`: CSV listo para importar la tabla inicial de NocoDB.
-- `docs/nocodb.md`: campos, tipos y contrato público de n8n.
-- `docs/auth.md`: contrato, validaciones y reglas de seguridad de Telegram.
-- `docs/publish-photos.md`: contrato multipart y configuración de fotos en
-  n8n/NocoDB.
-- `docs/sv_publish_item_photos.workflow.json`: workflow completo importable de
-  publicación con fotos.
-- `docs/sv_complete_item.workflow.json`: workflow importable para marcar y
-  reactivar objetos desde `Mis publicaciones`.
-- `docs/complete.md`: configuración del webhook `POST /segundavida/complete`.
-- `docs/sv_get_item.workflow.json`: workflow importable para `GET
-  /segundavida/item/:public_id`, con proyección pública y 404 seguro.
-- `docs/static-pages-design.md`: diseño de fichas indexables, rutas, contrato
-  público, migración de IDs y límites de seguridad.
-- `scripts/generate_static_pages.py`: generador local determinista de fichas
-  `/i/<public_id>/`, sitemap, robots y fallback 404.
-- `.github/workflows/generate-static-pages.yml`: ejecución manual/programada
-  opcional sin commits periódicos ni credenciales en el repositorio.
+### Explorar y encontrar objetos
 
-## Desarrollo local
+- Catálogo público de objetos disponibles, ordenado por fecha de publicación.
+- Búsqueda por texto y filtros por categoría.
+- Fichas individuales con descripción, zona aproximada, persona que lo ofrece,
+  disponibilidad y hasta dos fotografías.
+- URLs públicas estables (`/i/<public_id>/`) con metadatos para buscadores y
+  redes sociales.
+- Diseño responsive, navegación atrás/adelante, tema claro/oscuro y soporte
+  para el modo Mini App de Telegram.
 
-El proyecto no necesita dependencias para esta primera fase. Puede servirse
-localmente con cualquier servidor HTTP estático, por ejemplo:
+### Ofrecer un objeto
+
+La publicación se realiza dentro de Telegram para validar la identidad de la
+persona. El formulario permite indicar título, categoría, zona aproximada,
+descripción y duración de la publicación (7, 14 o 30 días), además de adjuntar
+entre una y dos fotos. Las imágenes se validan y optimizan en el navegador
+antes de enviarse.
+
+Antes de publicar se solicita el consentimiento para hacer visible el
+contenido, facilitar el contacto y ofrecer el objeto gratis. El backend valida
+de nuevo la identidad, los datos y las condiciones de moderación.
+
+### Contacto y gestión
+
+- El botón **Me interesa** abre el chat de Telegram de quien ofrece el objeto
+  con un mensaje preparado y el enlace de la ficha.
+- **Mis publicaciones** permite consultar publicaciones activas y entregadas.
+- La persona propietaria puede marcar un objeto como entregado o volver a
+  publicarlo si sigue disponible.
+- Las publicaciones sin nombre de usuario público se mantienen visibles, pero
+  no habilitan el contacto directo.
+
+## Arquitectura
+
+La aplicación se divide en tres piezas:
+
+1. **Frontend estático**: `index.html`, `404.html`, `css/` y `js/`. Se puede
+   servir desde GitHub Pages o desde cualquier servidor HTTP estático.
+2. **Backend de integración**: n8n expone los endpoints públicos y protegidos,
+   valida `Telegram.WebApp.initData` y aplica las reglas de publicación.
+3. **Persistencia**: NocoDB almacena los objetos, el estado de disponibilidad,
+   las fotografías y los datos operativos privados.
+
+El catálogo público solo recibe una proyección segura de los datos. Los
+identificadores de Telegram, chats, hilos, mensajes y credenciales permanecen
+en n8n/NocoDB y nunca se incrustan en las fichas públicas.
+
+## Instalación local
+
+No hay dependencias de Node ni paquetes que instalar. Hace falta Python 3 para
+levantar un servidor HTTP local:
 
 ```bash
+git clone https://github.com/aldeapucela/segundavida.git
+cd segundavida
 python3 -m http.server 8000
 ```
 
-Después, abrir `http://localhost:8000/` en el navegador.
+Abre [http://localhost:8000/](http://localhost:8000/) en el navegador. El
+frontend usa por defecto los endpoints de producción definidos en
+[`js/api.js`](js/api.js), por lo que esta instalación sirve para revisar la
+interfaz y consultar el catálogo existente. Para una instalación independiente
+hay que sustituir esas URLs por las de la instancia propia de n8n.
 
-Una ficha generada se abre en `http://localhost:8000/i/<public_id>/`. Si no
-existe el directorio generado, la app sigue funcionando como catálogo y el
-endpoint individual intenta hidratar la ficha. Las URLs históricas
-`#item=<id>` y `/objetos/<id>` se redirigen en el navegador a `/i/<id>/`; no se
-usan para nuevos enlaces.
+## Replicar la aplicación
 
-## Integración n8n
+### 1. Preparar NocoDB
 
-`js/api.js` consulta el catálogo público mediante `/data`. La llamada de
-identidad solo se realiza dentro de Telegram cuando existe `initData`; el
-backend `SV · Validate Telegram User` todavía debe crearse y activarse en n8n.
+Importa [`data/sv_items.csv`](data/sv_items.csv) y configura la tabla y sus
+campos según [`docs/nocodb.md`](docs/nocodb.md). El CSV contiene únicamente las
+cabeceras: no incluye objetos de ejemplo.
 
-La tabla `sv_items` ya está creada en NocoDB a partir del CSV y el endpoint
-público de n8n proyecta solo los campos seguros del catálogo.
+El identificador público debe ser aleatorio, estable y opaco (`public_id`). No
+se debe construir a partir de un identificador de Telegram, chat, timestamp ni
+otro dato privado.
 
-## Fichas estáticas y GitHub Pages
+### 2. Preparar n8n y Telegram
 
-El campo canónico es `public_id`, opaco y estable. `item-id` se mantiene como
-alias de lectura durante la migración de filas antiguas;
-las nuevas publicaciones deben escribir ambos campos con el mismo valor
-aleatorio generado en n8n. Nunca uses un Telegram user ID para formar una URL.
+Importa y activa los workflows JSON de `docs/` para estos endpoints. Para
+publicar con fotografías, utiliza el workflow de fotos:
 
-Para generar fichas con datos reales:
+| Endpoint | Función | Workflow |
+| --- | --- | --- |
+| `GET /segundavida/data` | Catálogo público | Configuración descrita en [`docs/nocodb.md`](docs/nocodb.md) |
+| `GET /segundavida/item/<public_id>` | Ficha pública individual | [`sv_get_item.workflow.json`](docs/sv_get_item.workflow.json) |
+| `POST /segundavida/whoami` | Validación de identidad Telegram | [`sv_validate_telegram_user.workflow.json`](docs/sv_validate_telegram_user.workflow.json) |
+| `POST /segundavida/publish` | Publicación con fotos y consentimiento | [`sv_publish_item_photos.workflow.json`](docs/sv_publish_item_photos.workflow.json) |
+| `POST /segundavida/mine` | Publicaciones de la persona autenticada | [`sv_mine_items.workflow.json`](docs/sv_mine_items.workflow.json) |
+| `POST /segundavida/complete` | Marcar entregado o reabrir | [`sv_complete_item.workflow.json`](docs/sv_complete_item.workflow.json) |
+
+Configura en n8n la credencial de NocoDB y la variable privada
+`TELEGRAM_BOT_TOKEN`. El token nunca debe guardarse en este repositorio, en el
+frontend ni en NocoDB. Los nodos de código que validan Telegram necesitan el
+módulo `crypto` habilitado en instalaciones self-hosted.
+
+Los workflows importables y sus instrucciones detalladas están en:
+
+- [`docs/auth.md`](docs/auth.md): autenticación y validación de Telegram.
+- [`docs/publish.md`](docs/publish.md) y
+  [`docs/publish-photos.md`](docs/publish-photos.md): publicación y fotos.
+- [`docs/complete.md`](docs/complete.md): entrega y reapertura.
+- [`docs/nocodb.md`](docs/nocodb.md): modelo de datos y contrato público.
+
+### 3. Configurar el frontend
+
+Actualiza en [`js/api.js`](js/api.js) las URLs de catálogo, ficha, publicación,
+gestión y entrega. Actualiza también en [`js/telegram.js`](js/telegram.js) el
+enlace de la Mini App del bot. El dominio propio debe estar incluido en los
+orígenes permitidos de los webhooks de n8n.
+
+El frontend no necesita variables de entorno ni secretos. Los datos sensibles
+se validan exclusivamente en el backend.
+
+### 4. Publicar los archivos estáticos
+
+Sube la raíz del repositorio a GitHub Pages, a otro hosting estático o a un
+servidor HTTP. `CNAME` contiene el dominio usado por la instalación actual.
+
+Las fichas indexables se generan con
+[`scripts/generate_static_pages.py`](scripts/generate_static_pages.py):
 
 ```bash
 python3 scripts/generate_static_pages.py \
-  --source-url https://tasks.nukeador.com/webhook/segundavida/data \
-  --output-dir .generated-site \
-  --site-url https://segundavida.aldeapucela.org
+  --source-url https://tu-n8n.example/webhook/segundavida/data \
+  --output-dir generated-site \
+  --site-url https://segundavida.example
 ```
 
-El repositorio no contiene objetos ficticios. La generación manual debe usar un
-JSON real proyectado por N8N o el endpoint público real.
+El generador crea las rutas `/i/<public_id>/`, `sitemap.xml`, `robots.txt` y
+un `404.html` de fallback. La salida generada no se versiona; el workflow de
+GitHub Actions la prepara como artefacto y la publica en GitHub Pages. Puede
+ejecutarse manualmente o con la programación incluida en
+[`.github/workflows/generate-static-pages.yml`](.github/workflows/generate-static-pages.yml).
 
-El contrato completo de NocoDB/n8n, incluido el endpoint individual
-`GET /webhook/segundavida/item/<public_id>`, está en
-[`docs/nocodb.md`](docs/nocodb.md) y [`docs/publish.md`](docs/publish.md).
-Después de `/publish`, n8n debe invocar el generador con la proyección pública
-del objeto; el repositorio deja esa integración preparada pero no la dispara.
+Para usar otra fuente de datos en GitHub Actions, define la variable de
+repositorio `SEGUNDAVIDA_PUBLIC_ITEMS_URL` o proporciona `source_url` al lanzar
+el workflow.
 
-GitHub Pages está configurado actualmente desde `main`. Para evitar commits
-automáticos de páginas generadas, configura Pages en **GitHub Actions** y usa
-`.github/workflows/generate-static-pages.yml`, que prepara y despliega el sitio
-desde el artefacto generado. El workflow ya incluye como valor predeterminado
-la URL pública real de `/data`; `SEGUNDAVIDA_PUBLIC_ITEMS_URL` solo sirve como
-override opcional.
+## Configuración opcional
 
-## Analítica
+La analítica utiliza Matomo para medir navegación agregada sin enviar datos
+personales. La configuración está documentada en [`docs/analytics.md`](docs/analytics.md).
+El sistema visual y las decisiones de accesibilidad se describen en
+[`docs/design-system.md`](docs/design-system.md).
 
-El HITO 6 integra Matomo mediante un wrapper propio y el `siteId 27` de
-SegundaVida, sin exponer credenciales ni enviar identificadores personales.
+## Seguridad, privacidad y límites
+
+- La consulta del catálogo y el contacto son públicos; publicar y gestionar
+  objetos requiere una identidad Telegram validada por n8n. El contacto directo
+  solo está disponible cuando la persona oferente tiene nombre de usuario
+  público.
+- La zona es aproximada: no se publican direcciones exactas.
+- No se almacenan tokens ni sesiones persistentes en el navegador.
+- No hay reservas ni mensajería interna: el contacto se realiza en Telegram.
+- Las publicaciones deben ofrecer objetos legales, seguros, propios y sin
+  contraprestación. La moderación puede retirar contenido que incumpla las
+  condiciones de la comunidad.
+- El texto y las fotografías compartidos se publican bajo
+  [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/deed.es).
+
+El código de la aplicación se distribuye bajo
+[GNU AGPL-3.0](LICENSE). El contenido aportado por las personas usuarias se
+gestiona según la licencia indicada en el formulario de publicación.

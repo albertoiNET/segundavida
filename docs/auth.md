@@ -1,8 +1,8 @@
-# Autenticación Telegram · HITO 8
+# Autenticación y validación de Telegram
 
 La web pública puede consultar el catálogo sin iniciar sesión. Cualquier acción
-que cree o modifique datos —ofrecer un objeto, marcarlo como finalizado o
-mostrar interés— debe exigir una identidad Telegram validada por n8n.
+que cree o modifique datos —ofrecer un objeto, marcarlo como entregado o
+mostrar interés— exige una identidad de Telegram validada por n8n.
 
 ## Contrato del frontend
 
@@ -44,9 +44,9 @@ Respuesta sin identidad válida:
 }
 ```
 
-## Workflow n8n
+## Workflow de n8n
 
-Crear el workflow `SV · Validate Telegram User`:
+El workflow `SV · Validate Telegram User` tiene esta estructura:
 
 ```text
 Webhook (POST /segundavida/whoami)
@@ -92,7 +92,7 @@ La misma validación debe repetirse en cada endpoint que escriba datos. La
 respuesta de `whoami` sirve para la interfaz, pero no sustituye la autorización
 del endpoint de publicación.
 
-## Reglas que aplicaremos al formulario
+## Reglas de publicación y seguridad
 
 - El propietario se obtiene del `telegram_id` validado por n8n; nunca del body
   enviado por el navegador.
@@ -101,9 +101,9 @@ del endpoint de publicación.
 - Los endpoints de escritura no devolverán campos privados de NocoDB.
 - No habrá token persistente en `localStorage` ni secretos en GitHub Pages.
 
-## Prueba de aceptación
+## Verificación de la instalación
 
-Cuando el workflow esté activo:
+Tras activar el workflow:
 
 1. Abrir la mini app desde el botón de Telegram: debe responder `valid: true`.
 2. Abrir `http://localhost:8000/`: debe mantenerse en modo público sin llamar a

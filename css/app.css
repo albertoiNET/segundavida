@@ -41,7 +41,6 @@ input[type="search"] {
 .app-header,
 .brand-lockup,
 .runtime-badge,
-.service-status,
 .catalog-heading,
 .item-card__meta,
 .item-card__footer {
@@ -601,32 +600,6 @@ h2 {
   color: var(--color-primary-dark);
 }
 
-.service-strip {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.5rem;
-  margin-top: auto;
-  padding-top: 2.5rem;
-}
-
-.diagnostics {
-  margin-top: auto;
-  padding-top: 1.25rem;
-  color: var(--text-muted);
-  font-size: 0.78rem;
-}
-
-.diagnostics summary {
-  cursor: pointer;
-  list-style-position: inside;
-  text-align: center;
-}
-
-.diagnostics .service-strip {
-  margin-top: 0.75rem;
-  padding-top: 0;
-}
-
 .secondary-view[hidden],
 .success-view[hidden],
 .detail-owner-actions[hidden],
@@ -975,29 +948,6 @@ h2 {
   display: none;
 }
 
-.service-status {
-  min-width: 0;
-  flex-wrap: wrap;
-  gap: 0.35rem;
-  color: var(--text-muted);
-  font-size: 0.72rem;
-}
-
-.service-status strong {
-  color: var(--text-main);
-  font-weight: 700;
-}
-
-.service-status[data-state="connected"] .status-dot,
-.service-status[data-state="connected"] strong {
-  color: var(--color-secondary);
-}
-
-.service-status[data-state="error"] .status-dot,
-.service-status[data-state="error"] strong {
-  color: #b45309;
-}
-
 .status-dot {
   display: inline-block;
   width: 0.5rem;
@@ -1094,9 +1044,6 @@ h2 {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .service-strip {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-  }
 }
 
 @media (max-width: 420px) {
@@ -1462,41 +1409,6 @@ h2 {
   justify-content: center;
   gap: 0.5rem;
   margin-top: 0.45rem;
-}
-
-.diagnostics {
-  margin-top: 2rem;
-  color: var(--text-muted);
-  font-size: 0.74rem;
-}
-
-.diagnostics summary {
-  cursor: pointer;
-  list-style: none;
-  text-align: center;
-}
-
-.diagnostics summary::-webkit-details-marker {
-  display: none;
-}
-
-.diagnostics summary::before {
-  margin-right: 0.35rem;
-  content: "·";
-}
-
-.service-strip {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.45rem 0.8rem;
-  margin-top: 0.7rem;
-  padding: 0.75rem;
-  border: 1px solid var(--border-light);
-  border-radius: 0.85rem;
-  background: var(--bg-card);
-}
-
-.service-status {
-  font-size: 0.68rem;
 }
 
 .bottom-nav {

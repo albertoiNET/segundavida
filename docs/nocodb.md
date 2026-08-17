@@ -38,14 +38,14 @@ deben entrar desde el workflow de publicación o desde una importación validada
 NocoDB ya aporta `CreatedAt` y `UpdatedAt`; no hay que crearlos ni rellenarlos
 desde el CSV. n8n los expondrá como `created_at` y `updated_at` en la respuesta
 pública. Telegram IDs se guardan como texto para evitar problemas de precisión o
-limitaciones de tamaño en campos numéricos. No se crea todavía el estado
-`reserved` ni la tabla de intereses. Cuando haya un `owner_username` público,
+limitaciones de tamaño en campos numéricos. El modelo actual no contempla
+reservas ni una tabla de intereses. Cuando haya un `owner_username` público,
 `Me interesa` abre directamente el chat del vecino o la vecina con un mensaje
 preparado y el enlace a la ficha concreta. Por eso el formulario exige
 configurar un nombre de usuario público antes de publicar. Las
 publicaciones antiguas sin nombre de usuario se mantienen visibles, pero no ofrecen un
-canal de contacto. La tabla de intereses queda para una segunda fase si
-necesitamos métricas o notificaciones más detalladas.
+canal de contacto. El contador de intereses es agregado y se mantiene en el
+registro del objeto.
 
 ## Importación en NocoDB
 
@@ -93,7 +93,7 @@ Devuelve una envoltura JSON con `ok`, `items` y `total`. n8n proyecta solo los
 campos públicos antes de responder; los campos privados de Telegram no salen al
 navegador.
 
-El endpoint individual que debe añadirse en n8n es:
+El endpoint individual disponible en n8n es:
 
 ```text
 GET /webhook/segundavida/item/<public_id>

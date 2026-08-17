@@ -7,8 +7,9 @@ n8n está en [`publish-photos.md`](./publish-photos.md).
 
 ## Workflow de n8n
 
-Importar [`sv_publish_item.workflow.json`](./sv_publish_item.workflow.json) en
-n8n. El workflow crea una fila en `sv_items` mediante la credencial existente
+Importa [`sv_publish_item_photos.workflow.json`](./sv_publish_item_photos.workflow.json)
+en n8n. Es el workflow operativo para crear una fila en `sv_items`, validar el
+contenido y subir hasta dos fotos mediante la credencial existente
 `NocoDB Token account`.
 
 Antes de activarlo:
@@ -76,9 +77,9 @@ generan enlaces nuevos con el valor antiguo.
 
 ## Generación de la ficha después de publicar
 
-El workflow de publicación debe responder primero con `public_id` (manteniendo
-`item_id` como alias temporal) y después dejar preparada una llamada al
-generador. Este repositorio no contiene credenciales reales.
+El workflow de publicación responde con `public_id` (manteniendo `item_id` como
+alias temporal). La generación de fichas utiliza la proyección pública del
+objeto y no requiere credenciales en este repositorio.
 
 Contrato de llamada para n8n:
 
@@ -182,7 +183,9 @@ Error de validación:
 ```
 
 La configuración actual permite probar desde `localhost:8000` y desde
-`https://segundavida.aldeapucela.org`. La foto no se envía en esta versión.
+`https://segundavida.aldeapucela.org`. Las fotos se envían como binarios
+`photo_0` y `photo_1`; sus límites y validaciones están en
+[`publish-photos.md`](./publish-photos.md).
 
 ## Enlace para abrir la Mini App
 

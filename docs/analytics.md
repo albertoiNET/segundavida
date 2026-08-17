@@ -1,20 +1,19 @@
 # Analítica de SegundaVida
 
-## Decisión
+## Configuración
 
-SegundaVida usará la instalación Matomo existente de Aldea Pucela, en:
+SegundaVida utiliza la instalación Matomo existente de Aldea Pucela, en:
 
 ```text
 https://stats.aldeapucela.org/
 ```
 
-La web principal publica actualmente el `siteId 13`. SegundaVida tendrá un
-`siteId` propio para separar el uso de la Mini App de las métricas generales
-de Aldea Pucela.
+La web principal utiliza el `siteId 13`. SegundaVida tiene un `siteId` propio
+para separar el uso de la Mini App de las métricas generales de Aldea Pucela.
 
 ## Sitio configurado
 
-En Matomo hay que crear un nuevo sitio con este dominio:
+El sitio de SegundaVida está asociado a este dominio:
 
 ```text
 segundavida.aldeapucela.org

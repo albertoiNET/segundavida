@@ -87,17 +87,15 @@ python3 scripts/generate_static_pages.py \
 
 Contrato para n8n después de `/publish`: enviar un JSON con `public_id` (o
 `item_id` durante la transición), los campos públicos ya proyectados y, si se
-quiere generar solo una ficha, `items` con un único elemento. n8n debe ejecutar
-el generador en un runner autorizado o invocar el workflow de GitHub Actions
-con un artefacto firmado; no se guardan credenciales en el repositorio y este
-repositorio no dispara todavía ese flujo automáticamente.
+quiere generar solo una ficha, `items` con un único elemento. La generación se
+ejecuta en un runner autorizado o mediante el workflow de GitHub Actions; no se
+guardan credenciales en el repositorio.
 
-GitHub Pages está documentado para cambiar de la fuente actual `main` a
-`GitHub Actions` si se desea publicar el resultado generado sin commits
-periódicos. El workflow incluido permite ejecución manual y programada como
-opción y usa por defecto la URL pública real de `/data`; la variable de
-repositorio solo permite sustituirla. El job es deliberadamente neutral
-respecto a secretos, NocoDB y n8n.
+GitHub Pages se publica mediante `GitHub Actions` a partir del artefacto
+generado, sin commits periódicos de páginas. El workflow incluido permite
+ejecución manual y programada, usa por defecto la URL pública real de `/data` y
+acepta una variable de repositorio para sustituirla. El job es deliberadamente
+neutral respecto a secretos, NocoDB y n8n.
 
 ## Seguridad y límites
 

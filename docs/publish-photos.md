@@ -14,7 +14,7 @@ photo_1  = segunda foto optimizada en JPEG (opcional)
 ```
 
 El navegador conserva las selecciones sucesivas hasta dos fotos, permite quitar
-cualquiera de ellas y las redimensiona a un máximo de 1600 px por lado antes de
+cualquiera de ellas y las redimensiona a un máximo de 1280 px por lado antes de
 enviarlas.
 
 El formulario exige al menos una foto e informa y solicita aceptar que el texto

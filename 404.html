@@ -4,10 +4,26 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <!-- STATIC_ITEM_METADATA -->
+    <!-- STATIC_HOME_METADATA -->
     <meta
       name="description"
-      content="SegundaVida, una iniciativa de Aldea Pucela."
+      content="SegundaVida, una iniciativa de Aldea Pucela para compartir objetos gratis."
     />
+    <link rel="canonical" href="https://segundavida.aldeapucela.org/" />
+    <meta property="og:locale" content="es_ES" />
+    <meta property="og:site_name" content="SegundaVida · Aldea Pucela" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="SegundaVida · Aldea Pucela" />
+    <meta property="og:description" content="Comparte objetos que ya no necesitas para que otras personas puedan darles una segunda vida." />
+    <meta property="og:url" content="https://segundavida.aldeapucela.org/" />
+    <meta property="og:image" content="https://segundavida.aldeapucela.org/assets/segundavida-mark.png" />
+    <meta property="og:image:alt" content="Avatar de SegundaVida" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="SegundaVida · Aldea Pucela" />
+    <meta name="twitter:description" content="Comparte objetos que ya no necesitas para que otras personas puedan darles una segunda vida." />
+    <meta name="twitter:image" content="https://segundavida.aldeapucela.org/assets/segundavida-mark.png" />
+    <meta name="twitter:image:alt" content="Avatar de SegundaVida" />
+    <!-- END_STATIC_HOME_METADATA -->
     <link rel="icon" type="image/png" sizes="1254x1254" href="/assets/segundavida-mark.png?v=sv-20260817-40" />
     <link rel="apple-touch-icon" href="/assets/segundavida-mark.png?v=sv-20260817-40" />
     <title>SegundaVida · Aldea Pucela</title>
@@ -19,8 +35,8 @@
       onerror="document.documentElement.classList.add('icons-fallback')"
     />
     <link rel="stylesheet" href="/css/icon-fallback.css?v=sv-20260817-40" />
-    <link rel="stylesheet" href="/css/tokens.css?v=sv-20260817-40" />
-    <link rel="stylesheet" href="/css/app.css?v=sv-20260817-40" />
+    <link rel="stylesheet" href="/css/tokens.css?v=sv-20260817-41" />
+    <link rel="stylesheet" href="/css/app.css?v=sv-20260817-53" />
     <script src="https://telegram.org/js/telegram-web-app.js?63"></script>
   </head>
   <body>
@@ -89,9 +105,14 @@
       <section class="detail-view" id="detail-view" hidden aria-labelledby="detail-title">
         <div class="detail-media" id="detail-media"></div>
         <div class="detail-content">
-          <div class="detail-availability" id="detail-availability">Disponible</div>
           <h1 id="detail-title">Objeto</h1>
-          <p class="detail-category" id="detail-category"></p>
+          <div class="detail-subline">
+            <p class="detail-category" id="detail-category"></p>
+            <p class="detail-availability" id="detail-availability">
+              <i class="fa-regular fa-calendar-days fa-icon" data-fallback="▣" aria-hidden="true"></i>
+              <span id="detail-availability-label">Disponible</span>
+            </p>
+          </div>
           <p class="detail-description" id="detail-description"></p>
           <dl class="detail-facts">
             <div>
@@ -113,6 +134,16 @@
             </button>
             <p class="action-state" id="detail-owner-action-state" aria-live="polite"></p>
           </div>
+          <aside class="community-promo" aria-labelledby="community-promo-title">
+            <div class="community-promo__mark">
+              <img src="/assets/aldea-pucela-mark.jpg" alt="Logo de Aldea Pucela" />
+            </div>
+            <div class="community-promo__content">
+              <h2 id="community-promo-title">Segunda Vida forma parte de Aldea Pucela</h2>
+              <p>Debates, iniciativas y eventos de la mayor comunidad vecinal de Valladolid.</p>
+              <a class="community-promo__link" href="https://aldeapucela.org/" target="_blank" rel="noopener noreferrer"><i class="fa-solid fa-arrow-up-right-from-square fa-icon" data-fallback="↗" aria-hidden="true"></i> Conocer la comunidad</a>
+            </div>
+          </aside>
         </div>
       </section>
 
@@ -306,24 +337,41 @@
             </div>
           </fieldset>
           <div class="form-field">
-            <span class="field-label">Fotos <small>hasta 2</small></span>
-            <label class="photo-picker" for="offer-images">
+            <span class="field-label">Fotos <small>1 obligatoria · hasta 2</small></span>
+            <label class="photo-picker" id="offer-photo-picker" for="offer-images" tabindex="-1">
               <span class="photo-picker__icon" aria-hidden="true"><i class="fa-solid fa-plus fa-icon" data-fallback="+"></i></span>
-              <span><strong>Añadir fotos</strong><small>La primera será la portada</small></span>
-              <input id="offer-images" name="images" type="file" accept="image/jpeg,image/png,image/webp" multiple />
+              <span><strong>Añadir fotos</strong><small>Añade al menos una · puedes añadirlas en varias veces · la primera será la portada</small></span>
+              <input id="offer-images" name="images" type="file" accept="image/jpeg,image/png,image/webp" multiple aria-describedby="offer-form-state" />
             </label>
             <div class="photo-preview" id="offer-preview" aria-live="polite"></div>
           </div>
           <div class="consent-block">
             <label class="consent-field" for="offer-consent">
               <input id="offer-consent" name="consent" type="checkbox" value="accepted" required />
-              <span>Acepto que mi publicación sea visible en la web y Telegram, que otras personas puedan contactarme para solicitarla y que ofrezco el objeto gratis y sin contraprestación.</span>
+              <span>Acepto que mi publicación sea visible en la web y Telegram, que otras personas puedan contactarme para solicitarla, que ofrezco el objeto gratis y sin contraprestación y que cumple las condiciones de SegundaVida. El contenido que comparto (texto y fotos) se publica bajo la licencia <a href="https://creativecommons.org/licenses/by-sa/4.0/deed.es" target="_blank" rel="noopener noreferrer">CC BY-SA 4.0</a>.</span>
             </label>
             <details class="consent-details">
               <summary>Ver qué implica</summary>
               <div class="consent-details__body">
                 <p>Declaro que puedo ofrecer el objeto y que la información es veraz. La entrega se coordina entre las personas y la publicación solo muestra una zona aproximada.</p>
-                <p>La comunidad puede retirar publicaciones y limitar o excluir la participación si detecta abuso, fraude, acoso, contenido ilegal o incumplimiento de estas condiciones.</p>
+                <p><strong>Objetos y publicaciones no permitidos:</strong></p>
+                <ul class="consent-details__list">
+                  <li>Medicamentos y productos sanitarios sujetos a prescripción.</li>
+                  <li>Armas, munición, explosivos, pirotecnia y sustancias inflamables o peligrosas.</li>
+                  <li>Productos químicos peligrosos, tóxicos o potencialmente nocivos.</li>
+                  <li>Drogas, sustancias ilegales o productos cuya posesión o distribución esté prohibida.</li>
+                  <li>Animales; para ello existen espacios específicos de Aldea Pucela, como <a href="https://peluditos.aldeapucela.org/" target="_blank" rel="noopener noreferrer">Peluditos</a>.</li>
+                  <li>Documentos personales u oficiales, datos personales, tarjetas, títulos o certificados.</li>
+                  <li>Tarjetas SIM, cuentas, credenciales, contraseñas o dispositivos con información personal del anterior propietario.</li>
+                  <li>Objetos robados, de procedencia dudosa, falsificados o que vulneren derechos de propiedad intelectual o industrial.</li>
+                  <li>Contenido ilegal, inseguro, gravemente deteriorado o contaminado.</li>
+                  <li>Alimentos o productos perecederos que puedan representar un riesgo sanitario.</li>
+                  <li>Dinero, aportaciones económicas, recaudaciones o solicitudes de donaciones.</li>
+                  <li>Servicios, ofertas de empleo, favores, publicidad o promociones comerciales.</li>
+                  <li>Ventas, subastas, precios, pujas, pagos encubiertos, trueques o contraprestaciones obligatorias.</li>
+                  <li>Spam, duplicados abusivos, publicaciones engañosas o anuncios que deriven a negocios o servicios externos.</li>
+                </ul>
+                <p>SegundaVida está destinada a objetos legales, seguros, de tu propiedad, todavía útiles para otra persona y entregados completamente gratis. La moderación podrá retirar cualquier publicación que genere riesgos, abusos o problemas legales para la comunidad.</p>
                 <p>El nombre y el usuario público de Telegram se usarán para asociar la publicación y facilitar el contacto. El identificador técnico de Telegram quedará privado.</p>
               </div>
             </details>
@@ -351,6 +399,33 @@
         <button class="primary-button" id="telegram-username-retry" type="button">Ya lo he configurado</button>
       </dialog>
 
+      <dialog class="photo-lightbox" id="photo-lightbox" aria-labelledby="photo-lightbox-title">
+        <div class="photo-lightbox__panel">
+          <div class="photo-lightbox__topline">
+            <div>
+              <span class="eyebrow">SegundaVida</span>
+              <h2 id="photo-lightbox-title">Foto</h2>
+            </div>
+            <div class="photo-lightbox__actions">
+              <span class="photo-lightbox__counter" id="photo-lightbox-counter" aria-live="polite"></span>
+              <button class="icon-button photo-lightbox__close" id="photo-lightbox-close" type="button" aria-label="Cerrar foto" title="Cerrar foto">
+                <i class="fa-solid fa-xmark fa-icon" data-fallback="×" aria-hidden="true"></i>
+              </button>
+            </div>
+          </div>
+          <div class="photo-lightbox__stage">
+            <button class="photo-lightbox__nav photo-lightbox__nav--previous" id="photo-lightbox-previous" type="button" aria-label="Foto anterior" title="Foto anterior">
+              <i class="fa-solid fa-chevron-left fa-icon" data-fallback="‹" aria-hidden="true"></i>
+            </button>
+            <img class="photo-lightbox__image" id="photo-lightbox-image" alt="" />
+            <button class="photo-lightbox__nav photo-lightbox__nav--next" id="photo-lightbox-next" type="button" aria-label="Foto siguiente" title="Foto siguiente">
+              <i class="fa-solid fa-chevron-right fa-icon" data-fallback="›" aria-hidden="true"></i>
+            </button>
+          </div>
+          <div class="photo-lightbox__thumbs" id="photo-lightbox-thumbs" aria-label="Fotos de la publicación"></div>
+        </div>
+      </dialog>
+
       <section class="secondary-view" id="posts-view" hidden aria-labelledby="posts-title">
         <div id="posts-content" hidden>
           <h1 id="posts-title">Mis publicaciones</h1>
@@ -360,7 +435,7 @@
               Activas <span id="posts-active-count">0</span>
             </button>
             <button class="posts-tab" id="posts-completed-tab" type="button" role="tab" aria-selected="false" aria-controls="posts-list" data-posts-filter="completed">
-              Entregadas <span id="posts-completed-count">0</span>
+              Finalizadas <span id="posts-completed-count">0</span>
             </button>
           </div>
           <div class="posts-list" id="posts-list" aria-live="polite"></div>
@@ -395,31 +470,15 @@
         </section>
       </section>
 
-      <details class="diagnostics">
-        <summary>Estado de conexión</summary>
-        <div class="service-strip" aria-label="Estado de los servicios">
-          <div class="service-status">
-            <span class="status-dot" aria-hidden="true"></span>
-            <span>Web</span>
-            <strong>OK</strong>
-          </div>
-          <div class="service-status" id="telegram-status">
-            <span class="status-dot" aria-hidden="true"></span>
-            <span>Telegram</span>
-            <strong id="telegram-status-label">Sin comprobar</strong>
-          </div>
-          <div class="service-status" id="n8n-status">
-            <span class="status-dot" aria-hidden="true"></span>
-            <span>n8n</span>
-            <strong id="n8n-status-label">Sin comprobar</strong>
-          </div>
-          <div class="service-status" id="identity-status">
-            <span class="status-dot" aria-hidden="true"></span>
-            <span>Identidad</span>
-            <strong id="identity-status-label">Modo público</strong>
-          </div>
-        </div>
-      </details>
+      <footer class="site-footer">
+        <p class="site-footer__links">
+          <a href="https://aldeapucela.org/" target="_blank" rel="noopener noreferrer">Aldea Pucela</a>
+          <span class="site-footer__separator" aria-hidden="true">·</span>
+          <a href="https://github.com/aldeapucela/segundavida" target="_blank" rel="noopener noreferrer">Código</a>
+          <span class="site-footer__separator" aria-hidden="true">·</span>
+          <a href="https://www.gnu.org/licenses/agpl-3.0.html" target="_blank" rel="noopener noreferrer">Licencia</a>
+        </p>
+      </footer>
 
       <nav class="bottom-nav" aria-label="Navegación principal">
         <button class="nav-item" type="button" data-view="explore" aria-current="page">
@@ -431,7 +490,7 @@
           <span>Ofrecer</span>
         </button>
         <button class="nav-item" type="button" data-view="posts">
-          <span class="nav-item__icon" aria-hidden="true"><i class="fa-solid fa-box-archive fa-icon" data-fallback="♙"></i></span>
+          <span class="nav-item__icon" aria-hidden="true"><i class="fa-solid fa-user fa-icon" data-fallback="●"></i></span>
           <span>Mis publicaciones</span>
         </button>
       </nav>
@@ -442,9 +501,9 @@
     </main>
 
     <script src="/js/telegram.js?v=sv-20260817-41"></script>
-    <script src="/js/auth.js?v=sv-20260817-41"></script>
-    <script src="/js/api.js?v=sv-20260817-41"></script>
+    <script src="/js/auth.js?v=sv-20260817-42"></script>
+    <script src="/js/api.js?v=sv-20260817-42"></script>
     <script src="/js/analytics.js?v=sv-20260817-41"></script>
-    <script src="/js/app.js?v=sv-20260817-41"></script>
+    <script src="/js/app.js?v=sv-20260817-53"></script>
   </body>
 </html>
