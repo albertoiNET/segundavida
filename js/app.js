@@ -80,7 +80,6 @@ let photoLightboxIndex = 0;
 let photoLightboxReturnFocus = null;
 let lastTrackedViewKey = "";
 const trackedInterestTelegramItems = new Set();
-let favoriteFeedbackTimer = null;
 let routeOpenInFlight = null;
 let routeOpenItemId = "";
 let reportStartInFlight = null;
@@ -112,8 +111,6 @@ const statusToggle = document.querySelector("#status-toggle");
 const itemsCount = document.querySelector("#items-count");
 const itemsState = document.querySelector("#items-state");
 const itemsGrid = document.querySelector("#items-grid");
-const favoriteFeedback = document.querySelector("#favorite-feedback");
-const detailFavoriteFeedback = document.querySelector("#detail-favorite-feedback");
 const catalogTitle = document.querySelector("#catalog-title");
 const catalogIntro = document.querySelector(".catalog-intro");
 const catalogTools = document.querySelector(".catalog-tools");
@@ -192,7 +189,6 @@ const favoritesList = document.querySelector("#favorites-list");
 const favoritesEmptyState = document.querySelector("#favorites-empty-state");
 const favoritesEmptyTitle = document.querySelector("#favorites-empty-title");
 const favoritesEmptyCopy = document.querySelector("#favorites-empty-copy");
-const favoritesActionState = document.querySelector("#favorites-action-state");
 const favoritesExploreButton = document.querySelector("#favorites-explore-button");
 const successItemTitle = document.querySelector("#success-item-title");
 const successItemStatus = document.querySelector("#success-item-status");
@@ -688,22 +684,6 @@ function isFavorite(item) {
   return Boolean(item?.id && state.favoriteEntries.some((entry) => entry.id === item.id));
 }
 
-function setFavoriteFeedback(message, stateName = "") {
-  if (favoriteFeedbackTimer) window.clearTimeout(favoriteFeedbackTimer);
-  [favoriteFeedback, detailFavoriteFeedback, favoritesActionState].filter(Boolean).forEach((element) => {
-    element.textContent = message;
-    element.dataset.state = stateName;
-  });
-
-  if (!message) return;
-  favoriteFeedbackTimer = window.setTimeout(() => {
-    [favoriteFeedback, detailFavoriteFeedback, favoritesActionState].filter(Boolean).forEach((element) => {
-      element.textContent = "";
-      element.dataset.state = "";
-    });
-  }, 4200);
-}
-
 function updateFavoriteButton(button, item) {
   if (!button || !item?.id) return;
   const active = isFavorite(item);
@@ -751,9 +731,9 @@ function toggleFavorite(item, triggerButton = null) {
     : [
       ...state.favoriteEntries,
       { id: item.id, savedAt: new Date().toISOString() },
-    ];
+  ];
   state.favoriteEntries = nextEntries;
-  const persisted = saveFavorites(nextEntries);
+  saveFavorites(nextEntries);
   const action = wasFavorite ? "remove" : "add";
 
   refreshFavoriteControls(item);
@@ -763,15 +743,6 @@ function toggleFavorite(item, triggerButton = null) {
   }
 
   window.SecondaVidaAnalytics?.trackEvent("favorite", action, item.id);
-  setFavoriteFeedback(
-    persisted
-      ? wasFavorite
-        ? `«${item.title}» se ha quitado de favoritos.`
-        : `«${item.title}» se ha añadido a favoritos.`
-      : "No se ha podido guardar el cambio en este navegador.",
-    persisted ? "connected" : "error",
-  );
-
   if (triggerButton?.isConnected) triggerButton.focus();
 }
 
@@ -929,7 +900,7 @@ function createItemCard(item, index) {
     event.stopPropagation();
     showDetail(item);
   });
-  titleRow.append(openButton, createFavoriteButton(item));
+  titleRow.append(openButton);
   body.append(titleRow);
 
   const meta = document.createElement("div");
@@ -956,7 +927,7 @@ function createItemCard(item, index) {
   meta.append(availability);
   body.append(meta);
 
-  card.append(body);
+  card.append(body, createFavoriteButton(item, "favorite-toggle--card"));
   card.addEventListener("click", (event) => {
     if (event.target.closest("button, a")) return;
     showDetail(item);
@@ -1025,14 +996,14 @@ function createRelatedItemCard(item) {
     event.stopPropagation();
     showDetail(item);
   });
-  titleRow.append(openButton, createFavoriteButton(item, "favorite-toggle--related"));
+  titleRow.append(openButton);
   body.append(titleRow);
   body.append(createTextElement(
     "span",
     "related-item-card__availability",
     item.expiresAt ? `Hasta ${formatCompactDate(item.expiresAt)}` : "Disponible",
   ));
-  card.append(body);
+  card.append(body, createFavoriteButton(item, "favorite-toggle--card favorite-toggle--related"));
 
   card.addEventListener("click", (event) => {
     if (event.target.closest("button, a")) return;
