@@ -55,7 +55,7 @@ class StaticContractTests(unittest.TestCase):
             self.assertIn('property="og:image:alt"', page)
             self.assertIn('name="twitter:image:alt"', page)
             self.assertIn("summary_large_image", page)
-            self.assertNotIn("segundavida-social-preview.png", page)
+            self.assertNotIn("segundavida-social-preview.jpg", page)
             self.assertIn("&lt;script&gt;alert(1)&lt;/script&gt;", page)
             self.assertNotIn("javascript:alert", page)
             self.assertNotIn("owner_telegram_id", page)
@@ -73,9 +73,9 @@ class StaticContractTests(unittest.TestCase):
         homepage = self.template.read_text(encoding="utf-8")
         self.assertIn('property="og:title"', homepage)
         self.assertIn('property="og:image"', homepage)
-        self.assertIn("https://segundavida.aldeapucela.org/assets/segundavida-social-preview.png", homepage)
+        self.assertIn("https://segundavida.aldeapucela.org/assets/segundavida-social-preview.jpg", homepage)
         fallback = (ROOT / "404.html").read_text(encoding="utf-8")
-        self.assertIn("https://segundavida.aldeapucela.org/assets/segundavida-social-preview.png", fallback)
+        self.assertIn("https://segundavida.aldeapucela.org/assets/segundavida-social-preview.jpg", fallback)
 
         item = normalize_item({
             **self.item(),
