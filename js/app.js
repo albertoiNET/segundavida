@@ -26,6 +26,12 @@ const PUBLISH_DRAFT_STORE_NAME = "drafts";
 const LOCAL_AUTHOR_DEMO_MODE =
   ["localhost", "127.0.0.1"].includes(window.location.hostname) &&
   new URLSearchParams(window.location.search).get("demo") === "author";
+const LOCAL_REPORT_DEMO_MODE =
+  ["localhost", "127.0.0.1"].includes(window.location.hostname) &&
+  new URLSearchParams(window.location.search).get("demo") === "report";
+const LOCAL_REPORT_DEMO_ITEM_ID =
+  new URLSearchParams(window.location.search).get("item")?.trim() || "";
+const LOCAL_REPORT_DEMO_USERNAME = "usuario_demo";
 const LOCAL_AUTHOR_DEMO_DISPLAY_NAME = "Nuke";
 const LOCAL_AUTHOR_DEMO_USERNAME = "tionuke";
 const state = {
@@ -54,10 +60,13 @@ let photoLightboxIndex = 0;
 let photoLightboxReturnFocus = null;
 let routeOpenInFlight = null;
 let routeOpenItemId = "";
+let reportStartInFlight = null;
 let deleteDialogItem = null;
 let deleteDialogTriggerButton = null;
 let contactDialogItem = null;
 let contactDialogTriggerButton = null;
+let reportDialogTargetItem = null;
+let reportDialogTriggerButton = null;
 let reserveDialogItem = null;
 let reserveDialogTriggerButton = null;
 let reserveDialogFeedbackElement = null;
@@ -104,6 +113,7 @@ const detailZone = document.querySelector("#detail-zone");
 const detailOwner = document.querySelector("#detail-owner");
 const detailCreatedAt = document.querySelector("#detail-created-at");
 const interestButton = document.querySelector("#interest-button");
+const reportProblemButton = document.querySelector("#report-problem-button");
 const detailActionState = document.querySelector("#detail-action-state");
 const detailOwnerActions = document.querySelector("#detail-owner-actions");
 const manageStatusButton = document.querySelector("#manage-status-button");
@@ -127,6 +137,17 @@ const contactDialogOwner = document.querySelector("#contact-dialog-owner");
 const contactDialogClose = document.querySelector("#contact-dialog-close");
 const contactDialogCancel = document.querySelector("#contact-dialog-cancel");
 const contactDialogConfirm = document.querySelector("#contact-dialog-confirm");
+const reportDialog = document.querySelector("#report-dialog");
+const reportDialogItemTitle = document.querySelector("#report-dialog-item");
+const reportDialogClose = document.querySelector("#report-dialog-close");
+const reportDialogCancel = document.querySelector("#report-dialog-cancel");
+const reportForm = document.querySelector("#report-form");
+const reportReason = document.querySelector("#report-reason");
+const reportDetails = document.querySelector("#report-details");
+const reportAllowAdminContact = document.querySelector("#report-allow-admin-contact");
+const reportContactConsentCopy = document.querySelector("#report-contact-consent-copy");
+const reportFormState = document.querySelector("#report-form-state");
+const reportSubmitButton = document.querySelector("#report-submit-button");
 const reserveItemDialog = document.querySelector("#reserve-item-dialog");
 const reserveItemDialogCancel = document.querySelector("#reserve-item-dialog-cancel");
 const reserveItemDialogConfirm = document.querySelector("#reserve-item-dialog-confirm");
@@ -335,6 +356,14 @@ function getRouteItemId() {
   }
 
   return "";
+}
+
+function getReportStartItemId() {
+  if (!telegramRuntime.isTelegram) return "";
+
+  const startParam = String(telegramRuntime.startParam ?? "").trim();
+  const match = startParam.match(/^report_([A-Za-z0-9][A-Za-z0-9_-]{5,79})$/);
+  return match ? match[1] : "";
 }
 
 function decodeRoutePart(value) {
@@ -550,6 +579,11 @@ function getItemUrl(item) {
   return url.toString();
 }
 
+function getReportMiniAppUrl(item) {
+  const miniAppUrl = telegramRuntime.miniAppUrl || "https://t.me/pucelobot/segundavida";
+  return `${miniAppUrl}?startapp=report_${encodeURIComponent(item.id)}`;
+}
+
 function getHomeUrl() {
   const url = new URL(window.location.href);
   url.pathname = "/";
@@ -603,11 +637,15 @@ function createItemCard(item, index) {
   }
   const availability = document.createElement("span");
   availability.className = "availability";
-  availability.textContent = item.status === "reserved"
+  const availabilityLabel = item.status === "reserved"
     ? "Reservado"
     : item.expiresAt
       ? `Hasta ${formatDate(item.expiresAt)}`
       : "Disponible";
+  availability.append(
+    createIconElement("fa-clock", "◷"),
+    document.createTextNode(availabilityLabel),
+  );
   meta.append(availability);
   body.append(meta);
 
@@ -1234,6 +1272,11 @@ function renderDetail(item, { live = true, error = "" } = {}) {
       ? `Contactar con ${item.ownerDisplayName || "el vecino o la vecina"} por Telegram`
       : "Mostrar interés por este objeto",
   );
+  const canReport = Boolean(live && item.id && item.status !== "not_found" && !ownItem);
+  if (reportProblemButton) {
+    reportProblemButton.hidden = !canReport;
+    reportProblemButton.disabled = !canReport;
+  }
   if (live && item.status === "completed") {
     renderCompletedActionState(item);
   } else if (live && item.status === "reserved" && !ownItem) {
@@ -1436,6 +1479,8 @@ async function loadCatalog() {
     itemsState.textContent = "El catálogo todavía no está configurado.";
     itemsState.dataset.state = "error";
     void openItemFromRoute();
+    void openReportFromStartParam();
+    void openReportDemo();
     return;
   }
 
@@ -1457,6 +1502,8 @@ async function loadCatalog() {
     renderMyItems();
     renderRelatedItems(state.selectedItem);
     void openItemFromRoute();
+    void openReportFromStartParam();
+    void openReportDemo();
   } catch {
     if (requestVersion !== state.catalogRequestVersion) return;
     state.catalogNeedsRefresh = true;
@@ -1464,6 +1511,8 @@ async function loadCatalog() {
     itemsState.textContent = "No hemos podido cargar los objetos. Inténtalo de nuevo en unos instantes.";
     itemsState.dataset.state = "error";
     itemsCount.textContent = "Sin datos";
+    void openReportFromStartParam();
+    void openReportDemo();
     void openItemFromRoute();
   }
 }
@@ -1610,6 +1659,68 @@ async function openItemFromRoute() {
   }
 }
 
+async function openReportFromStartParam() {
+  const itemId = getReportStartItemId();
+  if (!itemId) return;
+  if (reportStartInFlight) return reportStartInFlight;
+
+  const request = (async () => {
+    const catalogItem = state.items.find((candidate) => candidate.id === itemId)
+      ?? state.myItems.find((candidate) => candidate.id === itemId && isOwnItem(candidate));
+    const initialItem = catalogItem ?? {
+      id: itemId,
+      title: "Cargando publicación…",
+      description: "",
+      category: "Otros",
+      zone: "Valladolid",
+      ownerDisplayName: "Vecindad",
+      ownerUsername: "",
+      status: "available",
+      expiresAt: null,
+      imageUrl: null,
+      imageUrls: [],
+    };
+
+    showDetail(initialItem, { syncHistory: false, live: Boolean(catalogItem) });
+
+    if (!api?.isItemConfigured || typeof api.getItem !== "function") {
+      detailActionState.textContent = "No se puede cargar esta publicación ahora.";
+      detailActionState.dataset.state = "error";
+      return;
+    }
+
+    try {
+      const item = await api.getItem(itemId);
+      showDetail(item, { syncHistory: false, live: true });
+      openReportDialog(item);
+    } catch (error) {
+      const message = error?.code === "not_found"
+        ? "Esta publicación ya no está disponible."
+        : "No se ha podido cargar la publicación. Inténtalo de nuevo.";
+      detailActionState.textContent = message;
+      detailActionState.dataset.state = "error";
+    }
+  })();
+
+  reportStartInFlight = request;
+  try {
+    return await request;
+  } finally {
+    if (reportStartInFlight === request) reportStartInFlight = null;
+  }
+}
+
+function openReportDemo() {
+  if (!LOCAL_REPORT_DEMO_MODE || reportDialog?.open) return;
+
+  const item = state.items.find((candidate) => candidate.id === LOCAL_REPORT_DEMO_ITEM_ID)
+    ?? state.items[0];
+  if (!item) return;
+
+  showDetail(item, { syncHistory: false, live: true });
+  openReportDialog(item);
+}
+
 function handleHistoryChange(event) {
   const nextState = event.state;
   const nextView = nextState?.svApp ? nextState.svView : "explore";
@@ -1640,6 +1751,7 @@ async function checkIdentity() {
 
     if (result.valid) {
       state.telegramUser = result;
+      updateReportContactConsentCopy();
       configureOfferAuth(result);
       configurePostsView();
       await loadMineItems();
@@ -1653,12 +1765,14 @@ async function checkIdentity() {
     }
 
     state.telegramUser = null;
+    updateReportContactConsentCopy();
     configureOfferAuth();
     configurePostsView();
     refreshSelectedDetailForIdentity();
     setServiceState(identityStatus, identityStatusLabel, "error", "No verificada");
   } catch {
     state.telegramUser = null;
+    updateReportContactConsentCopy();
     configureOfferAuth();
     configurePostsView();
     refreshSelectedDetailForIdentity();
@@ -2779,6 +2893,178 @@ function confirmContactDialog() {
   showInterestFeedback(telegramUrl);
 }
 
+function setReportFormState(message, stateName = "") {
+  if (!reportFormState) return;
+  reportFormState.textContent = message;
+  reportFormState.dataset.state = stateName;
+}
+
+function getDetectedReportUsername() {
+  if (LOCAL_REPORT_DEMO_MODE) return LOCAL_REPORT_DEMO_USERNAME;
+
+  const webAppUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
+  return normalizeTelegramUsername(
+    state.telegramUser?.username ?? webAppUser?.username ?? "",
+  );
+}
+
+function updateReportContactConsentCopy() {
+  if (!reportContactConsentCopy) return;
+
+  const username = getDetectedReportUsername();
+  reportContactConsentCopy.textContent = username
+    ? `Acepto que el equipo de Aldea Pucela me contacte por Telegram a @${username} para aclarar el problema.`
+    : "Acepto que el equipo de Aldea Pucela me contacte por Telegram a la cuenta con la que he abierto esta Mini App para aclarar el problema.";
+}
+
+function resetReportForm() {
+  reportForm?.reset();
+  reportForm?.querySelectorAll("input, select, textarea, button").forEach((control) => {
+    control.disabled = false;
+  });
+  if (reportSubmitButton) {
+    reportSubmitButton.textContent = "Enviar problema";
+    reportSubmitButton.disabled = false;
+  }
+  if (reportDialogCancel) reportDialogCancel.textContent = "Ahora no";
+  updateReportContactConsentCopy();
+  setReportFormState();
+}
+
+function openReportDialog(item = state.selectedItem, triggerButton = reportProblemButton) {
+  if (!item || !reportDialog || !reportForm) return;
+
+  reportDialogTargetItem = item;
+  reportDialogTriggerButton = triggerButton;
+  resetReportForm();
+  if (reportDialogItemTitle) reportDialogItemTitle.textContent = item.title || "Publicación seleccionada";
+
+  if (typeof reportDialog.showModal === "function") {
+    reportDialog.showModal();
+  } else {
+    reportDialog.setAttribute("open", "");
+  }
+  reportReason?.focus();
+}
+
+function closeReportDialog({ restoreFocus = true } = {}) {
+  if (!reportDialog) return;
+
+  if (typeof reportDialog.close === "function" && reportDialog.open) {
+    reportDialog.close();
+  } else {
+    reportDialog.removeAttribute("open");
+  }
+
+  const triggerButton = reportDialogTriggerButton;
+  reportDialogTargetItem = null;
+  reportDialogTriggerButton = null;
+  if (restoreFocus && triggerButton?.isConnected && !triggerButton.hidden) triggerButton.focus();
+}
+
+function reportErrorMessage(error) {
+  const messages = {
+    telegram_init_data_missing: "Abre la Mini App desde Telegram para enviar el problema.",
+    telegram_init_data_expired: "La sesión de Telegram ha caducado. Cierra y vuelve a abrir la Mini App.",
+    telegram_identity_invalid: "No hemos podido validar tu sesión. Cierra y vuelve a abrir la Mini App.",
+    telegram_user_invalid: "No hemos podido leer tu identidad de Telegram.",
+    item_not_found: "Esta publicación ya no está disponible.",
+    owner_cannot_report_own_item: "No puedes reportar tu propia publicación.",
+    reason_invalid: "Selecciona un motivo para el problema.",
+    details_required: "Describe brevemente qué ha ocurrido.",
+    details_too_long: "La descripción no puede superar los 1500 caracteres.",
+  };
+  return messages[error?.code] || "No hemos podido enviar el problema. Inténtalo de nuevo.";
+}
+
+function openReportFlow(item = state.selectedItem, triggerButton = reportProblemButton) {
+  if (!item) return;
+
+  if (LOCAL_REPORT_DEMO_MODE || (telegramRuntime.isTelegram && auth?.hasInitData())) {
+    openReportDialog(item, triggerButton);
+    return;
+  }
+
+  const miniAppUrl = getReportMiniAppUrl(item);
+  const opened = openTelegramChat(miniAppUrl);
+  if (detailActionState) {
+    detailActionState.textContent = opened
+      ? "Abre la Mini App desde Telegram para completar el formulario."
+      : "No hemos podido abrir Telegram. Usa el enlace de nuevo para intentarlo.";
+    detailActionState.dataset.state = opened ? "connected" : "error";
+  }
+}
+
+async function handleReportSubmit(event) {
+  event.preventDefault();
+  const item = reportDialogTargetItem;
+  if (!item || !reportReason || !reportDetails || !reportAllowAdminContact || !reportSubmitButton) return;
+
+  const reason = reportReason.value.trim();
+  const details = reportDetails.value.trim();
+  if (!reason) {
+    setReportFormState("Selecciona un motivo.", "error");
+    reportReason.focus();
+    return;
+  }
+  if (reason === "otro" && details.length < 10) {
+    setReportFormState("Describe brevemente qué ha ocurrido.", "error");
+    reportDetails.focus();
+    return;
+  }
+  if (!reportAllowAdminContact.checked) {
+    setReportFormState("Necesitamos tu autorización para que el equipo pueda aclarar el problema contigo.", "error");
+    reportAllowAdminContact.focus();
+    return;
+  }
+
+  const initData = auth?.getInitData?.() ?? "";
+  if (LOCAL_REPORT_DEMO_MODE && !telegramRuntime.isTelegram) {
+    setReportFormState("Modo demo local: no se ha enviado nada.", "success");
+    return;
+  }
+  if (!initData) {
+    closeReportDialog({ restoreFocus: false });
+    openReportFlow(item, reportDialogTriggerButton);
+    return;
+  }
+  if (!api?.isReportConfigured || typeof api.reportProblem !== "function") {
+    setReportFormState("El envío de problemas todavía no está configurado.", "error");
+    return;
+  }
+
+  reportForm?.querySelectorAll("input, select, textarea").forEach((control) => {
+    control.disabled = true;
+  });
+  reportSubmitButton.disabled = true;
+  reportSubmitButton.textContent = "Enviando…";
+  setReportFormState("Estamos enviando el problema de forma segura.", "pending");
+
+  try {
+    const result = await api.reportProblem({
+      initData,
+      item_id: item.id,
+      reason,
+      details,
+      allow_admin_contact: reportAllowAdminContact.checked,
+    });
+    setReportFormState(
+      result.message || "Hemos recibido el problema y el equipo lo revisará.",
+      "success",
+    );
+    reportSubmitButton.textContent = "Problema enviado";
+    if (reportDialogCancel) reportDialogCancel.textContent = "Cerrar";
+    window.SecondaVidaAnalytics?.trackEvent("report", "submit", item.id);
+  } catch (error) {
+    reportForm?.querySelectorAll("input, select, textarea").forEach((control) => {
+      control.disabled = false;
+    });
+    reportSubmitButton.disabled = false;
+    reportSubmitButton.textContent = "Enviar problema";
+    setReportFormState(reportErrorMessage(error), "error");
+  }
+}
+
 function setShareFeedback(message, stateName = "") {
   const feedbackElement = state.currentView === "detail" ? detailActionState : shareFeedback;
   if (!feedbackElement) return;
@@ -2901,6 +3187,7 @@ relatedItemsBrowse?.addEventListener("click", (event) => {
   showRelatedCategory(relatedItemsBrowse.dataset.category || state.selectedItem?.category || "Todo");
 });
 interestButton.addEventListener("click", () => openContactDialog(state.selectedItem));
+reportProblemButton?.addEventListener("click", () => openReportFlow(state.selectedItem, reportProblemButton));
 contactDialogClose?.addEventListener("click", () => closeContactDialog());
 contactDialogCancel?.addEventListener("click", () => closeContactDialog());
 contactDialogConfirm?.addEventListener("click", confirmContactDialog);
@@ -2910,6 +3197,16 @@ contactDialog?.addEventListener("cancel", (event) => {
 });
 contactDialog?.addEventListener("click", (event) => {
   if (event.target === contactDialog) closeContactDialog();
+});
+reportDialogClose?.addEventListener("click", () => closeReportDialog());
+reportDialogCancel?.addEventListener("click", () => closeReportDialog());
+reportForm?.addEventListener("submit", handleReportSubmit);
+reportDialog?.addEventListener("cancel", (event) => {
+  event.preventDefault();
+  closeReportDialog();
+});
+reportDialog?.addEventListener("click", (event) => {
+  if (event.target === reportDialog) closeReportDialog();
 });
 reserveItemDialogCancel?.addEventListener("click", () => closeReserveItemDialog());
 reserveItemDialogConfirm?.addEventListener("click", confirmReserveItemDialog);

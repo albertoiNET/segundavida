@@ -40,7 +40,7 @@
     />
     <link rel="stylesheet" href="/css/icon-fallback.css?v=sv-20260817-40" />
     <link rel="stylesheet" href="/css/tokens.css?v=sv-20260817-41" />
-    <link rel="stylesheet" href="/css/app.css?v=sv-20260818-share-1" />
+    <link rel="stylesheet" href="/css/app.css?v=sv-20260818-cards-1" />
     <script src="https://telegram.org/js/telegram-web-app.js?63"></script>
   </head>
   <body>
@@ -159,6 +159,10 @@
           <button class="primary-button" id="interest-button" type="button">
             <i class="fa-regular fa-message fa-icon" data-fallback="✉" aria-hidden="true"></i>
             <span>Me interesa</span>
+          </button>
+          <button class="quiet-action report-problem-button" id="report-problem-button" type="button" hidden>
+            <i class="fa-solid fa-triangle-exclamation fa-icon" data-fallback="!" aria-hidden="true"></i>
+            <span>Reportar un problema</span>
           </button>
           <div class="action-state" id="detail-action-state" aria-live="polite"></div>
           <div class="detail-owner-actions" id="detail-owner-actions" hidden>
@@ -497,6 +501,50 @@
         </div>
       </dialog>
 
+      <dialog class="report-dialog" id="report-dialog" aria-labelledby="report-dialog-title" aria-describedby="report-dialog-copy">
+        <div class="report-dialog__panel">
+          <div class="report-dialog__topline">
+            <div>
+              <span class="eyebrow">Segunda Vida</span>
+              <h2 id="report-dialog-title">Reportar un problema</h2>
+            </div>
+            <button class="icon-button" id="report-dialog-close" type="button" aria-label="Cerrar" title="Cerrar">
+              <i class="fa-solid fa-xmark fa-icon" data-fallback="×" aria-hidden="true"></i>
+            </button>
+          </div>
+          <p id="report-dialog-copy">Cuéntanos qué ha ocurrido con esta publicación. El equipo de Aldea Pucela revisará el caso.</p>
+          <p class="report-dialog__item" id="report-dialog-item"></p>
+          <form class="report-form" id="report-form" novalidate>
+            <label class="form-field">
+              <span>¿Qué ha pasado?</span>
+              <select id="report-reason" name="reason" required>
+                <option value="">Selecciona un motivo</option>
+                <option value="no_entregado">No me lo entregó</option>
+                <option value="pidio_dinero">Me pidió dinero o algo a cambio</option>
+                <option value="objeto_no_disponible">El objeto no estaba disponible</option>
+                <option value="informacion_falsa">La información no era cierta</option>
+                <option value="planton">Me dejó plantado/a</option>
+                <option value="conducta_abusiva">Tuve una conducta abusiva o inapropiada</option>
+                <option value="otro">Otro problema</option>
+              </select>
+            </label>
+            <label class="form-field">
+              <span>Cuéntanos brevemente qué ocurrió <small>(opcional salvo “Otro”)</small></span>
+              <textarea id="report-details" name="details" maxlength="1500" rows="4" placeholder="Añade datos que puedan ayudar a revisar el caso."></textarea>
+            </label>
+            <label class="consent-field report-consent-field">
+              <input id="report-allow-admin-contact" name="allow_admin_contact" type="checkbox" value="true" required />
+              <span id="report-contact-consent-copy">Acepto que el equipo de Aldea Pucela me contacte por Telegram para aclarar el problema.</span>
+            </label>
+            <p class="form-state" id="report-form-state" aria-live="polite"></p>
+            <div class="report-dialog__actions">
+              <button class="secondary-button" id="report-dialog-cancel" type="button">Ahora no</button>
+              <button class="primary-button" id="report-submit-button" type="submit">Enviar problema</button>
+            </div>
+          </form>
+        </div>
+      </dialog>
+
       <dialog class="reserve-item-dialog" id="reserve-item-dialog" aria-labelledby="reserve-item-dialog-title" aria-describedby="reserve-item-dialog-copy">
         <div class="reserve-item-dialog__panel">
           <h2 id="reserve-item-dialog-title">Confirmar reserva</h2>
@@ -662,6 +710,6 @@
     <script src="/js/auth.js?v=sv-20260817-42"></script>
     <script src="/js/api.js?v=sv-20260817-43"></script>
     <script src="/js/analytics.js?v=sv-20260817-41"></script>
-    <script src="/js/app.js?v=sv-20260818-share-1"></script>
+    <script src="/js/app.js?v=sv-20260818-report-demo-2"></script>
   </body>
 </html>
