@@ -452,6 +452,11 @@ function getTelegramStartParam() {
 }
 
 function getTelegramStartView() {
+  // Telegram conserva start_param durante la sesión de la Mini App. Una vez
+  // que la aplicación ya tiene una ruta propia, no debemos reaplicar el deep link
+  // al recargar después de que el usuario haya navegado a otra vista.
+  if (window.history.state?.svApp === true) return "";
+
   const startParam = getTelegramStartParam().toLowerCase();
   return {
     offer: "offer",

@@ -188,6 +188,7 @@ class StaticContractTests(unittest.TestCase):
         self.assertIn("function openTelegramChat", app_source)
         self.assertIn("function getTelegramMiniAppUrl", app_source)
         self.assertIn("function getTelegramStartView", app_source)
+        self.assertIn('if (window.history.state?.svApp === true) return "";', app_source)
         self.assertIn(': getTelegramStartView() || getViewFromPath() || (isNotFoundPage ? "not-found" : "explore");', app_source)
         self.assertIn('getTelegramMiniAppUrl("offer")', app_source)
         self.assertIn('getTelegramMiniAppUrl("profile")', app_source)
