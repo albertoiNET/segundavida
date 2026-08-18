@@ -68,13 +68,18 @@ Para tolerar despliegues graduales, el cliente reconoce `public_id` primero y
 
 `scripts/generate_static_pages.py` es un generador determinista sin
 dependencias externas. Lee un JSON de objetos públicos o llama al endpoint
-configurado, crea `i/<id>/index.html`, `sitemap.xml` y `robots.txt`, escapa
+configurado, crea `i/<id>/index.html`, `sitemap.xml`, `feed.xml` y `robots.txt`, escapa
 texto y atributos HTML, valida URLs de imagen `http(s)` y aplica la imagen de
 marca como fallback. La plantilla de la portada incluye Open Graph y Twitter
 Cards con el avatar de SegundaVida; las fichas sustituyen esas etiquetas por
 su título, descripción, URL canónica y primera imagen válida de `image_url` o
 `image_urls`. La salida se puede generar en un directorio temporal para
 que n8n la suba como artefacto o la entregue a un job de GitHub Actions.
+
+`feed.xml` es un feed RSS 2.0 con las mismas publicaciones públicas, ordenadas
+de más nuevas a más antiguas cuando tienen `created_at`. Incluye las URLs
+canónicas, categorías, zonas, fechas de publicación válidas e imágenes
+`http(s)` disponibles.
 
 Contrato de invocación local:
 

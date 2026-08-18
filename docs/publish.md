@@ -112,8 +112,8 @@ python3 scripts/generate_static_pages.py \
   --site-url https://segundavida.aldeapucela.org
 ```
 
-El generador produce `i/<public_id>/index.html`, `sitemap.xml`, `robots.txt` y
-un `404.html` de fallback. Rechaza campos sensibles, escapa HTML y usa la
+El generador produce `i/<public_id>/index.html`, `sitemap.xml`, `feed.xml`,
+`robots.txt` y un `404.html` de fallback. Rechaza campos sensibles, escapa HTML y usa la
 marca de SegundaVida como imagen fallback.
 
 ### Momento exacto para disparar GitHub Actions

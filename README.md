@@ -147,9 +147,11 @@ python3 scripts/generate_static_pages.py \
   --site-url https://segundavida.example
 ```
 
-El generador crea las rutas `/i/<public_id>/`, `sitemap.xml`, `robots.txt` y
-un `404.html` de fallback. La salida generada no se versiona; el workflow de
-GitHub Actions la prepara como artefacto y la publica en GitHub Pages. Puede
+El generador crea las rutas `/i/<public_id>/`, `sitemap.xml`, `feed.xml`,
+`robots.txt` y un `404.html` de fallback. El feed RSS contiene las mismas
+publicaciones públicas que las fichas estáticas y está disponible en
+`/feed.xml`. La salida generada no se versiona; el workflow de GitHub Actions
+la prepara como artefacto y la publica en GitHub Pages. Puede
 ejecutarse manualmente o con la programación incluida en
 [`.github/workflows/generate-static-pages.yml`](.github/workflows/generate-static-pages.yml).
 

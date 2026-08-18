@@ -8,6 +8,8 @@ import html
 import json
 import re
 import sys
+from datetime import datetime, timezone
+from email.utils import format_datetime
 from pathlib import Path
 from urllib.parse import quote, urlparse
 from urllib.request import Request, urlopen
@@ -152,6 +154,84 @@ def canonical_url(site_url: str, public_id: str) -> str:
     return f"{site_url.rstrip('/')}/i/{quote(public_id, safe='')}/"
 
 
+def parse_rss_datetime(value: object) -> datetime | None:
+    candidate = str(value or "").strip()
+    if not candidate:
+        return None
+    if candidate.endswith("Z"):
+        candidate = candidate[:-1] + "+00:00"
+    try:
+        parsed = datetime.fromisoformat(candidate)
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    return parsed.astimezone(timezone.utc)
+
+
+def render_rss_feed(items: list[dict[str, object]], site_url: str) -> str:
+    base_url = site_url.rstrip("/")
+    feed_url = f"{base_url}/feed.xml"
+    homepage_url = f"{base_url}/"
+    fallback_image = f"{base_url}/assets/segundavida-mark.png"
+
+    dated_items = [
+        (item, parse_rss_datetime(item.get("created_at")))
+        for item in items
+    ]
+    dated_items.sort(
+        key=lambda entry: (
+            entry[1] is not None,
+            entry[1] or datetime.min.replace(tzinfo=timezone.utc),
+            str(entry[0]["id"]),
+        ),
+        reverse=True,
+    )
+    dates = [date for _, date in dated_items if date is not None]
+
+    lines = [
+        '<?xml version="1.0" encoding="UTF-8"?>',
+        '<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:media="http://search.yahoo.com/mrss/">',
+        "  <channel>",
+        "    <title>Segunda Vida · Aldea Pucela</title>",
+        f'    <link>{html.escape(homepage_url, quote=False)}</link>',
+        "    <description>Últimas publicaciones públicas de Segunda Vida en Aldea Pucela.</description>",
+        "    <language>es</language>",
+        f'    <atom:link href="{html.escape(feed_url, quote=True)}" rel="self" type="application/rss+xml" />',
+        "    <image>",
+        f'      <url>{html.escape(fallback_image, quote=False)}</url>',
+        "      <title>Segunda Vida · Aldea Pucela</title>",
+        f'      <link>{html.escape(homepage_url, quote=False)}</link>',
+        "    </image>",
+    ]
+    if dates:
+        lines.append(f"    <lastBuildDate>{format_datetime(max(dates), usegmt=True)}</lastBuildDate>")
+
+    for item, published_at in dated_items:
+        item_url = canonical_url(site_url, str(item["id"]))
+        description = item["description"] or "Consulta la disponibilidad actual en Segunda Vida."
+        image_url = safe_image_url(item.get("image_url"), "")
+        lines.extend([
+            "    <item>",
+            f'      <title>{html.escape(str(item["title"]), quote=False)}</title>',
+            f'      <link>{html.escape(item_url, quote=False)}</link>',
+            f'      <guid isPermaLink="true">{html.escape(item_url, quote=False)}</guid>',
+            f'      <description>{html.escape(str(description), quote=False)}</description>',
+            f'      <category>{html.escape(str(item["category"]), quote=False)}</category>',
+            f'      <category>{html.escape(str(item["zone"]), quote=False)}</category>',
+        ])
+        if published_at is not None:
+            lines.append(f"      <pubDate>{format_datetime(published_at, usegmt=True)}</pubDate>")
+        if image_url:
+            lines.append(
+                f'      <media:content url="{html.escape(image_url, quote=True)}" medium="image" />'
+            )
+        lines.extend(["    </item>", ""])
+
+    lines.extend(["  </channel>", "</rss>", ""])
+    return "\n".join(lines)
+
+
 def render_metadata(item: dict[str, object], site_url: str) -> str:
     title = f"{item['title']} · Segunda Vida"
     description = (item["description"] or f"{item['title']} disponible en Segunda Vida, Aldea Pucela.")[:200]
@@ -231,6 +311,7 @@ def generate(items: list[dict[str, object]], output_dir: Path, template_path: Pa
     sitemap += "".join(f"  <url><loc>{html.escape(url)}</loc></url>\n" for url in urls)
     sitemap += "</urlset>\n"
     write_text(output_dir / "sitemap.xml", sitemap)
+    write_text(output_dir / "feed.xml", render_rss_feed(items, site_url))
     write_text(output_dir / "robots.txt", "User-agent: *\nAllow: /\nSitemap: " + site_url.rstrip("/") + "/sitemap.xml\n")
     write_text(output_dir / "404.html", template)
     return len(items)

@@ -2,6 +2,7 @@ import json
 import sys
 import tempfile
 import unittest
+import xml.etree.ElementTree as ET
 from pathlib import Path
 
 
@@ -63,19 +64,58 @@ class StaticContractTests(unittest.TestCase):
             self.assertNotIn("STATIC_HOME_METADATA", page)
             self.assertNotIn('property="og:title" content="Segunda Vida · Aldea Pucela"', page)
             self.assertTrue((output / "sitemap.xml").exists())
+            self.assertTrue((output / "feed.xml").exists())
             self.assertTrue((output / "robots.txt").exists())
             self.assertTrue((output / "404.html").exists())
 
             embedded = page.split('id="static-item-data">', 1)[1].split("</script>", 1)[0]
             self.assertEqual(json.loads(embedded)["id"], "safe-001")
 
+    def test_rss_feed_is_public_escaped_and_newest_first(self):
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory)
+            items = [
+                normalize_item({
+                    **self.item(),
+                    "public_id": "safe-old",
+                    "title": "Antiguo & útil",
+                    "created_at": "2026-08-15T10:00:00+02:00",
+                    "image_url": None,
+                }),
+                normalize_item({
+                    **self.item(),
+                    "public_id": "safe-new",
+                    "title": "Nuevo <objeto>",
+                    "created_at": "2026-08-16T10:00:00+02:00",
+                    "image_url": "https://images.example.test/new.jpg?a=1&b=2",
+                }),
+            ]
+            generate(items, output, self.template, self.site_url)
+
+            feed_source = (output / "feed.xml").read_text(encoding="utf-8")
+            root = ET.fromstring(feed_source)
+            feed_items = root.findall("./channel/item")
+            self.assertEqual([item.findtext("title") for item in feed_items], ["Nuevo <objeto>", "Antiguo & útil"])
+            self.assertEqual(
+                feed_items[0].findtext("link"),
+                "https://segundavida.aldeapucela.org/i/safe-new/",
+            )
+            self.assertEqual(feed_items[0].findtext("pubDate"), "Sun, 16 Aug 2026 08:00:00 GMT")
+            self.assertIn("media:content", feed_source)
+            self.assertIn("&lt;script&gt;alert(1)&lt;/script&gt;", feed_source)
+            self.assertNotIn("owner_telegram_id", feed_source)
+
+            self.assertIn('type="application/rss+xml"', (output / "i" / "safe-new" / "index.html").read_text(encoding="utf-8"))
+
     def test_homepage_has_social_metadata_and_image_urls_feed_item_preview(self):
         homepage = self.template.read_text(encoding="utf-8")
         self.assertIn('property="og:title"', homepage)
         self.assertIn('property="og:image"', homepage)
         self.assertIn("https://segundavida.aldeapucela.org/assets/segundavida-social-preview.jpg", homepage)
+        self.assertIn('type="application/rss+xml"', homepage)
         fallback = (ROOT / "404.html").read_text(encoding="utf-8")
         self.assertIn("https://segundavida.aldeapucela.org/assets/segundavida-social-preview.jpg", fallback)
+        self.assertIn('type="application/rss+xml"', fallback)
 
         item = normalize_item({
             **self.item(),
