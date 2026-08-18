@@ -17,6 +17,7 @@ const PHOTO_MAX_EDGE = 1280;
 const PHOTO_JPEG_QUALITY = 0.74;
 const ALLOWED_PHOTO_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 const OWN_ITEMS_STORAGE_KEY = "segundavida:my-items:v1";
+const FAVORITES_STORAGE_KEY = "segundavida:favorites:v1";
 const THEME_STORAGE_KEY = "segundavida:theme:v1";
 const PUBLISH_DRAFT_STORAGE_KEY = "segundavida:publish-draft:v1";
 const PUBLISH_DRAFT_VALUES_KEY = "segundavida:publish-draft-values:v1";
@@ -45,6 +46,7 @@ const state = {
   photoPreviewUrls: [],
   telegramUser: null,
   myItems: [],
+  favoriteEntries: [],
   postsFilter: "active",
   currentView: "explore",
   currentItemId: "",
@@ -61,6 +63,7 @@ let photoLightboxIndex = 0;
 let photoLightboxReturnFocus = null;
 let lastTrackedViewKey = "";
 const trackedInterestTelegramItems = new Set();
+let favoriteFeedbackTimer = null;
 let routeOpenInFlight = null;
 let routeOpenItemId = "";
 let reportStartInFlight = null;
@@ -92,6 +95,8 @@ const statusToggle = document.querySelector("#status-toggle");
 const itemsCount = document.querySelector("#items-count");
 const itemsState = document.querySelector("#items-state");
 const itemsGrid = document.querySelector("#items-grid");
+const favoriteFeedback = document.querySelector("#favorite-feedback");
+const detailFavoriteFeedback = document.querySelector("#detail-favorite-feedback");
 const catalogTitle = document.querySelector("#catalog-title");
 const catalogIntro = document.querySelector(".catalog-intro");
 const catalogTools = document.querySelector(".catalog-tools");
@@ -112,7 +117,9 @@ const photoLightboxPrevious = document.querySelector("#photo-lightbox-previous")
 const photoLightboxNext = document.querySelector("#photo-lightbox-next");
 const detailAvailability = document.querySelector("#detail-availability");
 const detailAvailabilityLabel = document.querySelector("#detail-availability-label");
+const detailAvailabilityIcon = document.querySelector("#detail-availability-icon");
 const detailTitle = document.querySelector("#detail-title");
+const detailFavorite = document.querySelector("#detail-favorite");
 const detailCategory = document.querySelector("#detail-category");
 const detailDescription = document.querySelector("#detail-description");
 const detailZone = document.querySelector("#detail-zone");
@@ -162,6 +169,14 @@ const reserveItemDialog = document.querySelector("#reserve-item-dialog");
 const reserveItemDialogCancel = document.querySelector("#reserve-item-dialog-cancel");
 const reserveItemDialogConfirm = document.querySelector("#reserve-item-dialog-confirm");
 const publishSuccessView = document.querySelector("#publish-success-view");
+const favoritesView = document.querySelector("#favorites-view");
+const favoritesCount = document.querySelector("#favorites-count");
+const favoritesList = document.querySelector("#favorites-list");
+const favoritesEmptyState = document.querySelector("#favorites-empty-state");
+const favoritesEmptyTitle = document.querySelector("#favorites-empty-title");
+const favoritesEmptyCopy = document.querySelector("#favorites-empty-copy");
+const favoritesActionState = document.querySelector("#favorites-action-state");
+const favoritesExploreButton = document.querySelector("#favorites-explore-button");
 const successItemTitle = document.querySelector("#success-item-title");
 const successItemStatus = document.querySelector("#success-item-status");
 const viewPublishedButton = document.querySelector("#view-published-button");
@@ -336,6 +351,8 @@ function pushViewHistory(viewName, itemId = "") {
   url.hash = "";
   url.pathname = itemId
     ? `/i/${encodeURIComponent(itemId)}/`
+    : viewName === "favorites"
+      ? "/favoritos/"
     : "/";
 
   window.history.pushState({
@@ -382,6 +399,11 @@ function getRouteItemId() {
   return "";
 }
 
+function getRouteView() {
+  const path = window.location.pathname.replace(/\/+$/, "") || "/";
+  return path === "/favoritos" ? "favorites" : "";
+}
+
 function getReportStartItemId() {
   if (!telegramRuntime.isTelegram) return "";
 
@@ -421,12 +443,16 @@ function getStaticItem() {
 function prepareHistoryState() {
   const currentState = window.history.state ?? {};
   const itemId = getRouteItemId();
-  const view = itemId ? "detail" : "explore";
+  const view = itemId ? "detail" : getRouteView() || "explore";
   const index = getHistoryIndex(currentState);
 
   const canonicalUrl = new URL(window.location.href);
   if (itemId) {
     canonicalUrl.pathname = `/i/${encodeURIComponent(itemId)}/`;
+    canonicalUrl.search = "";
+    canonicalUrl.hash = "";
+  } else if (view === "favorites") {
+    canonicalUrl.pathname = "/favoritos/";
     canonicalUrl.search = "";
     canonicalUrl.hash = "";
   }
@@ -553,6 +579,170 @@ function saveOwnItems() {
   }
 }
 
+function isUsableFavoriteId(value) {
+  const id = String(value ?? "").trim();
+  return /^[A-Za-z0-9][A-Za-z0-9_-]{5,79}$/.test(id);
+}
+
+function readFavorites() {
+  try {
+    const stored = JSON.parse(window.localStorage.getItem(FAVORITES_STORAGE_KEY) ?? "[]");
+    if (!Array.isArray(stored)) return [];
+
+    const seen = new Set();
+    return stored
+      .map((entry, index) => {
+        const id = typeof entry === "string" ? entry : entry?.id;
+        const normalizedId = String(id ?? "").trim();
+        if (!isUsableFavoriteId(normalizedId) || seen.has(normalizedId)) return null;
+        seen.add(normalizedId);
+        const savedAt = typeof entry === "object" && entry?.savedAt
+          ? String(entry.savedAt)
+          : new Date(Date.now() - index).toISOString();
+        return { id: normalizedId, savedAt };
+      })
+      .filter(Boolean);
+  } catch {
+    return [];
+  }
+}
+
+function saveFavorites(entries) {
+  try {
+    window.localStorage.setItem(FAVORITES_STORAGE_KEY, JSON.stringify(entries));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function isFavorite(item) {
+  return Boolean(item?.id && state.favoriteEntries.some((entry) => entry.id === item.id));
+}
+
+function setFavoriteFeedback(message, stateName = "") {
+  if (favoriteFeedbackTimer) window.clearTimeout(favoriteFeedbackTimer);
+  [favoriteFeedback, detailFavoriteFeedback, favoritesActionState].filter(Boolean).forEach((element) => {
+    element.textContent = message;
+    element.dataset.state = stateName;
+  });
+
+  if (!message) return;
+  favoriteFeedbackTimer = window.setTimeout(() => {
+    [favoriteFeedback, detailFavoriteFeedback, favoritesActionState].filter(Boolean).forEach((element) => {
+      element.textContent = "";
+      element.dataset.state = "";
+    });
+  }, 4200);
+}
+
+function updateFavoriteButton(button, item) {
+  if (!button || !item?.id) return;
+  const active = isFavorite(item);
+  const actionLabel = active
+    ? `Quitar «${item.title}» de favoritos`
+    : `Añadir «${item.title}» a favoritos`;
+  const icon = document.createElement("i");
+  icon.className = `${active ? "fa-solid" : "fa-regular"} fa-heart fa-icon`;
+  icon.dataset.fallback = active ? "♥" : "♡";
+  icon.setAttribute("aria-hidden", "true");
+  button.classList.toggle("is-active", active);
+  button.setAttribute("aria-pressed", String(active));
+  button.setAttribute("aria-label", actionLabel);
+  button.setAttribute("title", active ? "Quitar de favoritos" : "Añadir a favoritos");
+  button.replaceChildren(icon);
+}
+
+function refreshFavoriteControls(item) {
+  if (!item?.id) return;
+  document.querySelectorAll(".favorite-toggle").forEach((button) => {
+    if (button.dataset.itemId === item.id) updateFavoriteButton(button, item);
+  });
+}
+
+function createFavoriteButton(item, className = "") {
+  const button = document.createElement("button");
+  button.className = `favorite-toggle${className ? ` ${className}` : ""}`;
+  button.type = "button";
+  button.dataset.itemId = item.id;
+  button.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    toggleFavorite(item, button);
+  });
+  updateFavoriteButton(button, item);
+  return button;
+}
+
+function toggleFavorite(item, triggerButton = null) {
+  if (!item?.id) return;
+
+  const wasFavorite = isFavorite(item);
+  const nextEntries = wasFavorite
+    ? state.favoriteEntries.filter((entry) => entry.id !== item.id)
+    : [
+      ...state.favoriteEntries,
+      { id: item.id, savedAt: new Date().toISOString() },
+    ];
+  state.favoriteEntries = nextEntries;
+  const persisted = saveFavorites(nextEntries);
+  const action = wasFavorite ? "remove" : "add";
+
+  refreshFavoriteControls(item);
+  if (state.currentView === "favorites") renderFavorites();
+  if (state.currentView === "detail" && state.selectedItem?.id === item.id) {
+    updateFavoriteButton(detailFavorite, item);
+  }
+
+  window.SecondaVidaAnalytics?.trackEvent("favorite", action, item.id);
+  setFavoriteFeedback(
+    persisted
+      ? wasFavorite
+        ? `«${item.title}» se ha quitado de favoritos.`
+        : `«${item.title}» se ha añadido a favoritos.`
+      : "No se ha podido guardar el cambio en este navegador.",
+    persisted ? "connected" : "error",
+  );
+
+  if (triggerButton?.isConnected) triggerButton.focus();
+}
+
+function getFavoriteItems() {
+  const itemsById = new Map(state.items.map((item) => [item.id, item]));
+  return state.favoriteEntries
+    .map((entry) => ({ entry, item: itemsById.get(entry.id) }))
+    .filter(({ item }) => item && ["available", "reserved"].includes(item.status) && isNotExpired(item))
+    .sort((left, right) => {
+      const leftTime = Date.parse(left.entry.savedAt) || 0;
+      const rightTime = Date.parse(right.entry.savedAt) || 0;
+      return rightTime - leftTime || String(left.item.id).localeCompare(String(right.item.id));
+    })
+    .map(({ item }) => item);
+}
+
+function renderFavorites() {
+  if (!favoritesList || !favoritesEmptyState) return;
+
+  const favoriteItems = getFavoriteItems();
+  const hasStoredFavorites = state.favoriteEntries.length > 0;
+  favoritesList.replaceChildren(...favoriteItems.map(createItemCard));
+  favoritesList.hidden = favoriteItems.length === 0;
+  favoritesEmptyState.hidden = favoriteItems.length > 0;
+  if (favoritesCount) {
+    favoritesCount.textContent = `${favoriteItems.length} ${favoriteItems.length === 1 ? "cosa" : "cosas"}`;
+  }
+  if (favoritesEmptyTitle) {
+    favoritesEmptyTitle.textContent = hasStoredFavorites && favoriteItems.length === 0
+      ? "Tus favoritos ya no están disponibles"
+      : "Aún no tienes favoritos";
+  }
+  if (favoritesEmptyCopy) {
+    favoritesEmptyCopy.textContent = hasStoredFavorites && favoriteItems.length === 0
+      ? "Los objetos guardados ya no aparecen en el catálogo. Sigue explorando para encontrar algo nuevo."
+      : "Pulsa el corazón de cualquier objeto para guardarlo aquí.";
+  }
+}
+
 function rememberOwnItem(item) {
   if (!item?.id) return;
 
@@ -641,9 +831,6 @@ function getInterestMessage(item) {
 function createItemCard(item, index) {
   const card = document.createElement("article");
   card.className = "item-card";
-  card.tabIndex = 0;
-  card.setAttribute("role", "button");
-  card.setAttribute("aria-label", `Ver ${item.title}`);
   card.style.animationDelay = `${Math.min(index * 60, 240)}ms`;
   card.dataset.itemId = item.id;
 
@@ -662,7 +849,20 @@ function createItemCard(item, index) {
 
   const body = document.createElement("div");
   body.className = "item-card__body";
-  body.append(createTextElement("h3", "item-card__title", item.title));
+  const titleRow = document.createElement("div");
+  titleRow.className = "item-card__title-row";
+  const openButton = document.createElement("button");
+  openButton.className = "item-card__open";
+  openButton.type = "button";
+  openButton.setAttribute("aria-label", `Ver ${item.title}`);
+  openButton.append(createTextElement("h3", "item-card__title", item.title));
+  openButton.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    showDetail(item);
+  });
+  titleRow.append(openButton, createFavoriteButton(item));
+  body.append(titleRow);
 
   const meta = document.createElement("div");
   meta.className = "item-card__meta";
@@ -678,20 +878,20 @@ function createItemCard(item, index) {
     : item.expiresAt
       ? `Hasta ${formatCompactDate(item.expiresAt)}`
       : "Disponible";
+  const availabilityIcon = item.status === "reserved"
+    ? createIconElement("fa-lock", "▣")
+    : createIconElement("fa-clock", "◷");
   availability.append(
-    createIconElement("fa-clock", "◷"),
+    availabilityIcon,
     document.createTextNode(availabilityLabel),
   );
   meta.append(availability);
   body.append(meta);
 
   card.append(body);
-  card.addEventListener("click", () => showDetail(item));
-  card.addEventListener("keydown", (event) => {
-    if (event.key === "Enter" || event.key === " ") {
-      event.preventDefault();
-      showDetail(item);
-    }
+  card.addEventListener("click", (event) => {
+    if (event.target.closest("button, a")) return;
+    showDetail(item);
   });
   return card;
 }
@@ -726,9 +926,6 @@ function getExplorationItems(item) {
 function createRelatedItemCard(item) {
   const card = document.createElement("article");
   card.className = "related-item-card";
-  card.tabIndex = 0;
-  card.setAttribute("role", "button");
-  card.setAttribute("aria-label", `Ver ${item.title}`);
   card.dataset.itemId = item.id;
 
   const media = document.createElement("div");
@@ -748,7 +945,20 @@ function createRelatedItemCard(item) {
 
   const body = document.createElement("div");
   body.className = "related-item-card__body";
-  body.append(createTextElement("h3", "related-item-card__title", item.title));
+  const titleRow = document.createElement("div");
+  titleRow.className = "related-item-card__title-row";
+  const openButton = document.createElement("button");
+  openButton.className = "related-item-card__open";
+  openButton.type = "button";
+  openButton.setAttribute("aria-label", `Ver ${item.title}`);
+  openButton.append(createTextElement("h3", "related-item-card__title", item.title));
+  openButton.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    showDetail(item);
+  });
+  titleRow.append(openButton, createFavoriteButton(item, "favorite-toggle--related"));
+  body.append(titleRow);
   body.append(createTextElement(
     "span",
     "related-item-card__availability",
@@ -756,12 +966,9 @@ function createRelatedItemCard(item) {
   ));
   card.append(body);
 
-  card.addEventListener("click", () => showDetail(item));
-  card.addEventListener("keydown", (event) => {
-    if (event.key === "Enter" || event.key === " ") {
-      event.preventDefault();
-      showDetail(item);
-    }
+  card.addEventListener("click", (event) => {
+    if (event.target.closest("button, a")) return;
+    showDetail(item);
   });
   return card;
 }
@@ -867,7 +1074,7 @@ function renderReservedActionState() {
 
   const icon = document.createElement("span");
   icon.className = "action-state__icon";
-  icon.append(createIconElement("fa-clock", "◷"));
+  icon.append(createIconElement("fa-lock", "▣"));
 
   const content = document.createElement("div");
   content.className = "action-state__content";
@@ -940,11 +1147,14 @@ function createPhotoCarousel(item, { className = "", openLightbox = true } = {})
       openLightbox ? `Abrir foto ${index + 1} en grande` : `Ver ficha, foto ${index + 1}`,
     );
     slide.addEventListener("click", (event) => {
-      if (!openLightbox) return;
       event.preventDefault();
       event.stopPropagation();
       if (swipeHappened) return;
-      openPhotoLightbox(item, index, slide);
+      if (openLightbox) {
+        openPhotoLightbox(item, index, slide);
+      } else {
+        showDetail(item);
+      }
     });
 
     const image = document.createElement("img");
@@ -1283,7 +1493,13 @@ function renderDetail(item, { live = true, error = "" } = {}) {
   } else {
     detailAvailability.textContent = availabilityLabel;
   }
+  if (detailAvailabilityIcon) {
+    detailAvailabilityIcon.className = item.status === "reserved"
+      ? "fa-solid fa-lock fa-icon"
+      : "fa-regular fa-calendar-days fa-icon";
+  }
   detailTitle.textContent = item.title;
+  updateFavoriteButton(detailFavorite, item);
   detailCategory.replaceChildren(createCategoryIcon(item.category), document.createTextNode(` ${item.category}`));
   detailDescription.textContent = item.description || "";
   detailDescription.hidden = !item.description;
@@ -1380,6 +1596,7 @@ function setView(viewName, { syncHistory = true, itemId = "" } = {}) {
   state.currentView = viewName;
   state.currentItemId = itemId || "";
   const isExplore = viewName === "explore";
+  const isFavorites = viewName === "favorites";
   const isOffer = viewName === "offer";
   const isPosts = viewName === "posts";
   const isDetail = viewName === "detail";
@@ -1391,6 +1608,7 @@ function setView(viewName, { syncHistory = true, itemId = "" } = {}) {
   catalogTools.hidden = !isExplore;
   if (!isExplore) setSearchOpen(false);
   catalogSection.hidden = !isExplore;
+  favoritesView.hidden = !isFavorites;
   offerView.hidden = !isOffer;
   postsView.hidden = !isPosts;
   detailView.hidden = !isDetail;
@@ -1400,8 +1618,9 @@ function setView(viewName, { syncHistory = true, itemId = "" } = {}) {
   detailShare.setAttribute("title", isDetail ? "Compartir publicación" : "Compartir Segunda Vida");
 
   if (isOffer) configureOfferAuth();
+  if (isFavorites) renderFavorites();
   if (isPosts) configurePostsView();
-  if (isExplore && state.catalogNeedsRefresh && !getRouteItemId()) {
+  if ((isExplore || isFavorites) && state.catalogNeedsRefresh && !getRouteItemId()) {
     void loadCatalog();
   }
 
@@ -1538,6 +1757,7 @@ async function loadCatalog() {
     renderCategories();
     renderStatusFilters();
     renderItems();
+    renderFavorites();
     renderMyItems();
     renderRelatedItems(state.selectedItem);
     void openItemFromRoute();
@@ -1604,6 +1824,7 @@ async function loadMineItems() {
     renderCategories();
     renderStatusFilters();
     renderItems();
+    renderFavorites();
     renderMyItems();
     return records;
   } catch {
@@ -3324,6 +3545,11 @@ interestButton.addEventListener("click", () => {
   if (item?.id) window.SecondaVidaAnalytics?.trackEvent("interest", "click", item.id);
   openContactDialog(item);
 });
+detailFavorite?.addEventListener("click", (event) => {
+  event.preventDefault();
+  toggleFavorite(state.selectedItem, detailFavorite);
+});
+favoritesExploreButton?.addEventListener("click", () => setView("explore"));
 telegramOpenLink?.addEventListener("click", () => {
   window.SecondaVidaAnalytics?.trackEvent("telegram", "open-mini-app", "offer");
 });
@@ -3446,8 +3672,12 @@ if (telegramBackButton && typeof telegramBackButton.onClick === "function") {
 }
 
 state.myItems = readOwnItems();
+state.favoriteEntries = readFavorites();
 state.staticItem = getStaticItem();
 prepareHistoryState();
+if (state.currentView !== "explore") {
+  setView(state.currentView, { syncHistory: false, itemId: state.currentItemId });
+}
 lastTrackedViewKey = `${state.currentView}:${state.currentItemId}`;
 window.SecondaVidaAnalytics?.trackPageView();
 configureOfferAuth();

@@ -41,7 +41,7 @@
     />
     <link rel="stylesheet" href="/css/icon-fallback.css?v=sv-20260817-40" />
     <link rel="stylesheet" href="/css/tokens.css?v=sv-20260817-41" />
-    <link rel="stylesheet" href="/css/app.css?v=sv-20260818-404-page-1" />
+    <link rel="stylesheet" href="/css/app.css?v=sv-20260818-favorites-1" />
     <script src="https://telegram.org/js/telegram-web-app.js?63"></script>
   </head>
   <body data-page="not-found" class="not-found-page">
@@ -123,17 +123,24 @@
         </div>
 
         <div id="items-state" class="items-state" aria-live="polite">Cargando objetos...</div>
+        <p class="action-state favorite-feedback" id="favorite-feedback" role="status" aria-live="polite"></p>
         <div id="items-grid" class="items-grid" aria-live="polite"></div>
       </section>
 
       <section class="detail-view" id="detail-view" hidden aria-labelledby="detail-title">
         <div class="detail-media" id="detail-media"></div>
         <div class="detail-content">
-          <h1 id="detail-title">Objeto</h1>
+          <div class="detail-title-row">
+            <h1 id="detail-title">Objeto</h1>
+            <button class="favorite-toggle favorite-toggle--detail" id="detail-favorite" type="button" aria-pressed="false" aria-label="Añadir este objeto a favoritos" title="Añadir a favoritos">
+              <i class="fa-regular fa-heart fa-icon" data-fallback="♡" aria-hidden="true"></i>
+            </button>
+          </div>
+          <p class="action-state favorite-feedback detail-favorite-feedback" id="detail-favorite-feedback" role="status" aria-live="polite"></p>
           <div class="detail-subline">
             <p class="detail-category" id="detail-category"></p>
             <p class="detail-availability" id="detail-availability">
-              <i class="fa-regular fa-calendar-days fa-icon" data-fallback="▣" aria-hidden="true"></i>
+              <i class="fa-regular fa-calendar-days fa-icon" id="detail-availability-icon" data-fallback="▣" aria-hidden="true"></i>
               <span id="detail-availability-label">Disponible</span>
             </p>
           </div>
@@ -214,6 +221,28 @@
         <div class="success-actions">
           <button class="primary-button" id="view-published-button" type="button">Ver publicación</button>
           <button class="secondary-button" id="go-posts-button" type="button">Ir a mis publicaciones</button>
+        </div>
+      </section>
+
+      <section class="secondary-view favorites-view" id="favorites-view" hidden aria-labelledby="favorites-title">
+        <div class="favorites-heading">
+          <div>
+            <h1 id="favorites-title">Favoritos</h1>
+            <p class="view-copy">Guarda aquí los objetos que te gustaría volver a encontrar.</p>
+          </div>
+          <span class="items-count" id="favorites-count" aria-live="polite">0 cosas</span>
+        </div>
+        <p class="favorites-note">Tus favoritos se guardan en este navegador y no se sincronizan entre dispositivos.</p>
+        <p class="action-state favorites-action-state" id="favorites-action-state" aria-live="polite"></p>
+        <div class="items-grid favorites-list" id="favorites-list" aria-live="polite"></div>
+        <div class="empty-state favorites-empty-state" id="favorites-empty-state">
+          <span class="empty-state__icon" aria-hidden="true"><i class="fa-regular fa-heart fa-icon" data-fallback="♡"></i></span>
+          <strong id="favorites-empty-title">Aún no tienes favoritos</strong>
+          <p id="favorites-empty-copy">Pulsa el corazón de cualquier objeto para guardarlo aquí.</p>
+          <button class="primary-button empty-state__action" id="favorites-explore-button" type="button">
+            <i class="fa-solid fa-magnifying-glass fa-icon" data-fallback="⌕" aria-hidden="true"></i>
+            <span>Explorar objetos</span>
+          </button>
         </div>
       </section>
 
@@ -694,13 +723,21 @@
           <span class="nav-item__icon" aria-hidden="true"><i class="fa-solid fa-magnifying-glass fa-icon" data-fallback="⌕"></i></span>
           <span>Explorar</span>
         </button>
+        <a class="nav-item" href="https://t.me/aldeapucela" target="_blank" rel="noopener noreferrer">
+          <span class="nav-item__icon" aria-hidden="true"><i class="fa-solid fa-comments fa-icon" data-fallback="☷"></i></span>
+          <span>Comunidad</span>
+        </a>
         <button class="nav-item nav-item--action" type="button" data-view="offer">
           <span class="nav-item__icon" aria-hidden="true"><i class="fa-solid fa-plus fa-icon" data-fallback="+"></i></span>
           <span>Ofrecer</span>
         </button>
         <button class="nav-item" type="button" data-view="posts">
           <span class="nav-item__icon" aria-hidden="true"><i class="fa-solid fa-user fa-icon" data-fallback="●"></i></span>
-          <span>Mis publicaciones</span>
+          <span>Mi perfil</span>
+        </button>
+        <button class="nav-item" type="button" data-view="favorites">
+          <span class="nav-item__icon" aria-hidden="true"><i class="fa-regular fa-heart fa-icon" data-fallback="♡"></i></span>
+          <span>Favoritos</span>
         </button>
       </nav>
 
@@ -713,6 +750,6 @@
     <script src="/js/auth.js?v=sv-20260817-42"></script>
     <script src="/js/api.js?v=sv-20260817-43"></script>
     <script src="/js/analytics.js?v=sv-20260817-41"></script>
-    <script src="/js/app.js?v=sv-20260818-analytics-events-1"></script>
+    <script src="/js/app.js?v=sv-20260818-favorites-2"></script>
   </body>
 </html>

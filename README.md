@@ -19,6 +19,7 @@ no utiliza un framework ni necesita un proceso de compilación.
 
 - Catálogo público de objetos disponibles, ordenado por fecha de publicación.
 - Búsqueda por texto y filtros por categoría.
+- Favoritos guardados en el navegador, disponibles sin iniciar sesión.
 - Fichas individuales con descripción, zona aproximada, persona que lo ofrece,
   disponibilidad y hasta dos fotografías.
 - URLs públicas estables (`/i/<public_id>/`) con metadatos para buscadores y

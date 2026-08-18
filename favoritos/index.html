@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="noindex, follow" />
+    <title>Favoritos · Segunda Vida</title>
+  </head>
+  <body>
+    <main>
+      <p>Cargando Favoritos…</p>
+    </main>
+    <script>
+      (async () => {
+        try {
+          const response = await fetch("/index.html", { cache: "no-store" });
+          if (!response.ok) throw new Error("index_unavailable");
+
+          const source = await response.text();
+          const documentTemplate = new DOMParser().parseFromString(source, "text/html");
+          history.replaceState({ svApp: true, svView: "favorites", svItemId: null, svIndex: 0 }, "", "/favoritos/");
+          document.replaceChild(document.importNode(documentTemplate.documentElement, true), document.documentElement);
+
+          document.querySelectorAll("script").forEach((oldScript) => {
+            const newScript = document.createElement("script");
+            [...oldScript.attributes].forEach((attribute) => newScript.setAttribute(attribute.name, attribute.value));
+            newScript.textContent = oldScript.textContent;
+            oldScript.replaceWith(newScript);
+          });
+        } catch {
+          document.querySelector("main").innerHTML = "<p>No se ha podido cargar Favoritos. <a href=\"/\">Volver a explorar</a></p>";
+        }
+      })();
+    </script>
+  </body>
+</html>
