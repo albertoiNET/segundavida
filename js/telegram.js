@@ -6,9 +6,9 @@
   const query = new URLSearchParams(window.location.search);
   const startParam = String(
     webApp?.initDataUnsafe?.start_param
-      ?? query.get("tgWebAppStartParam")
-      ?? query.get("startapp")
-      ?? "",
+      || query.get("tgWebAppStartParam")
+      || query.get("startapp")
+      || "",
   ).trim();
   // El SDK también se carga en la web normal; initData solo existe al abrirse desde Telegram.
   const isTelegram = Boolean(webApp?.initData?.trim());

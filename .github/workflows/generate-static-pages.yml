@@ -42,7 +42,7 @@ jobs:
           SOURCE_URL: ${{ steps.source.outputs.url }}
         run: |
           mkdir -p generated-site
-          cp -R assets css js favoritos generated-site/
+          cp -R assets css js favoritos ofrecer perfil generated-site/
           cp index.html generated-site/
           python3 scripts/generate_static_pages.py \
             --source-url "$SOURCE_URL" \

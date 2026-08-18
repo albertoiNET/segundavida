@@ -317,8 +317,10 @@ class StaticContractTests(unittest.TestCase):
         self.assertIn('id="related-items"', fallback_source)
         self.assertIn('id="contact-dialog"', fallback_source)
         self.assertTrue((ROOT / "favoritos" / "index.html").exists())
+        self.assertTrue((ROOT / "ofrecer" / "index.html").exists())
+        self.assertTrue((ROOT / "perfil" / "index.html").exists())
         workflow_source = (ROOT / ".github" / "workflows" / "generate-static-pages.yml").read_text(encoding="utf-8")
-        self.assertIn("favoritos generated-site/", workflow_source)
+        self.assertIn("favoritos ofrecer perfil generated-site/", workflow_source)
         for source in (
             index_source,
             fallback_source,

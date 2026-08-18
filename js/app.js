@@ -440,8 +440,19 @@ function getRouteView() {
   return path === "/favoritos" ? "favorites" : "";
 }
 
+function getTelegramStartParam() {
+  const query = new URLSearchParams(window.location.search);
+  const candidates = [
+    window.Telegram?.WebApp?.initDataUnsafe?.start_param,
+    telegramRuntime.startParam,
+    query.get("tgWebAppStartParam"),
+    query.get("startapp"),
+  ];
+  return candidates.map((value) => String(value ?? "").trim()).find(Boolean) || "";
+}
+
 function getTelegramStartView() {
-  const startParam = String(telegramRuntime.startParam ?? "").trim().toLowerCase();
+  const startParam = getTelegramStartParam().toLowerCase();
   return {
     offer: "offer",
     profile: "posts",
@@ -453,7 +464,7 @@ function getTelegramStartView() {
 function getReportStartItemId() {
   if (!telegramRuntime.isTelegram) return "";
 
-  const startParam = String(telegramRuntime.startParam ?? "").trim();
+  const startParam = getTelegramStartParam();
   const match = startParam.match(/^report_([A-Za-z0-9][A-Za-z0-9_-]{5,79})$/);
   return match ? match[1] : "";
 }
@@ -461,7 +472,7 @@ function getReportStartItemId() {
 function getManageStartItemId() {
   if (!telegramRuntime.isTelegram) return "";
 
-  const startParam = String(telegramRuntime.startParam ?? "").trim();
+  const startParam = getTelegramStartParam();
   const match = startParam.match(/^manage_([A-Za-z0-9][A-Za-z0-9_-]{5,79})$/);
   return match ? match[1] : "";
 }

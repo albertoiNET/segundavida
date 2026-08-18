@@ -25,11 +25,13 @@ la navegación no recargue la Mini App:
 - `/favoritos/` — reserva de ruta para Favoritos; la entrada permanece
   desactivada mientras no exista la funcionalidad.
 
-GitHub Pages entrega `404.html` como fallback para las tres rutas internas. Al
-hidratarse, el router identifica la ruta solicitada, muestra la vista correcta,
-actualiza canonical y marca `/ofrecer/`, `/perfil/` y `/favoritos/` como
-`noindex, nofollow`. Las fichas generadas bajo `/i/<public_id>/` no heredan esa
-directiva y conservan sus metadatos indexables. Las rutas atrás/adelante
+Las tres rutas internas incluyen una entrada estática que carga la aplicación
+compartida y conserva la ruta al recargar, incluso cuando el navegador sirve la
+página desde caché. `404.html` sigue siendo el fallback para rutas desconocidas.
+Al hidratarse, el router identifica la ruta solicitada, muestra la vista
+correcta, actualiza canonical y marca `/ofrecer/`, `/perfil/` y `/favoritos/`
+como `noindex, nofollow`. Las fichas generadas bajo `/i/<public_id>/` no heredan
+esa directiva y conservan sus metadatos indexables. Las rutas atrás/adelante
 restauran la vista a partir de `popstate` y una ficha pública sigue usando su
 canonical independiente.
 
