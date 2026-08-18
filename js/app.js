@@ -66,8 +66,10 @@ const n8nStatusLabel = document.querySelector("#n8n-status-label");
 const identityStatus = document.querySelector("#identity-status");
 const identityStatusLabel = document.querySelector("#identity-status-label");
 const searchInput = document.querySelector("#search-input");
-const categoryFilters = document.querySelector("#category-filters");
-const statusFilters = document.querySelector("#status-filters");
+const categoryFilterSelect = document.querySelector("#category-filter");
+const categoryFilterLabel = document.querySelector("#category-filter-label");
+const statusFilterSelect = document.querySelector("#status-filter");
+const statusFilterLabel = document.querySelector("#status-filter-label");
 const itemsCount = document.querySelector("#items-count");
 const itemsState = document.querySelector("#items-state");
 const itemsGrid = document.querySelector("#items-grid");
@@ -272,7 +274,7 @@ function pushViewHistory(viewName, itemId = "") {
   const currentState = window.history.state ?? {};
   const nextIndex = getHistoryIndex(currentState) + 1;
   const url = new URL(window.location.href);
-  url.search = "";
+  url.search = LOCAL_AUTHOR_DEMO_MODE ? "?demo=author" : "";
   url.hash = "";
   url.pathname = itemId
     ? `/i/${encodeURIComponent(itemId)}/`
@@ -432,10 +434,7 @@ function configureStatusButton(button, status) {
 function configureDeleteButton(button) {
   if (!button) return;
   button.setAttribute("aria-label", "Borrar objeto");
-  button.replaceChildren(
-    createIconElement("fa-trash-can", "⌫"),
-    document.createTextNode("Borrar objeto"),
-  );
+  button.replaceChildren(createIconElement("fa-trash-can", "⌫"));
 }
 
 function normalizeTelegramUsername(value) {
@@ -476,6 +475,7 @@ function rememberOwnItem(item) {
 
 function isOwnItem(item) {
   if (!item?.id) return false;
+  if (LOCAL_AUTHOR_DEMO_MODE) return true;
 
   const authenticatedTelegramId = String(
     state.telegramUser?.telegram_id ?? state.telegramUser?.id ?? "",
@@ -779,7 +779,7 @@ function createOwnedItemCard(item) {
   deliveredButton.type = "button";
   configureDeliveryButton(deliveredButton, item.status);
   const statusButton = document.createElement("button");
-  statusButton.className = "secondary-button secondary-button--compact status-action-button";
+  statusButton.className = "secondary-button secondary-button--compact delivery-action-button status-action-button";
   statusButton.type = "button";
   configureStatusButton(statusButton, item.status);
   const deleteButton = document.createElement("button");
@@ -800,6 +800,36 @@ function createOwnedItemCard(item) {
   card.append(actionState);
 
   return card;
+}
+
+function createLocalAuthorDemoItems(items) {
+  const activeItems = items
+    .filter((item) => ["available", "reserved"].includes(item.status))
+    .slice(0, 3)
+    .map((item) => ({
+      ...item,
+      ownerDisplayName: "Autor de demo",
+      ownerUsername: "autor_demo",
+      ownerTelegramId: "demo-author",
+    }));
+  const completedSource = activeItems[0];
+
+  if (!completedSource) return activeItems;
+
+  return [
+    ...activeItems,
+    {
+      ...completedSource,
+      id: `${completedSource.id}-completed-demo`,
+      title: `${completedSource.title} · entregado`,
+      ownerDisplayName: "Autor de demo",
+      ownerUsername: "autor_demo",
+      ownerTelegramId: "demo-author",
+      status: "completed",
+      expiresAt: null,
+      completedAt: new Date().toISOString(),
+    },
+  ];
 }
 
 function renderMyItems() {
@@ -1032,12 +1062,17 @@ function configurePostsView() {
   if (!postsContent || !postsAuthGate || !postsOpenTelegramLink) return;
 
   const miniAppUrl = telegramRuntime.miniAppUrl || "https://t.me/pucelobot/segundavida";
-  const verified = Boolean(auth?.hasInitData() && state.telegramUser?.valid);
+  const verified = LOCAL_AUTHOR_DEMO_MODE || Boolean(auth?.hasInitData() && state.telegramUser?.valid);
   postsOpenTelegramLink.href = miniAppUrl;
   postsContent.hidden = !verified;
   postsAuthGate.hidden = verified;
 
-  if (verified) renderMyItems();
+  if (verified) {
+    if (LOCAL_AUTHOR_DEMO_MODE && state.items.length) {
+      state.myItems = createLocalAuthorDemoItems(state.items);
+    }
+    renderMyItems();
+  }
 }
 
 function setView(viewName, { syncHistory = true, itemId = "" } = {}) {
@@ -1064,7 +1099,7 @@ function setView(viewName, { syncHistory = true, itemId = "" } = {}) {
   postsView.hidden = !isPosts;
   detailView.hidden = !isDetail;
   publishSuccessView.hidden = !isSuccess;
-  detailShare.hidden = !(isExplore || isDetail);
+  detailShare.hidden = false;
   detailShare.setAttribute("aria-label", isDetail ? "Compartir publicación" : "Compartir Segunda Vida");
   detailShare.setAttribute("title", isDetail ? "Compartir publicación" : "Compartir Segunda Vida");
 
@@ -1098,46 +1133,38 @@ function setView(viewName, { syncHistory = true, itemId = "" } = {}) {
 }
 
 function renderCategories() {
-  categoryFilters.replaceChildren();
+  if (!categoryFilterSelect) return;
   const categories = ["Todo", ...new Set(state.items.map((item) => item.category))];
 
-  categories.forEach((category) => {
-    const button = document.createElement("button");
-    button.className = "filter-chip";
-    button.type = "button";
-    button.role = "tab";
-    button.setAttribute("aria-selected", String(state.category === category));
-    button.textContent = category;
-    button.addEventListener("click", () => {
-      state.category = category;
-      renderCategories();
-      renderItems();
-    });
-    categoryFilters.append(button);
-  });
+  categoryFilterSelect.replaceChildren(...categories.map((category) => {
+    const option = document.createElement("option");
+    option.value = category;
+    option.textContent = category;
+    return option;
+  }));
+  if (!categories.includes(state.category)) state.category = "Todo";
+  categoryFilterSelect.value = state.category;
+  if (categoryFilterLabel) categoryFilterLabel.textContent = state.category === "Todo" ? "Categoría" : state.category;
 }
 
 function renderStatusFilters() {
-  if (!statusFilters) return;
+  if (!statusFilterSelect) return;
   const statuses = [
     ["all", "Todas"],
     ["available", "Disponibles"],
     ["reserved", "Reservados"],
   ];
-  statusFilters.replaceChildren(...statuses.map(([status, label]) => {
-    const button = document.createElement("button");
-    button.className = "filter-chip filter-chip--status";
-    button.type = "button";
-    button.role = "tab";
-    button.setAttribute("aria-selected", String(state.statusFilter === status));
-    button.textContent = label;
-    button.addEventListener("click", () => {
-      state.statusFilter = status;
-      renderStatusFilters();
-      renderItems();
-    });
-    return button;
+  statusFilterSelect.replaceChildren(...statuses.map(([status, label]) => {
+    const option = document.createElement("option");
+    option.value = status;
+    option.textContent = label;
+    return option;
   }));
+  statusFilterSelect.value = state.statusFilter;
+  if (statusFilterLabel) {
+    const selectedStatus = statuses.find(([status]) => status === state.statusFilter);
+    statusFilterLabel.textContent = state.statusFilter === "all" ? "Estado" : selectedStatus?.[1] || "Estado";
+  }
 }
 
 function sortNewestFirst(items) {
@@ -1209,6 +1236,9 @@ async function loadCatalog() {
     setServiceState(n8nStatus, n8nStatusLabel, "connected", "Conectado ✓");
     state.catalogNeedsRefresh = false;
     state.items = records.filter((item) => ["available", "reserved"].includes(item.status) && isNotExpired(item));
+    if (LOCAL_AUTHOR_DEMO_MODE) {
+      state.myItems = createLocalAuthorDemoItems(state.items);
+    }
     renderCategories();
     renderStatusFilters();
     renderItems();
@@ -1416,8 +1446,8 @@ function configureOfferAuth(user = state.telegramUser) {
 
   const miniAppUrl = telegramRuntime.miniAppUrl || "https://t.me/pucelobot/segundavida";
   telegramOpenLink.href = miniAppUrl;
-  const verified = Boolean(auth?.hasInitData() && user?.valid);
-  const username = normalizeTelegramUsername(user?.username);
+  const verified = LOCAL_AUTHOR_DEMO_MODE || Boolean(auth?.hasInitData() && user?.valid);
+  const username = LOCAL_AUTHOR_DEMO_MODE ? "autor_demo" : normalizeTelegramUsername(user?.username);
 
   telegramAuthCard.dataset.state = verified && username ? "connected" : verified ? "warning" : "error";
   telegramAuthTitle.textContent = verified && username
@@ -2528,6 +2558,18 @@ if (telegramRuntime.isTelegram) {
 
 searchInput.addEventListener("input", (event) => {
   state.query = event.target.value;
+  renderItems();
+});
+
+statusFilterSelect?.addEventListener("change", (event) => {
+  state.statusFilter = event.target.value;
+  renderStatusFilters();
+  renderItems();
+});
+
+categoryFilterSelect?.addEventListener("change", (event) => {
+  state.category = event.target.value;
+  renderCategories();
   renderItems();
 });
 

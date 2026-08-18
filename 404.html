@@ -39,7 +39,7 @@
     />
     <link rel="stylesheet" href="/css/icon-fallback.css?v=sv-20260817-40" />
     <link rel="stylesheet" href="/css/tokens.css?v=sv-20260817-41" />
-    <link rel="stylesheet" href="/css/app.css?v=sv-20260818-hero" />
+    <link rel="stylesheet" href="/css/app.css?v=sv-20260818-owner-actions-breathing" />
     <script src="https://telegram.org/js/telegram-web-app.js?63"></script>
   </head>
   <body>
@@ -100,8 +100,22 @@
           <span class="sr-only">Buscar objetos</span>
           <input id="search-input" type="search" placeholder="Buscar objetos" autocomplete="off" />
         </label>
-        <div id="status-filters" class="filter-list" role="tablist" aria-label="Estado de las publicaciones"></div>
-        <div id="category-filters" class="filter-list" role="tablist" aria-label="Categorías"></div>
+        <div class="filter-controls" aria-label="Filtros del catálogo">
+          <label class="filter-control" id="status-filters">
+            <span class="filter-control__label" id="status-filter-label">Estado</span>
+            <select id="status-filter" aria-label="Estado de las publicaciones">
+              <option value="all">Todas</option>
+              <option value="available">Disponibles</option>
+              <option value="reserved">Reservados</option>
+            </select>
+          </label>
+          <label class="filter-control" id="category-filters">
+            <span class="filter-control__label" id="category-filter-label">Categoría</span>
+            <select id="category-filter" aria-label="Categorías">
+              <option value="Todo">Todo</option>
+            </select>
+          </label>
+        </div>
       </section>
 
       <section class="catalog-section" aria-labelledby="catalog-title">
@@ -127,6 +141,7 @@
               <span id="detail-availability-label">Disponible</span>
             </p>
           </div>
+          <p class="detail-description" id="detail-description"></p>
           <div class="detail-meta" aria-label="Información de la publicación">
             <span class="detail-meta__item">
               <i class="fa-regular fa-user detail-meta__icon fa-icon" data-fallback="●" aria-hidden="true"></i>
@@ -140,7 +155,6 @@
             <span class="detail-meta__separator" aria-hidden="true">·</span>
             <span id="detail-created-at">—</span>
           </div>
-          <p class="detail-description" id="detail-description"></p>
           <button class="primary-button" id="interest-button" type="button">
             <i class="fa-regular fa-message fa-icon" data-fallback="✉" aria-hidden="true"></i>
             <span>Me interesa</span>
@@ -159,7 +173,6 @@
               </button>
               <button class="quiet-action quiet-action--delete" id="delete-item-button" type="button" aria-label="Borrar publicación">
                 <i class="fa-solid fa-trash-can fa-icon" data-fallback="⌫" aria-hidden="true"></i>
-                <span>Borrar</span>
               </button>
             </div>
             <p class="action-state" id="detail-owner-action-state" aria-live="polite"></p>
@@ -621,6 +634,6 @@
     <script src="/js/auth.js?v=sv-20260817-42"></script>
     <script src="/js/api.js?v=sv-20260817-43"></script>
     <script src="/js/analytics.js?v=sv-20260817-41"></script>
-    <script src="/js/app.js?v=sv-20260818-59"></script>
+    <script src="/js/app.js?v=sv-20260818-64"></script>
   </body>
 </html>
