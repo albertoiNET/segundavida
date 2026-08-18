@@ -1645,6 +1645,9 @@ function movePhotoLightbox(step) {
 function renderDetail(item, { live = true, error = "" } = {}) {
   state.selectedItem = item;
   state.selectedItemLive = live;
+  if (isNotFoundPage) {
+    document.body.classList.toggle("not-found-page", item?.status === "not_found");
+  }
   detailMedia.replaceChildren();
 
   const imageUrls = getItemImageUrls(item);

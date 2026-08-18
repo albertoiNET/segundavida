@@ -118,6 +118,7 @@ class StaticContractTests(unittest.TestCase):
         self.assertIn("INTERACTION_STORAGE_KEY", app_source)
         self.assertIn("recordItemInteraction(item, \"interest\")", app_source)
         self.assertIn("recordItemInteraction(item, \"contact_attempt\")", app_source)
+        self.assertIn('document.body.classList.toggle("not-found-page", item?.status === "not_found")', app_source)
         self.assertIn("1 persona se ha interesado", app_source)
         self.assertIn("personas se han interesado", app_source)
         self.assertIn("/interaction", api_source)
