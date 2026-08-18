@@ -23,6 +23,8 @@ no utiliza un framework ni necesita un proceso de compilación.
   disponibilidad y hasta dos fotografías.
 - URLs públicas estables (`/i/<public_id>/`) con metadatos para buscadores y
   redes sociales.
+- Navegación interna con rutas reales: `/ofrecer/`, `/perfil/` y la ruta
+  reservada `/favoritos/`; las vistas internas no se indexan.
 - Diseño responsive, navegación atrás/adelante, tema claro/oscuro y soporte
   para el modo Mini App de Telegram.
 

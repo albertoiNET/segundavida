@@ -34,6 +34,11 @@ SecondaVidaAnalytics.trackPageView();
 SecondaVidaAnalytics.trackEvent("telegram", "open-mini-app", "offer");
 ```
 
+Las visitas de página usan las rutas reales, también cuando la navegación se
+resuelve sin recarga mediante History API: `/`, `/ofrecer/`, `/perfil/`,
+`/favoritos/` y `/i/<public_id>/`. No se usan fragmentos como `#offer` o
+`#posts` para representar estas vistas.
+
 ## Eventos de comportamiento
 
 La instrumentación mantiene las visitas de Matomo y añade únicamente estas

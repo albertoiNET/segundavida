@@ -240,7 +240,7 @@ def render_metadata(item: dict[str, object], site_url: str) -> str:
     image = safe_image_url(item.get("image_url"), fallback_image)
     fields = [
         f'<meta name="description" content="{html.escape(description, quote=True)}" />',
-        f'<link rel="canonical" href="{html.escape(canonical, quote=True)}" />',
+        f'<link id="page-canonical" rel="canonical" href="{html.escape(canonical, quote=True)}" />',
         f'<meta property="og:type" content="website" />',
         f'<meta property="og:locale" content="es_ES" />',
         f'<meta property="og:site_name" content="Segunda Vida · Aldea Pucela" />',

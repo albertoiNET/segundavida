@@ -35,6 +35,23 @@ const LOCAL_REPORT_DEMO_ITEM_ID =
 const LOCAL_REPORT_DEMO_USERNAME = "usuario_demo";
 const LOCAL_AUTHOR_DEMO_DISPLAY_NAME = "Nuke";
 const LOCAL_AUTHOR_DEMO_USERNAME = "tionuke";
+const PUBLIC_SITE_ORIGIN = "https://segundavida.aldeapucela.org";
+const VIEW_ROUTES = Object.freeze({
+  explore: "/",
+  offer: "/ofrecer/",
+  posts: "/perfil/",
+  favorites: "/favoritos/",
+});
+const ROUTE_VIEW_NAMES = new Set(Object.keys(VIEW_ROUTES));
+const PRIVATE_VIEW_NAMES = new Set(["offer", "posts", "favorites", "publish-success"]);
+const VIEW_TITLES = Object.freeze({
+  explore: "Segunda Vida · Aldea Pucela",
+  offer: "Ofrecer algo · Segunda Vida",
+  posts: "Mi perfil · Segunda Vida",
+  favorites: "Favoritos · Segunda Vida",
+  "publish-success": "Publicación realizada · Segunda Vida",
+  "not-found": "Página no encontrada · Segunda Vida",
+});
 const state = {
   items: [],
   category: "Todo",
@@ -98,6 +115,7 @@ const catalogTools = document.querySelector(".catalog-tools");
 const catalogSection = document.querySelector(".catalog-section");
 const offerView = document.querySelector("#offer-view");
 const postsView = document.querySelector("#posts-view");
+const favoritesView = document.querySelector("#favorites-view");
 const detailView = document.querySelector("#detail-view");
 const detailShare = document.querySelector("#detail-share");
 const shareFeedback = document.querySelector("#share-feedback");
@@ -329,15 +347,30 @@ function updateNavigationControls() {
   }
 }
 
+function normalizeRoutePath(path = window.location.pathname) {
+  const normalized = String(path || "").replace(/\/+$/, "");
+  return normalized || "/";
+}
+
+function getViewRoute(viewName, itemId = "") {
+  if (viewName === "detail" && itemId) {
+    return `/i/${encodeURIComponent(itemId)}/`;
+  }
+  return VIEW_ROUTES[viewName] || "/";
+}
+
+function getViewFromPath(path = window.location.pathname) {
+  const normalizedPath = normalizeRoutePath(path);
+  return Object.entries(VIEW_ROUTES).find(([, route]) => normalizeRoutePath(route) === normalizedPath)?.[0] || "";
+}
+
 function pushViewHistory(viewName, itemId = "") {
   const currentState = window.history.state ?? {};
   const nextIndex = getHistoryIndex(currentState) + 1;
   const url = new URL(window.location.href);
   url.search = LOCAL_AUTHOR_DEMO_MODE ? "?demo=author" : "";
   url.hash = "";
-  url.pathname = itemId
-    ? `/i/${encodeURIComponent(itemId)}/`
-    : "/";
+  url.pathname = getViewRoute(viewName, itemId);
 
   window.history.pushState({
     ...currentState,
@@ -367,8 +400,6 @@ function goForward() {
 }
 
 function getRouteItemId() {
-  if (isNotFoundPage) return "";
-
   const path = window.location.pathname.replace(/\/+$/, "");
   const modernMatch = path.match(/\/i\/([^/]+)$/);
   if (modernMatch) return decodeRoutePart(modernMatch[1]);
@@ -419,15 +450,58 @@ function getStaticItem() {
   }
 }
 
+function updateRouteMetadata(viewName, itemId = "") {
+  if (VIEW_TITLES[viewName]) document.title = VIEW_TITLES[viewName];
+
+  const isPrivateView = PRIVATE_VIEW_NAMES.has(viewName);
+  const isPublicDetail = viewName === "detail" && itemId && !isNotFoundPage;
+  const isNotFoundRoute = viewName === "not-found" || (viewName === "detail" && isNotFoundPage);
+  const robotsDirective = isPrivateView
+    ? "noindex, nofollow"
+    : isNotFoundRoute
+      ? "noindex, follow"
+      : "";
+
+  let robots = document.querySelector('meta[name="robots"]');
+  if (robotsDirective) {
+    if (!robots) {
+      robots = document.createElement("meta");
+      robots.name = "robots";
+      document.head.appendChild(robots);
+    }
+    robots.content = robotsDirective;
+  } else if (robots) {
+    robots.remove();
+  }
+
+  const shouldHaveCanonical = ROUTE_VIEW_NAMES.has(viewName) || isPublicDetail;
+  let canonical = document.querySelector('link[rel="canonical"]');
+  if (!shouldHaveCanonical) {
+    canonical?.remove();
+    return;
+  }
+
+  if (!canonical) {
+    canonical = document.createElement("link");
+    canonical.rel = "canonical";
+    document.head.appendChild(canonical);
+  }
+  canonical.href = `${PUBLIC_SITE_ORIGIN}${getViewRoute(viewName, itemId)}`;
+}
+
 function prepareHistoryState() {
   const currentState = window.history.state ?? {};
   const itemId = getRouteItemId();
-  const view = itemId ? "detail" : "explore";
+  const view = itemId ? "detail" : getViewFromPath() || (isNotFoundPage ? "not-found" : "explore");
   const index = getHistoryIndex(currentState);
 
   const canonicalUrl = new URL(window.location.href);
   if (itemId) {
     canonicalUrl.pathname = `/i/${encodeURIComponent(itemId)}/`;
+    canonicalUrl.search = "";
+    canonicalUrl.hash = "";
+  } else if (ROUTE_VIEW_NAMES.has(view)) {
+    canonicalUrl.pathname = getViewRoute(view);
     canonicalUrl.search = "";
     canonicalUrl.hash = "";
   }
@@ -442,6 +516,7 @@ function prepareHistoryState() {
   state.currentView = view;
   state.currentItemId = itemId;
   state.historyMaxIndex = index;
+  updateRouteMetadata(view, itemId);
   updateNavigationControls();
 }
 
@@ -1380,6 +1455,8 @@ function configurePostsView() {
 }
 
 function setView(viewName, { syncHistory = true, itemId = "" } = {}) {
+  if (![...ROUTE_VIEW_NAMES, "detail", "publish-success"].includes(viewName)) return;
+
   const shouldPushHistory = syncHistory && (
     state.currentView !== viewName ||
     (viewName === "detail" && state.currentItemId !== itemId)
@@ -1391,6 +1468,7 @@ function setView(viewName, { syncHistory = true, itemId = "" } = {}) {
   const isExplore = viewName === "explore";
   const isOffer = viewName === "offer";
   const isPosts = viewName === "posts";
+  const isFavorites = viewName === "favorites";
   const isDetail = viewName === "detail";
   const isSuccess = viewName === "publish-success";
 
@@ -1402,6 +1480,7 @@ function setView(viewName, { syncHistory = true, itemId = "" } = {}) {
   catalogSection.hidden = !isExplore;
   offerView.hidden = !isOffer;
   postsView.hidden = !isPosts;
+  favoritesView.hidden = !isFavorites;
   detailView.hidden = !isDetail;
   publishSuccessView.hidden = !isSuccess;
   detailShare.hidden = false;
@@ -1429,18 +1508,20 @@ function setView(viewName, { syncHistory = true, itemId = "" } = {}) {
   const activeNavigationView = viewName === "detail" ? "explore" : viewName;
   navItems.forEach((button) => {
     const selected = button.dataset.view === activeNavigationView;
-    button.toggleAttribute("aria-current", selected);
-    if (!selected) button.removeAttribute("aria-current");
+    if (selected) {
+      button.setAttribute("aria-current", "page");
+    } else {
+      button.removeAttribute("aria-current");
+    }
   });
 
   const viewKey = `${viewName}:${itemId || ""}`;
   if (lastTrackedViewKey !== viewKey) {
-    const pagePath = viewName === "detail" && itemId
-      ? `/i/${encodeURIComponent(itemId)}/`
-      : `#${viewName}`;
+    const pagePath = getViewRoute(viewName, itemId);
     window.SecondaVidaAnalytics?.trackPageView(pagePath);
     lastTrackedViewKey = viewKey;
   }
+  updateRouteMetadata(viewName, itemId);
   window.scrollTo({ top: 0, behavior: "smooth" });
   updateNavigationControls();
 }
@@ -1824,8 +1905,14 @@ function openReportDemo() {
 
 function handleHistoryChange(event) {
   const nextState = event.state;
-  const nextView = nextState?.svApp ? nextState.svView : "explore";
-  const nextItemId = nextState?.svApp ? nextState.svItemId : "";
+  const routeItemId = getRouteItemId();
+  const routeView = routeItemId ? "detail" : getViewFromPath() || (isNotFoundPage ? "not-found" : "explore");
+  const nextView = nextState?.svApp ? nextState.svView : routeView;
+  const nextItemId = nextState?.svApp ? nextState.svItemId : routeItemId;
+
+  if (![...ROUTE_VIEW_NAMES, "detail", "publish-success"].includes(nextView)) {
+    return;
+  }
 
   if (nextView === "detail" && nextItemId) {
     const item = state.items.find((candidate) => candidate.id === nextItemId)
@@ -3304,11 +3391,12 @@ categoryFilterSelect?.addEventListener("change", (event) => {
 });
 
 navItems.forEach((button) => {
-  button.addEventListener("click", () => {
-    if (isNotFoundPage && button.dataset.view === "explore") {
-      window.location.assign("/");
+  if (!button.dataset.view) return;
+  button.addEventListener("click", (event) => {
+    if (isNotFoundPage && getViewFromPath() === "" && button.dataset.view === "explore") {
       return;
     }
+    event.preventDefault();
     setView(button.dataset.view);
   });
 });
@@ -3444,7 +3532,7 @@ document.addEventListener("keydown", (event) => {
 });
 
 brandHomeLink.addEventListener("click", (event) => {
-  if (isNotFoundPage) return;
+  if (isNotFoundPage && getViewFromPath() === "") return;
   event.preventDefault();
   setView("explore");
 });
@@ -3458,6 +3546,10 @@ if (telegramBackButton && typeof telegramBackButton.onClick === "function") {
 state.myItems = readOwnItems();
 state.staticItem = getStaticItem();
 prepareHistoryState();
+if (ROUTE_VIEW_NAMES.has(state.currentView) || state.currentView === "detail") {
+  lastTrackedViewKey = `${state.currentView}:${state.currentItemId}`;
+  setView(state.currentView, { syncHistory: false, itemId: state.currentItemId });
+}
 lastTrackedViewKey = `${state.currentView}:${state.currentItemId}`;
 window.SecondaVidaAnalytics?.trackPageView();
 configureOfferAuth();

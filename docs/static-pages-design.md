@@ -14,6 +14,25 @@ No se crean nuevas URLs con hash ni bajo `/objetos/`. Se aceptan como
 compatibilidad las URLs históricas `#item=<id>` y `/objetos/<id>`; el frontend
 las normaliza a la ruta canónica cuando puede hacerlo.
 
+## Rutas internas de navegación
+
+La barra inferior usa estas rutas limpias, gestionadas con History API para que
+la navegación no recargue la Mini App:
+
+- `/` — Explorar, la única vista pública de catálogo.
+- `/ofrecer/` — Ofrecer algo.
+- `/perfil/` — Mi perfil y publicaciones propias.
+- `/favoritos/` — reserva de ruta para Favoritos; la entrada permanece
+  desactivada mientras no exista la funcionalidad.
+
+GitHub Pages entrega `404.html` como fallback para las tres rutas internas. Al
+hidratarse, el router identifica la ruta solicitada, muestra la vista correcta,
+actualiza canonical y marca `/ofrecer/`, `/perfil/` y `/favoritos/` como
+`noindex, nofollow`. Las fichas generadas bajo `/i/<public_id>/` no heredan esa
+directiva y conservan sus metadatos indexables. Las rutas atrás/adelante
+restauran la vista a partir de `popstate` y una ficha pública sigue usando su
+canonical independiente.
+
 ## Identificador público
 
 `public_id` es un valor opaco, estable y aleatorio generado por n8n antes de
