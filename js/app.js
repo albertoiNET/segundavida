@@ -1315,10 +1315,6 @@ function createPhotoCarousel(item, { className = "", openLightbox = true } = {})
   let swipeHappened = false;
   let swipeResetTimer = null;
 
-  const counter = document.createElement("span");
-  counter.className = "photo-carousel__counter";
-  counter.setAttribute("aria-live", "polite");
-
   const indicators = document.createElement("div");
   indicators.className = "photo-carousel__indicators";
   indicators.setAttribute("aria-label", "Seleccionar foto");
@@ -1340,7 +1336,6 @@ function createPhotoCarousel(item, { className = "", openLightbox = true } = {})
   const setIndex = (nextIndex) => {
     currentIndex = (nextIndex + urls.length) % urls.length;
     track.style.transform = `translate3d(-${currentIndex * 100}%, 0, 0)`;
-    counter.textContent = urls.length > 1 ? `${currentIndex + 1} / ${urls.length}` : "";
     indicatorButtons.forEach((indicator, index) => {
       const active = index === currentIndex;
       indicator.classList.toggle("is-active", active);
@@ -1381,27 +1376,7 @@ function createPhotoCarousel(item, { className = "", openLightbox = true } = {})
   carousel.append(viewport);
 
   if (urls.length > 1) {
-    const makeArrow = (direction, label, icon, step) => {
-      const button = document.createElement("button");
-      button.className = `photo-carousel__nav photo-carousel__nav--${direction}`;
-      button.type = "button";
-      button.setAttribute("aria-label", label);
-      button.title = label;
-      button.innerHTML = `<i class="fa-solid ${icon} fa-icon" data-fallback="${direction === "previous" ? "‹" : "›"}" aria-hidden="true"></i>`;
-      button.addEventListener("click", (event) => {
-        event.preventDefault();
-        event.stopPropagation();
-        setIndex(currentIndex + step);
-      });
-      return button;
-    };
-
-    carousel.append(
-      makeArrow("previous", "Foto anterior", "fa-chevron-left", -1),
-      makeArrow("next", "Foto siguiente", "fa-chevron-right", 1),
-      counter,
-      indicators,
-    );
+    carousel.append(indicators);
 
     viewport.addEventListener("touchstart", (event) => {
       const touch = event.changedTouches[0];
