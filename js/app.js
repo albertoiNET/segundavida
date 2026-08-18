@@ -59,6 +59,8 @@ const state = {
 let photoLightboxUrls = [];
 let photoLightboxIndex = 0;
 let photoLightboxReturnFocus = null;
+let lastTrackedViewKey = "";
+const trackedInterestTelegramItems = new Set();
 let routeOpenInFlight = null;
 let routeOpenItemId = "";
 let reportStartInFlight = null;
@@ -669,12 +671,6 @@ function createItemCard(item, index) {
   category.append(createCategoryIcon(item.category), document.createTextNode(item.category));
   meta.append(category);
 
-  if (item.zone) {
-    const zone = document.createElement("span");
-    zone.className = "item-card__zone";
-    zone.append(createIconElement("fa-location-dot", "⌖"), document.createTextNode(item.zone));
-    meta.append(zone);
-  }
   const availability = document.createElement("span");
   availability.className = "availability";
   const availabilityLabel = item.status === "reserved"
@@ -1352,7 +1348,6 @@ function renderDetail(item, { live = true, error = "" } = {}) {
 function showDetail(item, { syncHistory = true, live = true, error = "" } = {}) {
   renderDetail(item, { live, error });
   setView("detail", { syncHistory, itemId: item.id });
-  window.SecondaVidaAnalytics?.trackEvent("catalog", "open-item", item.id);
   if (syncHistory && api?.isItemConfigured && typeof api.getItem === "function") {
     void openItemFromRoute();
   }
@@ -1428,7 +1423,14 @@ function setView(viewName, { syncHistory = true, itemId = "" } = {}) {
     if (!selected) button.removeAttribute("aria-current");
   });
 
-  window.SecondaVidaAnalytics?.trackPageView(`#${viewName}`);
+  const viewKey = `${viewName}:${itemId || ""}`;
+  if (lastTrackedViewKey !== viewKey) {
+    const pagePath = viewName === "detail" && itemId
+      ? `/i/${encodeURIComponent(itemId)}/`
+      : `#${viewName}`;
+    window.SecondaVidaAnalytics?.trackPageView(pagePath);
+    lastTrackedViewKey = viewKey;
+  }
   window.scrollTo({ top: 0, behavior: "smooth" });
   updateNavigationControls();
 }
@@ -2892,7 +2894,7 @@ function openTelegramChat(url) {
   }
 }
 
-function showInterestFeedback(url) {
+function showInterestFeedback(item, url) {
   detailActionState.replaceChildren();
   detailActionState.append(document.createTextNode("Si no aparece el chat, "));
 
@@ -2903,30 +2905,38 @@ function showInterestFeedback(url) {
   link.rel = "noopener noreferrer";
   link.textContent = "pulsa aquí para abrirlo";
   link.addEventListener("click", (event) => {
-    const webApp = window.Telegram?.WebApp;
-    if (typeof webApp?.openTelegramLink !== "function") return;
-
     event.preventDefault();
-    openTelegramChat(url);
+    openInterestTelegram(item);
   });
   detailActionState.append(link);
   detailActionState.dataset.state = "connected";
 }
 
-function handleInterest() {
-  const item = state.selectedItem;
+function trackInterestTelegramOpen(item) {
+  if (!item?.id || trackedInterestTelegramItems.has(item.id)) return;
+  trackedInterestTelegramItems.add(item.id);
+  window.SecondaVidaAnalytics?.trackEvent("interest", "telegram-open", item.id);
+}
+
+function openInterestTelegram(item) {
   if (!item || isOwnItem(item)) return;
 
-  const username = normalizeTelegramUsername(state.selectedItem?.ownerUsername);
+  const username = normalizeTelegramUsername(item.ownerUsername);
   if (!username) {
     detailActionState.textContent = "Este vecino o vecina no tiene un nombre de usuario público para recibir contactos.";
     detailActionState.dataset.state = "error";
-    return;
+    return false;
   }
 
   const telegramUrl = `https://t.me/${username}?text=${encodeURIComponent(getInterestMessage(item))}`;
-  openTelegramChat(telegramUrl);
-  showInterestFeedback(telegramUrl);
+  const opened = openTelegramChat(telegramUrl);
+  if (opened) trackInterestTelegramOpen(item);
+  showInterestFeedback(item, telegramUrl);
+  return opened;
+}
+
+function handleInterest() {
+  openInterestTelegram(state.selectedItem);
 }
 
 function openContactDialog(item = state.selectedItem, triggerButton = interestButton) {
@@ -2976,10 +2986,8 @@ function confirmContactDialog() {
     return;
   }
 
-  const telegramUrl = `https://t.me/${username}?text=${encodeURIComponent(getInterestMessage(item))}`;
   closeContactDialog({ restoreFocus: false });
-  openTelegramChat(telegramUrl);
-  showInterestFeedback(telegramUrl);
+  openInterestTelegram(item);
 }
 
 function setReportFormState(message, stateName = "") {
@@ -3209,6 +3217,7 @@ async function copyTextToClipboard(text) {
 
 async function shareCurrentView() {
   const sharingItem = state.currentView === "detail" && state.selectedItem;
+  const analyticsShareName = sharingItem?.id || "home";
   const shareUrl = sharingItem ? getItemUrl(state.selectedItem) : getHomeUrl();
   const shareData = sharingItem
     ? {
@@ -3226,17 +3235,20 @@ async function shareCurrentView() {
     const webApp = window.Telegram?.WebApp;
     if (typeof navigator.share === "function") {
       await navigator.share(shareData);
+      window.SecondaVidaAnalytics?.trackEvent("share", "success", analyticsShareName);
       return;
     }
 
     if (telegramRuntime.isTelegram && typeof webApp?.openTelegramLink === "function") {
       const telegramShareUrl = `https://t.me/share/url?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(shareData.text)}`;
       webApp.openTelegramLink(telegramShareUrl);
+      window.SecondaVidaAnalytics?.trackEvent("share", "success", analyticsShareName);
       setShareFeedback(sharingItem ? "Elige dónde compartir la publicación." : "Elige dónde compartir Segunda Vida.", "connected");
       return;
     }
 
     await copyTextToClipboard(`${shareData.text}\n\n${shareUrl}`);
+    window.SecondaVidaAnalytics?.trackEvent("share", "success", analyticsShareName);
     setShareFeedback("URL copiada al portapapeles", "connected");
   } catch (error) {
     if (error?.name === "AbortError") return;
@@ -3307,7 +3319,17 @@ relatedItemsBrowse?.addEventListener("click", (event) => {
   event.preventDefault();
   showRelatedCategory(relatedItemsBrowse.dataset.category || state.selectedItem?.category || "Todo");
 });
-interestButton.addEventListener("click", () => openContactDialog(state.selectedItem));
+interestButton.addEventListener("click", () => {
+  const item = state.selectedItem;
+  if (item?.id) window.SecondaVidaAnalytics?.trackEvent("interest", "click", item.id);
+  openContactDialog(item);
+});
+telegramOpenLink?.addEventListener("click", () => {
+  window.SecondaVidaAnalytics?.trackEvent("telegram", "open-mini-app", "offer");
+});
+postsOpenTelegramLink?.addEventListener("click", () => {
+  window.SecondaVidaAnalytics?.trackEvent("telegram", "open-mini-app", "posts");
+});
 reportProblemButton?.addEventListener("click", () => openReportFlow(state.selectedItem, reportProblemButton));
 contactDialogClose?.addEventListener("click", () => closeContactDialog());
 contactDialogCancel?.addEventListener("click", () => closeContactDialog());
@@ -3426,6 +3448,7 @@ if (telegramBackButton && typeof telegramBackButton.onClick === "function") {
 state.myItems = readOwnItems();
 state.staticItem = getStaticItem();
 prepareHistoryState();
+lastTrackedViewKey = `${state.currentView}:${state.currentItemId}`;
 window.SecondaVidaAnalytics?.trackPageView();
 configureOfferAuth();
 void restorePublishDraft();
