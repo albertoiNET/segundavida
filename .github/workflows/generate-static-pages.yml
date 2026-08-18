@@ -1,6 +1,14 @@
 name: Generate SegundaVida static item pages
 
 on:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/generate-static-pages.yml"
+      - "index.html"
+      - "404.html"
+      - "scripts/generate_static_pages.py"
   workflow_dispatch:
     inputs:
       source_url:
@@ -14,6 +22,10 @@ permissions:
   contents: read
   pages: write
   id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
 
 jobs:
   generate:
@@ -48,6 +60,18 @@ jobs:
             --source-url "$SOURCE_URL" \
             --output-dir generated-site \
             --site-url "https://segundavida.aldeapucela.org"
+          python3 scripts/sync_static_asset_urls.py \
+            --site generated-site \
+            --template generated-site/index.html \
+            --version "sv-${GITHUB_SHA}"
+
+      - name: Store generated site for shared asset deployments
+        if: steps.source.outputs.url != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: segundavida-static-site
+          path: generated-site/
+          retention-days: 30
 
       - name: Explain skipped generation
         if: steps.source.outputs.url == ''

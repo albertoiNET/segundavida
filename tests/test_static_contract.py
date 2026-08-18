@@ -10,6 +10,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
 
 from generate_static_pages import ContractError, generate, normalize_item  # noqa: E402
+from sync_static_asset_urls import sync_asset_urls  # noqa: E402
 
 
 class StaticContractTests(unittest.TestCase):
@@ -73,6 +74,26 @@ class StaticContractTests(unittest.TestCase):
 
             embedded = page.split('id="static-item-data">', 1)[1].split("</script>", 1)[0]
             self.assertEqual(json.loads(embedded)["id"], "safe-001")
+
+    def test_shared_asset_sync_updates_existing_generated_pages_without_data_regeneration(self):
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory)
+            template = output / "index.html"
+            page = output / "i" / "safe-001" / "index.html"
+            page.parent.mkdir(parents=True)
+            template.write_text(
+                '<script src="/js/app.js?v=current"></script><link href="/css/app.css?v=current" rel="stylesheet" />',
+                encoding="utf-8",
+            )
+            page.write_text(
+                '<script src="/js/app.js?v=old"></script><link href="/css/app.css?v=old" rel="stylesheet" />',
+                encoding="utf-8",
+            )
+
+            self.assertEqual(sync_asset_urls(output, template, "sv-test"), 2)
+            updated_page = page.read_text(encoding="utf-8")
+            self.assertIn('/js/app.js?v=sv-test', updated_page)
+            self.assertIn('/css/app.css?v=sv-test', updated_page)
 
     def test_rss_feed_is_public_escaped_and_newest_first(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -271,7 +292,7 @@ class StaticContractTests(unittest.TestCase):
         self.assertIn("function openReserveItemDialog", app_source)
         self.assertIn("function confirmReserveItemDialog", app_source)
         self.assertIn('openReserveItemDialog(item, manageStatusButton, detailActionState)', app_source)
-        self.assertIn('interestButton.addEventListener("click", () => {', app_source)
+        self.assertIn('interestButton?.addEventListener("click", () => {', app_source)
         self.assertIn('trackEvent("share", "success", analyticsShareName)', app_source)
         self.assertIn('trackEvent("interest", "click", item.id)', app_source)
         self.assertIn('trackEvent("interest", "telegram-open", item.id)', app_source)
@@ -323,6 +344,12 @@ class StaticContractTests(unittest.TestCase):
         self.assertTrue((ROOT / "perfil" / "index.html").exists())
         workflow_source = (ROOT / ".github" / "workflows" / "generate-static-pages.yml").read_text(encoding="utf-8")
         self.assertIn("favoritos ofrecer perfil generated-site/", workflow_source)
+        self.assertIn('  push:\n    branches:\n      - main', workflow_source)
+        self.assertNotIn('      - "js/**"', workflow_source)
+        shared_workflow_source = (ROOT / ".github" / "workflows" / "deploy-shared-assets.yml").read_text(encoding="utf-8")
+        self.assertIn("segundavida-static-site", shared_workflow_source)
+        self.assertIn("sync_static_asset_urls.py", shared_workflow_source)
+        self.assertTrue((ROOT / "scripts" / "sync_static_asset_urls.py").exists())
         for source in (
             index_source,
             fallback_source,

@@ -1,0 +1,107 @@
+name: Deploy SegundaVida shared assets
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/deploy-shared-assets.yml"
+      - "assets/**"
+      - "css/**"
+      - "favoritos/**"
+      - "js/**"
+      - "ofrecer/**"
+      - "perfil/**"
+      - "scripts/sync_static_asset_urls.py"
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Skip when the same commit changes generated-page inputs
+        id: scope
+        env:
+          EVENT_BEFORE: ${{ github.event.before }}
+          EVENT_SHA: ${{ github.sha }}
+          EVENT_NAME: ${{ github.event_name }}
+        run: |
+          set -euo pipefail
+          if [ "$EVENT_NAME" != "push" ]; then
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          if [ -n "$EVENT_BEFORE" ] && [ "$EVENT_BEFORE" != "0000000000000000000000000000000000000000" ]; then
+            changed_files="$(git diff --name-only "$EVENT_BEFORE" "$EVENT_SHA")"
+          else
+            changed_files="$(git diff-tree --no-commit-id --name-only -r "$EVENT_SHA")"
+          fi
+
+          if printf '%s\n' "$changed_files" | grep -Eq '^(index\.html|404\.html|scripts/generate_static_pages\.py|\.github/workflows/generate-static-pages\.yml)$'; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "The full static-page generator owns this deployment."
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Find the latest generated-site artifact
+        id: source-run
+        if: steps.scope.outputs.skip != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          run_id="$(gh run list --workflow generate-static-pages.yml --branch main --status success --limit 20 --json databaseId --jq '.[0].databaseId')"
+          if [ -z "$run_id" ]; then
+            echo "No generated-site artifact exists yet. Run generate-static-pages.yml once first." >&2
+            exit 1
+          fi
+          echo "run_id=$run_id" >> "$GITHUB_OUTPUT"
+
+      - name: Reuse the last generated site
+        if: steps.scope.outputs.skip != 'true'
+        uses: actions/download-artifact@v5
+        with:
+          name: segundavida-static-site
+          path: generated-site
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: ${{ steps.source-run.outputs.run_id }}
+
+      - name: Replace shared files without regenerating item pages
+        if: steps.scope.outputs.skip != 'true'
+        run: |
+          set -euo pipefail
+          cp index.html 404.html generated-site/
+          cp -R assets css js favoritos ofrecer perfil generated-site/
+          python3 scripts/sync_static_asset_urls.py \
+            --site generated-site \
+            --template generated-site/index.html \
+            --version "sv-${GITHUB_SHA}"
+
+      - name: Upload static files as artifact
+        if: steps.scope.outputs.skip != 'true'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: generated-site/
+
+      - name: Deploy to GitHub Pages
+        if: steps.scope.outputs.skip != 'true'
+        id: deployment
+        uses: actions/deploy-pages@v4

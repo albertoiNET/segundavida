@@ -1636,13 +1636,17 @@ function renderDetail(item, { live = true, error = "" } = {}) {
     detailActionState.dataset.state = !live || (!ownItem && !ownerUsername && isAvailable) ? "error" : "";
   }
 
-  detailOwnerActions.hidden = !canManageItem || !live;
-  markDeliveredButton.disabled = false;
-  configureDeliveryButton(markDeliveredButton, item.status);
+  if (detailOwnerActions) detailOwnerActions.hidden = !canManageItem || !live;
+  if (markDeliveredButton) {
+    markDeliveredButton.disabled = false;
+    configureDeliveryButton(markDeliveredButton, item.status);
+  }
   configureStatusButton(manageStatusButton, item.status);
-  deleteItemButton.hidden = !canManageItem || !live;
-  deleteItemButton.disabled = false;
-  configureDeleteButton(deleteItemButton);
+  if (deleteItemButton) {
+    deleteItemButton.hidden = !canManageItem || !live;
+    deleteItemButton.disabled = false;
+    configureDeleteButton(deleteItemButton);
+  }
   renderRelatedItems(item);
 }
 
@@ -1690,18 +1694,20 @@ function setView(viewName, { syncHistory = true, itemId = "" } = {}) {
 
   if (!isDetail) closePhotoLightbox();
 
-  catalogIntro.hidden = !isExplore;
-  catalogTools.hidden = !isExplore;
+  if (catalogIntro) catalogIntro.hidden = !isExplore;
+  if (catalogTools) catalogTools.hidden = !isExplore;
   if (!isExplore) setSearchOpen(false);
-  catalogSection.hidden = !isExplore;
-  favoritesView.hidden = !isFavorites;
-  offerView.hidden = !isOffer;
-  postsView.hidden = !isPosts;
-  detailView.hidden = !isDetail;
-  publishSuccessView.hidden = !isSuccess;
-  detailShare.hidden = false;
-  detailShare.setAttribute("aria-label", isDetail ? "Compartir publicación" : "Compartir Segunda Vida");
-  detailShare.setAttribute("title", isDetail ? "Compartir publicación" : "Compartir Segunda Vida");
+  if (catalogSection) catalogSection.hidden = !isExplore;
+  if (favoritesView) favoritesView.hidden = !isFavorites;
+  if (offerView) offerView.hidden = !isOffer;
+  if (postsView) postsView.hidden = !isPosts;
+  if (detailView) detailView.hidden = !isDetail;
+  if (publishSuccessView) publishSuccessView.hidden = !isSuccess;
+  if (detailShare) {
+    detailShare.hidden = false;
+    detailShare.setAttribute("aria-label", isDetail ? "Compartir publicación" : "Compartir Segunda Vida");
+    detailShare.setAttribute("title", isDetail ? "Compartir publicación" : "Compartir Segunda Vida");
+  }
 
   if (isOffer) configureOfferAuth();
   if (isFavorites) renderFavorites();
@@ -3640,13 +3646,13 @@ searchToggle?.addEventListener("click", () => {
   setSearchOpen(!isOpen, !isOpen);
 });
 
-searchInput.addEventListener("keydown", (event) => {
+searchInput?.addEventListener("keydown", (event) => {
   if (event.key !== "Escape") return;
   setSearchOpen(false);
   searchToggle?.focus();
 });
 
-searchInput.addEventListener("input", (event) => {
+searchInput?.addEventListener("input", (event) => {
   state.query = event.target.value;
   renderItems();
 });
@@ -3684,13 +3690,13 @@ if (themeToggle) {
 
 applyTheme(readThemePreference(), false);
 
-offerEmptyButton.addEventListener("click", () => setView("offer"));
-detailShare.addEventListener("click", shareCurrentView);
+offerEmptyButton?.addEventListener("click", () => setView("offer"));
+detailShare?.addEventListener("click", shareCurrentView);
 relatedItemsBrowse?.addEventListener("click", (event) => {
   event.preventDefault();
   showRelatedCategory(relatedItemsBrowse.dataset.category || state.selectedItem?.category || "Todo");
 });
-interestButton.addEventListener("click", () => {
+interestButton?.addEventListener("click", () => {
   const item = state.selectedItem;
   if (item?.id) window.SecondaVidaAnalytics?.trackEvent("interest", "click", item.id);
   openContactDialog(item);
@@ -3741,7 +3747,7 @@ reserveItemDurationOptions.forEach((option) => {
   option.addEventListener("change", updateReservationDurationCopy);
 });
 reserveItemCustomDays?.addEventListener("input", updateReservationDurationCopy);
-manageStatusButton.addEventListener("click", () => {
+manageStatusButton?.addEventListener("click", () => {
   const item = state.selectedItem;
   if (!item) return;
   const action = item.status === "reserved" ? "release" : "reserve";
@@ -3751,8 +3757,8 @@ manageStatusButton.addEventListener("click", () => {
   }
   void manageItemAction(item, action, manageStatusButton);
 });
-markDeliveredButton.addEventListener("click", () => completeItem(state.selectedItem));
-deleteItemButton.addEventListener("click", () => openDeleteItemDialog(state.selectedItem));
+markDeliveredButton?.addEventListener("click", () => completeItem(state.selectedItem));
+deleteItemButton?.addEventListener("click", () => openDeleteItemDialog(state.selectedItem));
 deleteItemDialogClose?.addEventListener("click", () => closeDeleteItemDialog());
 deleteItemDialogCancel?.addEventListener("click", () => closeDeleteItemDialog());
 deleteItemDialogConfirm?.addEventListener("click", () => void hideItem());
@@ -3763,7 +3769,7 @@ deleteItemDialog?.addEventListener("cancel", (event) => {
 deleteItemDialog?.addEventListener("click", (event) => {
   if (event.target === deleteItemDialog) closeDeleteItemDialog();
 });
-offerImages.addEventListener("change", handlePhotoSelection);
+offerImages?.addEventListener("change", handlePhotoSelection);
 offerPhotoPicker?.addEventListener("click", handleGalleryRequest);
 offerCamera?.addEventListener("change", handlePhotoSelection);
 offerCameraButton?.addEventListener("click", handleCameraRequest);
@@ -3776,23 +3782,23 @@ cameraDialog?.addEventListener("cancel", (event) => {
   event.preventDefault();
   closeCameraDialog();
 });
-offerForm.addEventListener("submit", handleOfferSubmit);
-telegramUsernameHelp.addEventListener("click", openTelegramUsernameDialog);
-telegramUsernameDialogClose.addEventListener("click", closeTelegramUsernameDialog);
-telegramUsernameRetry.addEventListener("click", retryTelegramUsername);
-viewPublishedButton.addEventListener("click", () => {
+offerForm?.addEventListener("submit", handleOfferSubmit);
+telegramUsernameHelp?.addEventListener("click", openTelegramUsernameDialog);
+telegramUsernameDialogClose?.addEventListener("click", closeTelegramUsernameDialog);
+telegramUsernameRetry?.addEventListener("click", retryTelegramUsername);
+viewPublishedButton?.addEventListener("click", () => {
   const item = state.myItems[0];
   if (item) showDetail(item);
 });
-goPostsButton.addEventListener("click", () => setView("posts"));
+goPostsButton?.addEventListener("click", () => setView("posts"));
 postsTabs.forEach((tab) => {
   tab.addEventListener("click", () => {
     state.postsFilter = tab.dataset.postsFilter;
     renderMyItems();
   });
 });
-appBackButton.addEventListener("click", goBack);
-appForwardButton.addEventListener("click", goForward);
+appBackButton?.addEventListener("click", goBack);
+appForwardButton?.addEventListener("click", goForward);
 
 if (photoLightbox) {
   photoLightboxClose.addEventListener("click", closePhotoLightbox);
@@ -3813,7 +3819,7 @@ document.addEventListener("keydown", (event) => {
   if (event.key === "ArrowRight") movePhotoLightbox(1);
 });
 
-brandHomeLink.addEventListener("click", (event) => {
+brandHomeLink?.addEventListener("click", (event) => {
   if (isNotFoundPage && getViewFromPath() === "") return;
   event.preventDefault();
   setView("explore");

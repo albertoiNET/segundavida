@@ -28,6 +28,16 @@ la navegación no recargue la Mini App:
 Las tres rutas internas incluyen una entrada estática que carga la aplicación
 compartida y conserva la ruta al recargar, incluso cuando el navegador sirve la
 página desde caché. `404.html` sigue siendo el fallback para rutas desconocidas.
+
+La generación pesada de fichas se ejecuta al hacer push a `main` solo cuando
+cambia la plantilla HTML o el propio generador, además de poder ejecutarse por
+horario o manualmente para refrescar los datos públicos. El resultado completo
+se guarda como artefacto reutilizable.
+
+Los cambios de JavaScript, CSS, assets o rutas compartidas usan un despliegue
+ligero: reutilizan ese último artefacto, sustituyen los recursos compartidos y
+actualizan sus URLs dentro de las fichas sin volver a consultar ni renderizar
+los objetos. Así, tocar el frontend no reconstruye cientos de fichas.
 Al hidratarse, el router identifica la ruta solicitada, muestra la vista
 correcta, actualiza canonical y marca `/ofrecer/`, `/perfil/` y `/favoritos/`
 como `noindex, nofollow`. Las fichas generadas bajo `/i/<public_id>/` no heredan
