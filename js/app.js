@@ -5,6 +5,7 @@ const telegramRuntime = window.SecondaVidaTelegram ?? {
   isTelegram: false,
   sdkAvailable: false,
 };
+const isNotFoundPage = document.body?.dataset.page === "not-found";
 
 const auth = window.SecondaVidaAuth;
 const api = window.SecondaVidaApi;
@@ -89,6 +90,7 @@ const statusToggle = document.querySelector("#status-toggle");
 const itemsCount = document.querySelector("#items-count");
 const itemsState = document.querySelector("#items-state");
 const itemsGrid = document.querySelector("#items-grid");
+const catalogTitle = document.querySelector("#catalog-title");
 const catalogIntro = document.querySelector(".catalog-intro");
 const catalogTools = document.querySelector(".catalog-tools");
 const catalogSection = document.querySelector(".catalog-section");
@@ -362,6 +364,8 @@ function goForward() {
 }
 
 function getRouteItemId() {
+  if (isNotFoundPage) return "";
+
   const path = window.location.pathname.replace(/\/+$/, "");
   const modernMatch = path.match(/\/i\/([^/]+)$/);
   if (modernMatch) return decodeRoutePart(modernMatch[1]);
@@ -1469,14 +1473,18 @@ function sortNewestFirst(items) {
 
 function renderItems() {
   const query = state.query.trim().toLocaleLowerCase("es");
-  const visibleItems = sortNewestFirst(state.items.filter((item) => {
+  const matchingItems = sortNewestFirst(state.items.filter((item) => {
     const matchesCategory = state.category === "Todo" || item.category === state.category;
     const matchesStatus = state.statusFilter === "all" || item.status === state.statusFilter;
     const searchableText = `${item.title} ${item.description} ${item.category} ${item.zone}`
       .toLocaleLowerCase("es");
     return matchesCategory && matchesStatus && (!query || searchableText.includes(query));
   }));
+  const visibleItems = isNotFoundPage && !query ? matchingItems.slice(0, 4) : matchingItems;
 
+  if (catalogTitle && isNotFoundPage) {
+    catalogTitle.textContent = query ? "Resultados de búsqueda" : "Objetos recién añadidos";
+  }
   itemsCount.textContent = `${visibleItems.length} ${visibleItems.length === 1 ? "cosa" : "cosas"}`;
   itemsGrid.replaceChildren(...visibleItems.map(createItemCard));
 
@@ -3274,7 +3282,13 @@ categoryFilterSelect?.addEventListener("change", (event) => {
 });
 
 navItems.forEach((button) => {
-  button.addEventListener("click", () => setView(button.dataset.view));
+  button.addEventListener("click", () => {
+    if (isNotFoundPage && button.dataset.view === "explore") {
+      window.location.assign("/");
+      return;
+    }
+    setView(button.dataset.view);
+  });
 });
 
 if (themeToggle) {
@@ -3398,6 +3412,7 @@ document.addEventListener("keydown", (event) => {
 });
 
 brandHomeLink.addEventListener("click", (event) => {
+  if (isNotFoundPage) return;
   event.preventDefault();
   setView("explore");
 });

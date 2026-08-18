@@ -3899,6 +3899,29 @@ body.photo-lightbox-open {
   }
 }
 
+@media (min-width: 720px) {
+  .item-card__meta {
+    flex-wrap: nowrap;
+  }
+
+  .item-card__category,
+  .item-card__zone {
+    min-width: 0;
+  }
+
+  .item-card__zone {
+    flex: 1 1 auto;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .item-card__meta .availability {
+    flex: 0 0 auto;
+    white-space: nowrap;
+  }
+}
+
 @media (max-width: 719px) {
   .items-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));

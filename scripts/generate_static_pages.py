@@ -313,7 +313,9 @@ def generate(items: list[dict[str, object]], output_dir: Path, template_path: Pa
     write_text(output_dir / "sitemap.xml", sitemap)
     write_text(output_dir / "feed.xml", render_rss_feed(items, site_url))
     write_text(output_dir / "robots.txt", "User-agent: *\nAllow: /\nSitemap: " + site_url.rstrip("/") + "/sitemap.xml\n")
-    write_text(output_dir / "404.html", template)
+    fallback_template_path = template_path.parent / "404.html"
+    fallback_template = fallback_template_path.read_text(encoding="utf-8") if fallback_template_path.exists() else template
+    write_text(output_dir / "404.html", fallback_template)
     return len(items)
 
 

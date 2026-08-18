@@ -67,6 +67,9 @@ class StaticContractTests(unittest.TestCase):
             self.assertTrue((output / "feed.xml").exists())
             self.assertTrue((output / "robots.txt").exists())
             self.assertTrue((output / "404.html").exists())
+            fallback = (output / "404.html").read_text(encoding="utf-8")
+            self.assertIn('data-page="not-found"', fallback)
+            self.assertIn("Lo sentimos, no se ha encontrado lo que estabas buscando", fallback)
 
             embedded = page.split('id="static-item-data">', 1)[1].split("</script>", 1)[0]
             self.assertEqual(json.loads(embedded)["id"], "safe-001")

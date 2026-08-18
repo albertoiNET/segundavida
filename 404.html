@@ -30,7 +30,8 @@
     <link rel="alternate" type="application/rss+xml" title="Feed RSS de Segunda Vida" href="/feed.xml" />
     <link rel="icon" type="image/png" sizes="1254x1254" href="/assets/segundavida-mark.png?v=sv-20260817-40" />
     <link rel="apple-touch-icon" href="/assets/segundavida-mark.png?v=sv-20260817-40" />
-    <title>Segunda Vida · Aldea Pucela</title>
+    <meta name="robots" content="noindex, follow" />
+    <title>Página no encontrada · Segunda Vida</title>
     <!-- Bump this version whenever static assets change to bypass Mini App caches. -->
     <link
       rel="stylesheet"
@@ -40,10 +41,10 @@
     />
     <link rel="stylesheet" href="/css/icon-fallback.css?v=sv-20260817-40" />
     <link rel="stylesheet" href="/css/tokens.css?v=sv-20260817-41" />
-    <link rel="stylesheet" href="/css/app.css?v=sv-20260818-report-success-1" />
+    <link rel="stylesheet" href="/css/app.css?v=sv-20260818-404-page-1" />
     <script src="https://telegram.org/js/telegram-web-app.js?63"></script>
   </head>
-  <body>
+  <body data-page="not-found" class="not-found-page">
     <!-- The static generator replaces these markers in individual public pages. -->
     <!-- STATIC_ITEM_DATA -->
     <!-- STATIC_ITEM_FALLBACK -->
@@ -78,62 +79,45 @@
         </div>
       </header>
 
-      <section class="catalog-intro catalog-hero" aria-labelledby="page-title">
-        <div class="catalog-hero__content">
-          <h1 id="page-title" class="catalog-hero__title">
-            <span>Si ya no lo usas</span>
-            <strong>¡Dale una segunda vida!</strong>
-          </h1>
-          <p class="catalog-hero__support">
-            Vecinos/as de Valladolid ofrecen gratuitamente todo lo que ves aquí.
-          </p>
+      <section class="catalog-intro not-found-intro" aria-labelledby="page-title">
+        <div class="not-found-intro__visual" aria-hidden="true">
+          <span>404</span>
+          <i class="fa-solid fa-compass fa-icon" data-fallback="⌖"></i>
         </div>
-        <p class="catalog-hero__credit">
-          <a href="https://aldeapucela.org/" target="_blank" rel="noopener noreferrer">
-            <span>Por Aldea Pucela</span>
+        <div class="not-found-intro__content">
+          <h1 id="page-title">Lo sentimos, no se ha encontrado lo que estabas buscando</h1>
+          <p class="not-found-intro__support">
+            Puede que el enlace haya cambiado, pero todavía hay cosas esperando una nueva casa.
+          </p>
+          <a class="not-found-home-link" href="/">
+            <span>Volver a explorar</span>
+            <i class="fa-solid fa-arrow-right fa-icon" data-fallback="→" aria-hidden="true"></i>
           </a>
-        </p>
+        </div>
       </section>
 
-      <section class="catalog-tools" aria-label="Buscar y filtrar objetos">
-        <div class="catalog-filter-bar">
-          <div class="filter-controls" aria-label="Filtros del catálogo">
-            <label class="filter-control filter-control--category" id="category-filters">
-              <span class="filter-control__label" id="category-filter-label">Categorías</span>
-              <span class="filter-control__chevron" aria-hidden="true"><i class="fa-solid fa-chevron-down fa-icon" data-fallback="⌄"></i></span>
-              <select id="category-filter" aria-label="Categorías">
-                <option value="Todo">Todo</option>
-              </select>
-            </label>
-            <div id="status-filters" class="status-filter-shell">
-              <button class="status-toggle" id="status-toggle" type="button" role="switch" aria-checked="false" aria-label="Mostrar solo publicaciones no reservadas">
-                <span class="status-toggle__label">No reservados</span>
-              </button>
-              <span id="status-filter-label" class="sr-only">Estado</span>
-              <select id="status-filter" hidden aria-hidden="true" tabindex="-1">
-                <option value="all">Todas</option>
-                <option value="available">Disponibles</option>
-                <option value="reserved">Reservados</option>
-              </select>
-            </div>
-          </div>
-          <button class="search-toggle" id="search-toggle" type="button" aria-expanded="false" aria-controls="search-panel" aria-label="Mostrar búsqueda" title="Mostrar búsqueda">
-            <i class="fa-solid fa-magnifying-glass fa-icon" data-fallback="⌕" aria-hidden="true"></i>
-          </button>
+      <section class="catalog-tools not-found-tools" aria-labelledby="not-found-search-title">
+        <div class="not-found-tools__heading">
+          <span class="section-kicker" id="not-found-search-title">¿Buscabas otra cosa?</span>
+          <span>Prueba con el nombre de un objeto</span>
         </div>
-        <div class="search-panel" id="search-panel" hidden>
+        <div class="search-panel" id="search-panel">
           <label class="search-field">
             <span class="search-icon" aria-hidden="true"><i class="fa-solid fa-magnifying-glass fa-icon" data-fallback="⌕"></i></span>
             <span class="sr-only">Buscar objetos</span>
-            <input id="search-input" type="search" placeholder="Buscar objetos" autocomplete="off" />
+            <input id="search-input" type="search" placeholder="Buscar objetos…" autocomplete="off" />
           </label>
         </div>
+        <button class="search-toggle" id="search-toggle" type="button" aria-expanded="true" aria-controls="search-panel" aria-label="Ocultar búsqueda" title="Ocultar búsqueda">
+          <i class="fa-solid fa-magnifying-glass fa-icon" data-fallback="⌕" aria-hidden="true"></i>
+        </button>
       </section>
 
-      <section class="catalog-section" aria-labelledby="catalog-title">
+      <section class="catalog-section not-found-catalog" aria-labelledby="catalog-title">
         <div class="catalog-heading">
           <div>
-            <h2 id="catalog-title">Publicaciones activas</h2>
+            <h2 id="catalog-title">Objetos recién añadidos</h2>
+            <p class="not-found-catalog__copy">Mientras encuentras el camino, quizá encuentres algo que te sirva.</p>
           </div>
           <span id="items-count" class="items-count" aria-live="polite">Comprobando...</span>
         </div>
@@ -729,6 +713,6 @@
     <script src="/js/auth.js?v=sv-20260817-42"></script>
     <script src="/js/api.js?v=sv-20260817-43"></script>
     <script src="/js/analytics.js?v=sv-20260817-41"></script>
-    <script src="/js/app.js?v=sv-20260818-report-success-1"></script>
+    <script src="/js/app.js?v=sv-20260818-404-page-1"></script>
   </body>
 </html>
