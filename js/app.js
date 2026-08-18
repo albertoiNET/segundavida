@@ -105,6 +105,7 @@ const manageStatusButton = document.querySelector("#manage-status-button");
 const markDeliveredButton = document.querySelector("#mark-delivered-button");
 const deleteItemButton = document.querySelector("#delete-item-button");
 const relatedItemsSection = document.querySelector("#related-items");
+const relatedItemsTitle = document.querySelector("#related-items-title");
 const relatedItemsCopy = document.querySelector("#related-items-copy");
 const relatedItemsTrack = document.querySelector("#related-items-track");
 const relatedItemsEmpty = document.querySelector("#related-items-empty");
@@ -615,6 +616,22 @@ function getRelatedItems(item) {
   ))).slice(0, 3);
 }
 
+function getExplorationItems(item) {
+  if (!item?.id || item.status === "not_found") return [];
+
+  const availableItems = state.items.filter((candidate) => (
+    candidate.id !== item.id &&
+    candidate.status === "available" &&
+    isNotExpired(candidate)
+  ));
+
+  for (let index = availableItems.length - 1; index > 0; index -= 1) {
+    const swapIndex = Math.floor(Math.random() * (index + 1));
+    [availableItems[index], availableItems[swapIndex]] = [availableItems[swapIndex], availableItems[index]];
+  }
+  return availableItems.slice(0, 3);
+}
+
 function createRelatedItemCard(item) {
   const card = document.createElement("article");
   card.className = "related-item-card";
@@ -684,21 +701,30 @@ function renderRelatedItems(item) {
 
   relatedItemsBrowse.hidden = false;
   relatedItemsBrowse.href = getHomeUrl();
-  relatedItemsBrowse.dataset.category = item.category;
-  relatedItemsBrowse.setAttribute("aria-label", `Ver más objetos de ${item.category}`);
-
   const relatedItems = getRelatedItems(item);
-  if (relatedItems.length) {
+  const fallbackItems = relatedItems.length ? [] : getExplorationItems(item);
+  const itemsToRender = relatedItems.length ? relatedItems : fallbackItems;
+  const isFallback = relatedItems.length === 0;
+  if (relatedItemsTitle) relatedItemsTitle.textContent = isFallback ? "Sigue explorando" : "Relacionados";
+  relatedItemsBrowse.dataset.category = isFallback ? "Todo" : item.category;
+  relatedItemsBrowse.setAttribute(
+    "aria-label",
+    isFallback ? "Ver más objetos disponibles" : `Ver más objetos de ${item.category}`,
+  );
+
+  if (itemsToRender.length) {
     if (relatedItemsCopy) {
-      relatedItemsCopy.textContent = `Más objetos disponibles de ${item.category}.`;
+      relatedItemsCopy.textContent = isFallback
+        ? "Otros objetos disponibles que también podrían interesarte."
+        : `Más objetos disponibles de ${item.category}.`;
     }
-    relatedItemsTrack.replaceChildren(...relatedItems.map(createRelatedItemCard));
+    relatedItemsTrack.replaceChildren(...itemsToRender.map(createRelatedItemCard));
     relatedItemsTrack.hidden = false;
     return;
   }
 
+  relatedItemsTrack.hidden = true;
   relatedItemsEmpty.hidden = false;
-  relatedItemsBrowse.hidden = false;
 }
 
 function renderCompletedActionState(item) {
