@@ -548,7 +548,7 @@ function getHomeUrl() {
 }
 
 function getInterestMessage(item) {
-  return `Hola, he visto que has publicado «${item.title}» en Segunda Vida y estoy interesado/a.\n\n${getItemUrl(item)}`;
+  return `Hola, he visto que has publicado «${item.title}» en Segunda Vida de @aldeapucela y estoy interesado/a.\n\n${getItemUrl(item)}`;
 }
 
 function createItemCard(item, index) {
