@@ -2377,10 +2377,10 @@ body.photo-lightbox-open {
   gap: 0.75rem;
   min-height: 0;
   margin-top: 1rem;
-  padding: 1rem;
-  border: 1px solid var(--border-light);
-  border-radius: 1rem;
-  background: var(--color-secondary-soft);
+  padding: 1rem 0.9rem;
+  border: 0;
+  border-radius: 0.65rem;
+  background: color-mix(in srgb, var(--color-secondary-soft) 72%, var(--bg-card));
   animation: fade-up 280ms ease both;
 }
 
@@ -2389,14 +2389,13 @@ body.photo-lightbox-open {
 }
 
 .action-state__icon {
-  display: grid;
-  width: 2.35rem;
-  height: 2.35rem;
-  place-items: center;
-  border-radius: 0.75rem;
-  background: var(--bg-container);
+  display: block;
+  width: 1.55rem;
+  height: auto;
+  padding-top: 0.05rem;
   color: var(--color-secondary-dark);
-  font-size: 1.05rem;
+  font-size: 1.35rem;
+  line-height: 1.2;
 }
 
 .action-state__content {
@@ -2421,7 +2420,28 @@ body.photo-lightbox-open {
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
-  margin-top: 0.8rem;
+  margin-top: 0.65rem;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--color-primary);
+  font-size: 0.76rem;
+  font-weight: 750;
+  text-decoration: none;
+  text-underline-offset: 0.16rem;
+  transition: color 180ms ease, transform 180ms ease;
+}
+
+.action-state__action:hover {
+  color: var(--color-primary-dark);
+  text-decoration: underline;
+  transform: translateY(-1px);
+}
+
+.action-state__action:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 3px;
 }
 
 .inline-action-link {
