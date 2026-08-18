@@ -49,6 +49,8 @@ interacciones de negocio:
 | `share` | `success` | `public_id` o `home` | La compartición se completa |
 | `interest` | `click` | `public_id` | Se pulsa «Me interesa» |
 | `interest` | `telegram-open` | `public_id` | Se abre o se intenta abrir el chat de Telegram |
+| `favorite` | `add` | `public_id` | Se añade un objeto a Favoritos |
+| `favorite` | `remove` | `public_id` | Se quita un objeto de Favoritos |
 | `telegram` | `open-mini-app` | `offer` o `posts` | Se pulsa un CTA web para abrir la Mini App |
 
 No se genera un evento adicional al mostrar una ficha: las visitas y páginas
