@@ -1,0 +1,217 @@
+{
+  "name": "SV · Record public interaction",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "segundavida/interaction",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "https://segundavida.aldeapucela.org,http://localhost:8000,http://127.0.0.1:8000"
+        }
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [0, 0],
+      "id": "b9c4a7e2-0d51-4b8d-9f34-2a6c7e8d1f05",
+      "name": "Webhook"
+    },
+    {
+      "parameters": {
+        "authentication": "nocoDbApiToken",
+        "operation": "search",
+        "workspaceId": {
+          "__rl": true,
+          "value": "wfrogvq8",
+          "mode": "list",
+          "cachedResultName": "Default Workspace"
+        },
+        "projectId": {
+          "__rl": true,
+          "value": "p3amiucxfm0jzoc",
+          "mode": "list",
+          "cachedResultName": "Aldea Pucela"
+        },
+        "table": {
+          "__rl": true,
+          "value": "mwk20n0679wz5fr",
+          "mode": "list",
+          "cachedResultName": "Segunda Vida"
+        },
+        "returnAll": true,
+        "options": {},
+        "resource": "row",
+        "downloadAttachments": false
+      },
+      "type": "n8n-nodes-base.nocoDb",
+      "typeVersion": 4,
+      "position": [224, 0],
+      "id": "c0d5b8f3-1e62-4c9e-a045-3b7d8f9e2a16",
+      "name": "Search rows",
+      "alwaysOutputData": true,
+      "credentials": {
+        "nocoDbApiToken": {
+          "id": "t0BGosFerj8egJ4y",
+          "name": "NocoDB Token account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const webhook = $('Webhook').first()?.json ?? {};\nlet body = webhook.body ?? webhook;\nif (typeof body === 'string') { try { body = JSON.parse(body); } catch { return [{ json: { ok: false, valid: false, error: 'invalid_json', http_status: 400 } }]; } }\nconst itemId = typeof body.item_id === 'string' ? body.item_id.trim() : '';\nconst action = typeof body.action === 'string' ? body.action.trim() : '';\nconst itemIdPattern = /^[A-Za-z0-9][A-Za-z0-9_-]{5,79}$/;\nconst actions = new Set(['interest', 'contact_attempt']);\nif (!itemIdPattern.test(itemId)) return [{ json: { ok: false, valid: false, error: 'item_id_invalid', http_status: 400 } }];\nif (!actions.has(action)) return [{ json: { ok: false, valid: false, error: 'action_invalid', http_status: 400 } }];\nconst found = $input.all().map(({ json }) => ({ json, fields: json.fields ?? json })).find(({ fields }) => String(fields.public_id ?? fields['item-id'] ?? '') === itemId);\nif (!found) return [{ json: { ok: false, valid: false, error: 'item_not_found', http_status: 404 } }];\nconst fields = found.fields;\nconst status = String(fields.status ?? 'hidden').toLowerCase();\nif (!['available', 'reserved', 'completed', 'expired'].includes(status)) return [{ json: { ok: false, valid: false, error: 'item_not_found', http_status: 404 } }];\nconst rowId = fields.Id ?? found.json.Id ?? found.json.id ?? null;\nif (rowId === null || rowId === undefined || rowId === '') return [{ json: { ok: false, valid: false, error: 'nocodb_row_id_missing', http_status: 500 } }];\nconst interestCount = Math.max(0, Number(fields.interest_count ?? 0));\nconst contactAttemptCount = Math.max(0, Number(fields.contact_attempt_count ?? 0));\nconst nextInterestCount = action === 'interest' ? interestCount + 1 : interestCount;\nconst nextContactAttemptCount = action === 'contact_attempt' ? contactAttemptCount + 1 : contactAttemptCount;\nconst count = action === 'interest' ? nextInterestCount : nextContactAttemptCount;\nreturn [{ json: { ok: true, valid: true, Id: rowId, item_id: itemId, action, count, interest_count: nextInterestCount, contact_attempt_count: nextContactAttemptCount, http_status: 200 } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [448, 0],
+      "id": "d1e6c9a4-2f73-4d0f-b156-4c8e9f0a3b27",
+      "name": "Prepare interaction"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.valid }}",
+              "operation": "isTrue"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [672, 0],
+      "id": "e2f7d0b5-3a84-4e10-c267-5d9f0a1b4c38",
+      "name": "Can update?"
+    },
+    {
+      "parameters": {
+        "authentication": "nocoDbApiToken",
+        "operation": "update",
+        "id": "={{ $json.Id }}",
+        "workspaceId": {
+          "__rl": true,
+          "value": "wfrogvq8",
+          "mode": "list",
+          "cachedResultName": "Default Workspace"
+        },
+        "projectId": {
+          "__rl": true,
+          "value": "p3amiucxfm0jzoc",
+          "mode": "list",
+          "cachedResultName": "Aldea Pucela"
+        },
+        "table": {
+          "__rl": true,
+          "value": "mwk20n0679wz5fr",
+          "mode": "list",
+          "cachedResultName": "Segunda Vida"
+        },
+        "fieldsMapper": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "interest_count": "={{ $json.interest_count }}",
+            "contact_attempt_count": "={{ $json.contact_attempt_count }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "interest_count",
+              "displayName": "interest_count",
+              "type": "number",
+              "display": true,
+              "readOnly": false
+            },
+            {
+              "id": "contact_attempt_count",
+              "displayName": "contact_attempt_count",
+              "type": "number",
+              "display": true,
+              "readOnly": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      },
+      "type": "n8n-nodes-base.nocoDb",
+      "typeVersion": 4,
+      "position": [896, -96],
+      "id": "f308e1c6-4b95-4f21-d378-6e0a1b2c5d49",
+      "name": "Update interaction counters",
+      "credentials": {
+        "nocoDbApiToken": {
+          "id": "t0BGosFerj8egJ4y",
+          "name": "NocoDB Token account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $('Prepare interaction').first()?.json ?? {}; return [{ json: { response: { ok: true, item_id: input.item_id ?? '', action: input.action ?? '', count: input.count ?? 0 }, http_status: 200 } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1120, -96],
+      "id": "a419f2d7-5ca6-4032-e489-7f1b2c3d6e50",
+      "name": "Build success response"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json.response ?? $json }}",
+        "options": {
+          "responseCode": "={{ $json.http_status ?? 200 }}"
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [1344, -96],
+      "id": "b52a03e8-6db7-4143-f590-8a2c3d4e7f61",
+      "name": "Respond success"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {
+          "responseCode": "={{ $json.http_status ?? 400 }}"
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [896, 96],
+      "id": "c63b14f9-7ec8-4254-a601-9b3d4e5f8a72",
+      "name": "Respond error"
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [[{"node": "Search rows", "type": "main", "index": 0}]]
+    },
+    "Search rows": {
+      "main": [[{"node": "Prepare interaction", "type": "main", "index": 0}]]
+    },
+    "Prepare interaction": {
+      "main": [[{"node": "Can update?", "type": "main", "index": 0}]]
+    },
+    "Can update?": {
+      "main": [
+        [{"node": "Update interaction counters", "type": "main", "index": 0}],
+        [{"node": "Respond error", "type": "main", "index": 0}]
+      ]
+    },
+    "Update interaction counters": {
+      "main": [[{"node": "Build success response", "type": "main", "index": 0}]]
+    },
+    "Build success response": {
+      "main": [[{"node": "Respond success", "type": "main", "index": 0}]]
+    }
+  },
+  "pinData": {},
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": []
+}

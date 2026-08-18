@@ -98,7 +98,8 @@ Contrato de llamada para n8n:
     "image_url": null,
     "owner_display_name": "Vecindad",
     "owner_username": "vecino",
-    "interest_count": 0
+    "interest_count": 0,
+    "contact_attempt_count": 0
   }]
 }
 ```

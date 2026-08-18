@@ -164,6 +164,10 @@
               "fieldValue": "={{ $json.interest_count }}"
             },
             {
+              "fieldName": "contact_attempt_count",
+              "fieldValue": "={{ $json.contact_attempt_count ?? 0 }}"
+            },
+            {
               "fieldName": "consent_accepted",
               "fieldValue": "={{ $json.consent_accepted }}"
             },

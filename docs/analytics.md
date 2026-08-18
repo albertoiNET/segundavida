@@ -62,6 +62,13 @@ Telegram. La web no puede confirmar que la persona haya enviado el mensaje
 dentro de Telegram; para eso haría falta un flujo mediado por un bot o un
 backend que recibiera una confirmación.
 
+Además de Matomo, el frontend registra en NocoDB las acciones confirmadas a
+través de `POST /segundavida/interaction`: aceptar el diálogo de contacto
+incrementa `interest_count` y abrir correctamente el chat incrementa
+`contact_attempt_count`. El navegador evita repetir cada acción para el mismo
+objeto mediante `localStorage`; estos contadores son señales agregadas y no
+identifican personas únicas.
+
 El `public_id` usado como nombre de evento es un identificador opaco y público.
 Nunca se envían a Matomo títulos, descripciones, términos de búsqueda,
 username o ID de Telegram, `initData`, nombre, correo ni teléfono. El evento de

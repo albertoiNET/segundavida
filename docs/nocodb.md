@@ -33,6 +33,7 @@ deben entrar desde el workflow de publicación o desde una importación validada
 | `telegram_thread_id` | SingleLineText | No | Referencia privada para n8n |
 | `telegram_message_id` | SingleLineText | No | Referencia privada para n8n |
 | `interest_count` | Number | Sí | Contador agregado, valor inicial `0` |
+| `contact_attempt_count` | Number | Sí | Contador agregado de aperturas confirmadas del chat, valor inicial `0` |
 | `consent_accepted` | Checkbox | Sí | Confirmación de aceptación de publicación y contacto |
 | `consent_version` | SingleLineText | Sí | Versión del texto aceptado por la persona |
 | `consent_at` | DateTime | Sí | Fecha generada por n8n al publicar |
@@ -53,7 +54,8 @@ preparado y el enlace a la ficha concreta. Por eso el formulario exige
 configurar un nombre de usuario público antes de publicar. Las
 publicaciones antiguas sin nombre de usuario se mantienen visibles, pero no ofrecen un
 canal de contacto. El contador de intereses es agregado y se mantiene en el
-registro del objeto.
+registro del objeto. `contact_attempt_count` registra las aperturas confirmadas
+del chat desde la ficha; no demuestra que el mensaje se haya enviado.
 
 ## Importación en NocoDB
 

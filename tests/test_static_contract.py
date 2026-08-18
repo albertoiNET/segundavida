@@ -95,6 +95,37 @@ class StaticContractTests(unittest.TestCase):
             self.assertIn('/js/app.js?v=sv-test', updated_page)
             self.assertIn('/css/app.css?v=sv-test', updated_page)
 
+    def test_interaction_workflow_contract_updates_both_counters(self):
+        workflow = json.loads((ROOT / "docs" / "sv_record_interaction.workflow.json").read_text(encoding="utf-8"))
+        webhook = next(node for node in workflow["nodes"] if node["name"] == "Webhook")
+        self.assertEqual(webhook["parameters"]["httpMethod"], "POST")
+        self.assertEqual(webhook["parameters"]["path"], "segundavida/interaction")
+
+        workflow_source = json.dumps(workflow, ensure_ascii=False)
+        self.assertIn("interest", workflow_source)
+        self.assertIn("contact_attempt", workflow_source)
+        self.assertIn("interest_count", workflow_source)
+        self.assertIn("contact_attempt_count", workflow_source)
+
+    def test_interest_signal_contract_is_live_and_discreet(self):
+        index_source = self.template.read_text(encoding="utf-8")
+        app_source = (ROOT / "js" / "app.js").read_text(encoding="utf-8")
+        api_source = (ROOT / "js" / "api.js").read_text(encoding="utf-8")
+        app_css = (ROOT / "css" / "app.css").read_text(encoding="utf-8")
+
+        self.assertIn('id="detail-interest-signal"', index_source)
+        self.assertIn("detail-meta__item--zone", index_source)
+        self.assertIn("INTERACTION_STORAGE_KEY", app_source)
+        self.assertIn("recordItemInteraction(item, \"interest\")", app_source)
+        self.assertIn("recordItemInteraction(item, \"contact_attempt\")", app_source)
+        self.assertIn("1 persona se ha interesado", app_source)
+        self.assertIn("personas se han interesado", app_source)
+        self.assertIn("/interaction", api_source)
+        self.assertIn("keepalive: true", api_source)
+        self.assertIn(".detail-interest-signal", app_css)
+        self.assertIn("grid-template-columns: minmax(0, 0.85fr) auto minmax(0, 1.15fr) auto minmax(0, 0.9fr)", app_css)
+        self.assertIn("text-overflow: ellipsis", app_css)
+
     def test_rss_feed_is_public_escaped_and_newest_first(self):
         with tempfile.TemporaryDirectory() as directory:
             output = Path(directory)
@@ -196,6 +227,8 @@ class StaticContractTests(unittest.TestCase):
         self.assertIn("renderRelatedItems(item)", app_source)
         self.assertIn("function sortNewestFirst", app_source)
         self.assertIn("function formatShortDateTime", app_source)
+        self.assertIn("function formatRelativeAge", app_source)
+        self.assertIn('new Intl.RelativeTimeFormat("es-ES"', app_source)
         self.assertIn("function isAdminUser", app_source)
         self.assertIn("function refreshSelectedDetailForIdentity", app_source)
         self.assertIn("const canManageItem = ownItem || adminUser", app_source)

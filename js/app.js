@@ -25,6 +25,7 @@ const PHOTO_JPEG_QUALITY = 0.74;
 const ALLOWED_PHOTO_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 const OWN_ITEMS_STORAGE_KEY = "segundavida:my-items:v1";
 const FAVORITES_STORAGE_KEY = "segundavida:favorites:v1";
+const INTERACTION_STORAGE_KEY = "segundavida:interaction-events:v1";
 const THEME_STORAGE_KEY = "segundavida:theme:v1";
 const PUBLISH_DRAFT_STORAGE_KEY = "segundavida:publish-draft:v1";
 const PUBLISH_DRAFT_VALUES_KEY = "segundavida:publish-draft-values:v1";
@@ -87,6 +88,7 @@ let photoLightboxIndex = 0;
 let photoLightboxReturnFocus = null;
 let lastTrackedViewKey = "";
 const trackedInterestTelegramItems = new Set();
+const pendingInteractions = new Set();
 let routeOpenInFlight = null;
 let routeOpenItemId = "";
 let reportStartInFlight = null;
@@ -147,6 +149,7 @@ const detailDescription = document.querySelector("#detail-description");
 const detailZone = document.querySelector("#detail-zone");
 const detailOwner = document.querySelector("#detail-owner");
 const detailCreatedAt = document.querySelector("#detail-created-at");
+const detailInterestSignal = document.querySelector("#detail-interest-signal");
 const interestButton = document.querySelector("#interest-button");
 const reportProblemButton = document.querySelector("#report-problem-button");
 const detailActionState = document.querySelector("#detail-action-state");
@@ -613,6 +616,45 @@ function formatShortDateTime(value) {
   }).format(date).replace(",", "");
 }
 
+function formatRelativeAge(value, now = Date.now()) {
+  if (!value) return "";
+
+  const rawValue = String(value);
+  const normalized = rawValue.includes(" ") ? rawValue.replace(" ", "T") : rawValue;
+  const timestamp = new Date(normalized).getTime();
+  if (Number.isNaN(timestamp)) return "";
+
+  const elapsedMs = now - timestamp;
+  if (elapsedMs < 0) return "ahora mismo";
+  if (elapsedMs < 60 * 1000) return "hace menos de 1 minuto";
+
+  const units = [
+    ["year", 365 * 24 * 60 * 60 * 1000],
+    ["month", 30 * 24 * 60 * 60 * 1000],
+    ["week", 7 * 24 * 60 * 60 * 1000],
+    ["day", 24 * 60 * 60 * 1000],
+    ["hour", 60 * 60 * 1000],
+    ["minute", 60 * 1000],
+  ];
+  const [unit, unitMs] = units.find(([, milliseconds]) => elapsedMs >= milliseconds);
+  const amount = -Math.floor(elapsedMs / unitMs);
+
+  try {
+    return new Intl.RelativeTimeFormat("es-ES", { numeric: "always" }).format(amount, unit);
+  } catch {
+    const labels = {
+      year: ["año", "años"],
+      month: ["mes", "meses"],
+      week: ["semana", "semanas"],
+      day: ["día", "días"],
+      hour: ["hora", "horas"],
+      minute: ["minuto", "minutos"],
+    };
+    const label = labels[unit][Math.abs(amount) === 1 ? 0 : 1];
+    return `hace ${Math.abs(amount)} ${label}`;
+  }
+}
+
 function createTextElement(tagName, className, text) {
   const element = document.createElement(tagName);
   element.className = className;
@@ -680,6 +722,89 @@ function saveOwnItems() {
     window.localStorage.setItem(OWN_ITEMS_STORAGE_KEY, JSON.stringify(state.myItems));
   } catch {
     // La lista sigue disponible durante esta sesión aunque el almacenamiento esté bloqueado.
+  }
+}
+
+function readRecordedInteractions() {
+  try {
+    const stored = JSON.parse(window.localStorage.getItem(INTERACTION_STORAGE_KEY) ?? "{}");
+    return stored && typeof stored === "object" && !Array.isArray(stored) ? stored : {};
+  } catch {
+    return {};
+  }
+}
+
+function interactionStorageKey(itemId, action) {
+  return `${action}:${itemId}`;
+}
+
+function hasRecordedInteraction(itemId, action) {
+  const key = interactionStorageKey(itemId, action);
+  return Boolean(readRecordedInteractions()[key]);
+}
+
+function markInteractionRecorded(itemId, action) {
+  try {
+    const stored = readRecordedInteractions();
+    stored[interactionStorageKey(itemId, action)] = new Date().toISOString();
+    window.localStorage.setItem(INTERACTION_STORAGE_KEY, JSON.stringify(stored));
+  } catch {
+    // El registro en backend sigue siendo útil aunque el almacenamiento local esté bloqueado.
+  }
+}
+
+function renderInterestSignal(item) {
+  if (!detailInterestSignal) return;
+
+  const count = Number(item?.interestCount ?? 0);
+  if (!Number.isFinite(count) || count < 1) {
+    detailInterestSignal.hidden = true;
+    detailInterestSignal.textContent = "";
+    return;
+  }
+
+  detailInterestSignal.hidden = false;
+  detailInterestSignal.textContent = count === 1
+    ? "1 persona se ha interesado"
+    : `${count} personas se han interesado`;
+}
+
+function updateSelectedInterestCount(count) {
+  const normalizedCount = Number(count);
+  if (!Number.isFinite(normalizedCount) || normalizedCount < 0) return;
+
+  const update = (item) => item?.id === state.selectedItem?.id
+    ? { ...item, interestCount: normalizedCount }
+    : item;
+  state.selectedItem = update(state.selectedItem);
+  state.items = state.items.map(update);
+  state.myItems = state.myItems.map(update);
+  renderInterestSignal(state.selectedItem);
+}
+
+async function recordItemInteraction(item, action) {
+  if (!item?.id || !["interest", "contact_attempt"].includes(action)) return null;
+  if (!api?.isInteractionConfigured || typeof api.recordInteraction !== "function") return null;
+  const storageKey = interactionStorageKey(item.id, action);
+  if (hasRecordedInteraction(item.id, action) || pendingInteractions.has(storageKey)) return null;
+
+  pendingInteractions.add(storageKey);
+
+  try {
+    const result = await api.recordInteraction({
+      item_id: item.id,
+      action,
+    });
+    markInteractionRecorded(item.id, action);
+    if (action === "interest") {
+      updateSelectedInterestCount(result.count ?? result.interest_count);
+    }
+    return result;
+  } catch {
+    // El registro nunca debe impedir que la persona contacte con quien ofrece.
+    return null;
+  } finally {
+    pendingInteractions.delete(storageKey);
   }
 }
 
@@ -1590,7 +1715,8 @@ function renderDetail(item, { live = true, error = "" } = {}) {
   detailDescription.hidden = !item.description;
   detailZone.textContent = item.zone || "Valladolid";
   detailOwner.textContent = item.ownerDisplayName || "Vecindad";
-  if (detailCreatedAt) detailCreatedAt.textContent = formatShortDateTime(item.createdAt) || "—";
+  if (detailCreatedAt) detailCreatedAt.textContent = formatRelativeAge(item.createdAt) || "—";
+  renderInterestSignal(item);
   const ownItem = LOCAL_AUTHOR_DEMO_MODE || isOwnItem(item);
   const adminUser = isAdminUser();
   const canManageItem = ownItem || adminUser;
@@ -3306,7 +3432,10 @@ function openInterestTelegram(item) {
 
   const telegramUrl = `https://t.me/${username}?text=${encodeURIComponent(getInterestMessage(item))}`;
   const opened = openTelegramChat(telegramUrl);
-  if (opened) trackInterestTelegramOpen(item);
+  if (opened) {
+    trackInterestTelegramOpen(item);
+    void recordItemInteraction(item, "contact_attempt");
+  }
   showInterestFeedback(item, telegramUrl);
   return opened;
 }
@@ -3363,6 +3492,7 @@ function confirmContactDialog() {
   }
 
   closeContactDialog({ restoreFocus: false });
+  void recordItemInteraction(item, "interest");
   openInterestTelegram(item);
 }
 

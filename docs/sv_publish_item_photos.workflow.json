@@ -269,6 +269,7 @@
             "reserved_at": null,
             "reservation_expires_at": null,
             "interest_count": "={{ $json.interest_count }}",
+            "contact_attempt_count": "={{ $json.contact_attempt_count ?? 0 }}",
             "consent_accepted": "={{ $json.consent_accepted }}",
             "consent_version": "={{ $json.consent_version }}",
             "consent_at": "={{ $json.consent_at }}"
@@ -362,6 +363,13 @@
             {
               "id": "interest_count",
               "displayName": "interest_count",
+              "type": "number",
+              "display": true,
+              "readOnly": false
+            },
+            {
+              "id": "contact_attempt_count",
+              "displayName": "contact_attempt_count",
               "type": "number",
               "display": true,
               "readOnly": false

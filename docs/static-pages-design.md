@@ -85,6 +85,11 @@ contener:
 }
 ```
 
+La ficha hidrata `interest_count` desde el endpoint vivo y muestra una señal
+discreta solo cuando el contador es mayor que cero. Los contadores de interés y
+de apertura de contacto se registran mediante `POST /segundavida/interaction`;
+no provocan regeneraciones de fichas.
+
 El endpoint individual recomendado es `GET /item/<public_id>` (o el mismo
 webhook con esa ruta). Debe responder `200` con `{ok:true,item}` para
 `available`, `reserved`, `completed` y `expired`, y `404` con `{ok:false,error:"not_found"}`

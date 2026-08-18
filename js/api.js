@@ -5,6 +5,7 @@ const N8N_PUBLISH_URL = "https://tasks.nukeador.com/webhook/segundavida/publish"
 const N8N_COMPLETE_URL = "https://tasks.nukeador.com/webhook/segundavida/complete";
 const N8N_MINE_URL = "https://tasks.nukeador.com/webhook/segundavida/mine";
 const N8N_REPORT_URL = "https://tasks.nukeador.com/webhook/segundavida/report";
+const N8N_INTERACTION_URL = "https://tasks.nukeador.com/webhook/segundavida/interaction";
 const NOCODB_BASE_URL = "https://proyectos.aldeapucela.org";
 
 let catalogInFlight = null;
@@ -330,6 +331,38 @@ async function reportProblem(payload) {
   return result;
 }
 
+async function recordInteraction(payload) {
+  if (!N8N_INTERACTION_URL) {
+    throw new Error("El endpoint de interacciones todavía no está configurado.");
+  }
+
+  const response = await fetch(N8N_INTERACTION_URL, {
+    method: "POST",
+    headers: {
+      Accept: "application/json",
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+    keepalive: true,
+  });
+
+  let result = null;
+  try {
+    result = await response.json();
+  } catch {
+    result = null;
+  }
+
+  result = Array.isArray(result) ? result[0] ?? null : result;
+  if (!response.ok || result?.ok !== true) {
+    const error = new Error(result?.error ?? `n8n respondió con HTTP ${response.status}`);
+    error.code = result?.error_code ?? result?.error ?? `http_${response.status}`;
+    throw error;
+  }
+
+  return result;
+}
+
 window.SecondaVidaApi = Object.freeze({
   isConfigured: Boolean(N8N_DATA_URL),
   isDataConfigured: Boolean(N8N_DATA_URL),
@@ -338,6 +371,7 @@ window.SecondaVidaApi = Object.freeze({
   isCompleteConfigured: Boolean(N8N_COMPLETE_URL),
   isMineConfigured: Boolean(N8N_MINE_URL),
   isReportConfigured: Boolean(N8N_REPORT_URL),
+  isInteractionConfigured: Boolean(N8N_INTERACTION_URL),
   listItems,
   getItem,
   listMineItems,
@@ -346,4 +380,5 @@ window.SecondaVidaApi = Object.freeze({
   publishItem,
   completeItem,
   reportProblem,
+  recordInteraction,
 });
