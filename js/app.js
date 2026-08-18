@@ -112,6 +112,7 @@ const photoLightboxPrevious = document.querySelector("#photo-lightbox-previous")
 const photoLightboxNext = document.querySelector("#photo-lightbox-next");
 const detailAvailability = document.querySelector("#detail-availability");
 const detailAvailabilityLabel = document.querySelector("#detail-availability-label");
+const detailAvailabilityIcon = document.querySelector("#detail-availability-icon");
 const detailTitle = document.querySelector("#detail-title");
 const detailCategory = document.querySelector("#detail-category");
 const detailDescription = document.querySelector("#detail-description");
@@ -678,8 +679,11 @@ function createItemCard(item, index) {
     : item.expiresAt
       ? `Hasta ${formatCompactDate(item.expiresAt)}`
       : "Disponible";
+  const availabilityIcon = item.status === "reserved"
+    ? createIconElement("fa-lock", "▣")
+    : createIconElement("fa-clock", "◷");
   availability.append(
-    createIconElement("fa-clock", "◷"),
+    availabilityIcon,
     document.createTextNode(availabilityLabel),
   );
   meta.append(availability);
@@ -867,7 +871,7 @@ function renderReservedActionState() {
 
   const icon = document.createElement("span");
   icon.className = "action-state__icon";
-  icon.append(createIconElement("fa-clock", "◷"));
+  icon.append(createIconElement("fa-lock", "▣"));
 
   const content = document.createElement("div");
   content.className = "action-state__content";
@@ -1283,6 +1287,11 @@ function renderDetail(item, { live = true, error = "" } = {}) {
   } else {
     detailAvailability.textContent = availabilityLabel;
   }
+  if (detailAvailabilityIcon) {
+    detailAvailabilityIcon.className = item.status === "reserved"
+      ? "fa-solid fa-lock fa-icon"
+      : "fa-regular fa-calendar-days fa-icon";
+  }
   detailTitle.textContent = item.title;
   detailCategory.replaceChildren(createCategoryIcon(item.category), document.createTextNode(` ${item.category}`));
   detailDescription.textContent = item.description || "";
@@ -1417,8 +1426,9 @@ function setView(viewName, { syncHistory = true, itemId = "" } = {}) {
     }, "", url);
   }
 
+  const activeNavigationView = viewName === "detail" ? "explore" : viewName;
   navItems.forEach((button) => {
-    const selected = button.dataset.view === viewName;
+    const selected = button.dataset.view === activeNavigationView;
     button.toggleAttribute("aria-current", selected);
     if (!selected) button.removeAttribute("aria-current");
   });

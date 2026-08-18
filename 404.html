@@ -133,7 +133,7 @@
           <div class="detail-subline">
             <p class="detail-category" id="detail-category"></p>
             <p class="detail-availability" id="detail-availability">
-              <i class="fa-regular fa-calendar-days fa-icon" data-fallback="▣" aria-hidden="true"></i>
+              <i class="fa-regular fa-calendar-days fa-icon" id="detail-availability-icon" data-fallback="▣" aria-hidden="true"></i>
               <span id="detail-availability-label">Disponible</span>
             </p>
           </div>
@@ -694,13 +694,21 @@
           <span class="nav-item__icon" aria-hidden="true"><i class="fa-solid fa-magnifying-glass fa-icon" data-fallback="⌕"></i></span>
           <span>Explorar</span>
         </button>
+        <a class="nav-item" href="https://t.me/aldeapucela" target="_blank" rel="noopener noreferrer">
+          <span class="nav-item__icon" aria-hidden="true"><i class="fa-solid fa-comments fa-icon" data-fallback="☷"></i></span>
+          <span>Comunidad</span>
+        </a>
         <button class="nav-item nav-item--action" type="button" data-view="offer">
           <span class="nav-item__icon" aria-hidden="true"><i class="fa-solid fa-plus fa-icon" data-fallback="+"></i></span>
           <span>Ofrecer</span>
         </button>
         <button class="nav-item" type="button" data-view="posts">
           <span class="nav-item__icon" aria-hidden="true"><i class="fa-solid fa-user fa-icon" data-fallback="●"></i></span>
-          <span>Mis publicaciones</span>
+          <span>Mi perfil</span>
+        </button>
+        <button class="nav-item nav-item--placeholder" type="button" disabled aria-label="Favoritos, próximamente">
+          <span class="nav-item__icon" aria-hidden="true"><i class="fa-regular fa-star fa-icon" data-fallback="☆"></i></span>
+          <span>Favoritos</span>
         </button>
       </nav>
 
