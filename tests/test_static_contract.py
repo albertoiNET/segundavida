@@ -152,6 +152,8 @@ class StaticContractTests(unittest.TestCase):
         self.assertIn('"Optimizando…"', app_source)
         self.assertIn("state.offerFiles = [...state.offerFiles, ...filesToAdd]", app_source)
         index_source = (ROOT / "index.html").read_text(encoding="utf-8")
+        self.assertIn('class="brand-subtitle">Aldea Pucela</span>', index_source)
+        self.assertIn('aria-label="Ir a la portada de Segunda Vida Aldea Pucela"', index_source)
         self.assertIn('id="share-feedback"', index_source)
         self.assertIn('id="detail-share"', index_source)
         self.assertIn('id="related-items"', index_source)
