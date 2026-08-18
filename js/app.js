@@ -541,7 +541,7 @@ function prepareHistoryState() {
   const itemId = getRouteItemId();
   const view = itemId
     ? "detail"
-    : getViewFromPath() || getTelegramStartView() || (isNotFoundPage ? "not-found" : "explore");
+    : getTelegramStartView() || getViewFromPath() || (isNotFoundPage ? "not-found" : "explore");
   const index = getHistoryIndex(currentState);
 
   const canonicalUrl = new URL(window.location.href);
