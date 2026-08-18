@@ -2521,13 +2521,14 @@ body.photo-lightbox-open {
 .telegram-auth-card__icon {
   display: grid;
   flex: 0 0 auto;
-  width: 2.65rem;
-  height: 2.65rem;
+  width: 1.35rem;
+  height: 1.35rem;
   place-items: center;
-  border-radius: 0.85rem;
-  background: var(--color-telegram-soft);
+  border-radius: 0;
+  background: transparent;
   color: var(--color-telegram-dark);
-  font-size: 1.45rem;
+  font-size: 1.05rem;
+  line-height: 1;
 }
 
 .telegram-auth-card h2 {
@@ -2536,7 +2537,8 @@ body.photo-lightbox-open {
   font-size: 1rem;
 }
 
-.telegram-auth-card p {
+.telegram-auth-card p,
+.telegram-auth-card ul {
   margin: 0;
   color: var(--text-secondary);
   font-size: 0.8rem;
@@ -2544,6 +2546,10 @@ body.photo-lightbox-open {
 }
 
 .telegram-auth-privacy {
+  display: grid;
+  gap: 0.35rem;
+  margin: 0;
+  padding-left: 1.15rem;
   color: var(--color-secondary-dark) !important;
   font-size: 0.76rem !important;
 }

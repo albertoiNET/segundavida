@@ -26,6 +26,8 @@ const PUBLISH_DRAFT_STORE_NAME = "drafts";
 const LOCAL_AUTHOR_DEMO_MODE =
   ["localhost", "127.0.0.1"].includes(window.location.hostname) &&
   new URLSearchParams(window.location.search).get("demo") === "author";
+const LOCAL_AUTHOR_DEMO_DISPLAY_NAME = "Nuke";
+const LOCAL_AUTHOR_DEMO_USERNAME = "tionuke";
 const state = {
   items: [],
   category: "Todo",
@@ -138,6 +140,7 @@ const brandHomeLink = document.querySelector("#brand-home-link");
 const telegramAuthTitle = document.querySelector("#telegram-auth-title");
 const telegramAuthMessage = document.querySelector("#telegram-auth-message");
 const telegramAuthPrivacy = document.querySelector("#telegram-auth-privacy");
+const telegramAuthNamePrivacy = document.querySelector("#telegram-auth-name-privacy");
 const telegramDownloadLink = document.querySelector("#telegram-download-link");
 const telegramOpenLink = document.querySelector("#telegram-open-link");
 const telegramUsernameHelp = document.querySelector("#telegram-username-help");
@@ -452,6 +455,14 @@ function configureDeleteButton(button) {
 function normalizeTelegramUsername(value) {
   const username = String(value ?? "").trim().replace(/^@/, "");
   return /^[A-Za-z][A-Za-z0-9_]{4,31}$/.test(username) ? username : "";
+}
+
+function normalizeTelegramDisplayName(user) {
+  return [user?.first_name, user?.last_name]
+    .filter((value) => typeof value === "string" && value.trim())
+    .join(" ")
+    .trim()
+    .slice(0, 120);
 }
 
 function readOwnItems() {
@@ -1008,8 +1019,8 @@ function createLocalAuthorDemoItems(items) {
     .slice(0, 3)
     .map((item) => ({
       ...item,
-      ownerDisplayName: "Autor de demo",
-      ownerUsername: "autor_demo",
+      ownerDisplayName: LOCAL_AUTHOR_DEMO_DISPLAY_NAME,
+      ownerUsername: LOCAL_AUTHOR_DEMO_USERNAME,
       ownerTelegramId: "demo-author",
     }));
   const completedSource = activeItems[0];
@@ -1022,8 +1033,8 @@ function createLocalAuthorDemoItems(items) {
       ...completedSource,
       id: `${completedSource.id}-completed-demo`,
       title: `${completedSource.title} · entregado`,
-      ownerDisplayName: "Autor de demo",
-      ownerUsername: "autor_demo",
+      ownerDisplayName: LOCAL_AUTHOR_DEMO_DISPLAY_NAME,
+      ownerUsername: LOCAL_AUTHOR_DEMO_USERNAME,
       ownerTelegramId: "demo-author",
       status: "completed",
       expiresAt: null,
@@ -1669,17 +1680,23 @@ function configureOfferAuth(user = state.telegramUser) {
   const miniAppUrl = telegramRuntime.miniAppUrl || "https://t.me/pucelobot/segundavida";
   telegramOpenLink.href = miniAppUrl;
   const verified = LOCAL_AUTHOR_DEMO_MODE || Boolean(auth?.hasInitData() && user?.valid);
-  const username = LOCAL_AUTHOR_DEMO_MODE ? "autor_demo" : normalizeTelegramUsername(user?.username);
+  const username = LOCAL_AUTHOR_DEMO_MODE ? LOCAL_AUTHOR_DEMO_USERNAME : normalizeTelegramUsername(user?.username);
+  const displayName = LOCAL_AUTHOR_DEMO_MODE ? LOCAL_AUTHOR_DEMO_DISPLAY_NAME : normalizeTelegramDisplayName(user);
 
   telegramAuthCard.dataset.state = verified && username ? "connected" : verified ? "warning" : "error";
   telegramAuthTitle.textContent = verified && username
-    ? `Publicar como @${username}`
+    ? displayName ? `Publicar como ${displayName} (@${username})` : `Publicar como @${username}`
     : verified
       ? "Necesitas un nombre de usuario público"
       : "Publica desde Telegram";
   telegramDownloadLink.hidden = verified;
   telegramOpenLink.hidden = verified;
   telegramAuthPrivacy.hidden = !verified || !username;
+  if (telegramAuthNamePrivacy) {
+    telegramAuthNamePrivacy.textContent = displayName
+      ? "Se compartirá tu nombre público y tu nombre de usuario para que puedan contactar contigo."
+      : "Se compartirá tu nombre de usuario para que puedan contactar contigo.";
+  }
   telegramUsernameHelp.hidden = !verified || Boolean(username);
 
   if (verified) {
