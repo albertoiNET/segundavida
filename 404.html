@@ -537,9 +537,9 @@
           <p id="report-dialog-copy">Cuéntanos qué ha ocurrido con esta publicación. El equipo de Aldea Pucela revisará el caso.</p>
           <p class="report-dialog__item" id="report-dialog-item"></p>
           <form class="report-form" id="report-form" novalidate>
-            <label class="form-field">
-              <span>¿Qué ha pasado?</span>
-              <select id="report-reason" name="reason" required>
+            <div class="form-field report-reason-field">
+              <span id="report-reason-label">¿Qué ha pasado?</span>
+              <select id="report-reason" class="report-reason-native" name="reason" required tabindex="-1" aria-hidden="true">
                 <option value="">Selecciona un motivo</option>
                 <optgroup label="Sobre la entrega o el trato">
                   <option value="no_entregado">No me lo entregó</option>
@@ -556,7 +556,75 @@
                 </optgroup>
                 <option value="otro">Otro problema</option>
               </select>
-            </label>
+              <div class="report-reason-picker" id="report-reason-picker">
+                <button class="report-reason-trigger" id="report-reason-trigger" type="button" aria-haspopup="listbox" aria-expanded="false" aria-controls="report-reason-menu" aria-labelledby="report-reason-label report-reason-value" aria-required="true">
+                  <span class="report-reason-trigger__copy">
+                    <span class="report-reason-trigger__value" id="report-reason-value">Selecciona un motivo</span>
+                  </span>
+                  <i class="fa-solid fa-chevron-down fa-icon" data-fallback="⌄" aria-hidden="true"></i>
+                </button>
+                <div class="report-reason-menu" id="report-reason-menu" role="listbox" tabindex="-1" hidden>
+                  <div class="report-reason-menu__group">
+                    <p class="report-reason-menu__label">Sobre la entrega o el trato</p>
+                    <button class="report-reason-option" type="button" role="option" aria-selected="false" data-report-reason-option data-report-reason-value="no_entregado">
+                      <span class="report-reason-option__icon" aria-hidden="true"><i class="fa-solid fa-box-open fa-icon" data-fallback="□"></i></span>
+                      <span class="report-reason-option__copy"><strong>No me lo entregó</strong></span>
+                      <i class="report-reason-option__check fa-solid fa-check fa-icon" data-fallback="✓" aria-hidden="true"></i>
+                    </button>
+                    <button class="report-reason-option" type="button" role="option" aria-selected="false" data-report-reason-option data-report-reason-value="pidio_dinero">
+                      <span class="report-reason-option__icon" aria-hidden="true"><i class="fa-solid fa-euro-sign fa-icon" data-fallback="€"></i></span>
+                      <span class="report-reason-option__copy"><strong>Me pidió dinero o algo a cambio</strong></span>
+                      <i class="report-reason-option__check fa-solid fa-check fa-icon" data-fallback="✓" aria-hidden="true"></i>
+                    </button>
+                    <button class="report-reason-option" type="button" role="option" aria-selected="false" data-report-reason-option data-report-reason-value="objeto_no_disponible">
+                      <span class="report-reason-option__icon" aria-hidden="true"><i class="fa-solid fa-cube fa-icon" data-fallback="□"></i></span>
+                      <span class="report-reason-option__copy"><strong>El objeto no estaba disponible</strong></span>
+                      <i class="report-reason-option__check fa-solid fa-check fa-icon" data-fallback="✓" aria-hidden="true"></i>
+                    </button>
+                    <button class="report-reason-option" type="button" role="option" aria-selected="false" data-report-reason-option data-report-reason-value="planton">
+                      <span class="report-reason-option__icon" aria-hidden="true"><i class="fa-regular fa-clock fa-icon" data-fallback="◷"></i></span>
+                      <span class="report-reason-option__copy"><strong>Me dejó plantado/a</strong></span>
+                      <i class="report-reason-option__check fa-solid fa-check fa-icon" data-fallback="✓" aria-hidden="true"></i>
+                    </button>
+                    <button class="report-reason-option" type="button" role="option" aria-selected="false" data-report-reason-option data-report-reason-value="conducta_abusiva">
+                      <span class="report-reason-option__icon" aria-hidden="true"><i class="fa-solid fa-triangle-exclamation fa-icon" data-fallback="!"></i></span>
+                      <span class="report-reason-option__copy"><strong>Conducta abusiva o inapropiada</strong></span>
+                      <i class="report-reason-option__check fa-solid fa-check fa-icon" data-fallback="✓" aria-hidden="true"></i>
+                    </button>
+                  </div>
+                  <div class="report-reason-menu__group">
+                    <p class="report-reason-menu__label">Sobre el anuncio</p>
+                    <button class="report-reason-option" type="button" role="option" aria-selected="false" data-report-reason-option data-report-reason-value="informacion_falsa">
+                      <span class="report-reason-option__icon" aria-hidden="true"><i class="fa-solid fa-circle-question fa-icon" data-fallback="?"></i></span>
+                      <span class="report-reason-option__copy"><strong>La información del anuncio no coincide con la realidad</strong></span>
+                      <i class="report-reason-option__check fa-solid fa-check fa-icon" data-fallback="✓" aria-hidden="true"></i>
+                    </button>
+                    <button class="report-reason-option" type="button" role="option" aria-selected="false" data-report-reason-option data-report-reason-value="contenido_inadecuado">
+                      <span class="report-reason-option__icon" aria-hidden="true"><i class="fa-solid fa-shield-halved fa-icon" data-fallback="◈"></i></span>
+                      <span class="report-reason-option__copy"><strong>El contenido de este anuncio no es adecuado</strong></span>
+                      <i class="report-reason-option__check fa-solid fa-check fa-icon" data-fallback="✓" aria-hidden="true"></i>
+                    </button>
+                    <button class="report-reason-option" type="button" role="option" aria-selected="false" data-report-reason-option data-report-reason-value="datos_personales">
+                      <span class="report-reason-option__icon" aria-hidden="true"><i class="fa-solid fa-user-lock fa-icon" data-fallback="◉"></i></span>
+                      <span class="report-reason-option__copy"><strong>Incluye datos personales o información privada</strong></span>
+                      <i class="report-reason-option__check fa-solid fa-check fa-icon" data-fallback="✓" aria-hidden="true"></i>
+                    </button>
+                    <button class="report-reason-option" type="button" role="option" aria-selected="false" data-report-reason-option data-report-reason-value="spam_publicidad">
+                      <span class="report-reason-option__icon" aria-hidden="true"><i class="fa-solid fa-bullhorn fa-icon" data-fallback="!"></i></span>
+                      <span class="report-reason-option__copy"><strong>Es spam, publicidad o no ofrece un objeto</strong></span>
+                      <i class="report-reason-option__check fa-solid fa-check fa-icon" data-fallback="✓" aria-hidden="true"></i>
+                    </button>
+                  </div>
+                  <div class="report-reason-menu__group report-reason-menu__group--last">
+                    <button class="report-reason-option" type="button" role="option" aria-selected="false" data-report-reason-option data-report-reason-value="otro">
+                      <span class="report-reason-option__icon" aria-hidden="true"><i class="fa-solid fa-ellipsis fa-icon" data-fallback="…"></i></span>
+                      <span class="report-reason-option__copy"><strong>Otro problema</strong></span>
+                      <i class="report-reason-option__check fa-solid fa-check fa-icon" data-fallback="✓" aria-hidden="true"></i>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
             <label class="form-field">
               <span>Cuéntanos brevemente qué ocurrió <small>(opcional salvo “Otro”)</small></span>
               <textarea id="report-details" name="details" maxlength="1500" rows="4" placeholder="Añade datos que puedan ayudar a revisar el caso."></textarea>

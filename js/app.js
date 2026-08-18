@@ -183,6 +183,11 @@ const reportDialogClose = document.querySelector("#report-dialog-close");
 const reportDialogCancel = document.querySelector("#report-dialog-cancel");
 const reportForm = document.querySelector("#report-form");
 const reportReason = document.querySelector("#report-reason");
+const reportReasonPicker = document.querySelector("#report-reason-picker");
+const reportReasonTrigger = document.querySelector("#report-reason-trigger");
+const reportReasonValue = document.querySelector("#report-reason-value");
+const reportReasonMenu = document.querySelector("#report-reason-menu");
+const reportReasonOptions = [...document.querySelectorAll("[data-report-reason-option]")];
 const reportDetails = document.querySelector("#report-details");
 const reportAllowAdminContact = document.querySelector("#report-allow-admin-contact");
 const reportContactConsentCopy = document.querySelector("#report-contact-consent-copy");
@@ -3480,6 +3485,49 @@ function setReportFormState(message, stateName = "") {
   reportFormState.dataset.state = stateName;
 }
 
+function closeReportReasonPicker({ restoreFocus = false } = {}) {
+  if (reportReasonMenu) reportReasonMenu.hidden = true;
+  reportReasonTrigger?.setAttribute("aria-expanded", "false");
+  if (restoreFocus) reportReasonTrigger?.focus();
+}
+
+function openReportReasonPicker({ focusOption = true } = {}) {
+  if (!reportReasonMenu || reportReasonTrigger?.disabled) return;
+
+  reportReasonMenu.hidden = false;
+  reportReasonTrigger?.setAttribute("aria-expanded", "true");
+  if (focusOption) {
+    const selectedOption = reportReasonOptions.find(
+      (option) => option.dataset.reportReasonValue === reportReason?.value,
+    );
+    (selectedOption || reportReasonOptions[0])?.focus();
+  }
+}
+
+function updateReportReasonPicker(value = "") {
+  const selectedOption = reportReasonOptions.find(
+    (option) => option.dataset.reportReasonValue === value,
+  );
+  const selectedLabel = selectedOption?.querySelector("strong")?.textContent?.trim() || "Selecciona un motivo";
+
+  if (reportReasonValue) {
+    reportReasonValue.textContent = selectedLabel;
+    reportReasonValue.dataset.placeholder = selectedOption ? "false" : "true";
+  }
+  reportReasonOptions.forEach((option) => {
+    option.setAttribute(
+      "aria-selected",
+      String(option === selectedOption),
+    );
+  });
+}
+
+function setReportReasonValue(value = "", { restoreFocus = false } = {}) {
+  if (reportReason) reportReason.value = value;
+  updateReportReasonPicker(value);
+  closeReportReasonPicker({ restoreFocus });
+}
+
 function getDetectedReportUsername() {
   if (LOCAL_REPORT_DEMO_MODE) return LOCAL_REPORT_DEMO_USERNAME;
 
@@ -3500,6 +3548,7 @@ function updateReportContactConsentCopy() {
 
 function resetReportForm() {
   reportForm?.reset();
+  setReportReasonValue();
   if (reportDialogTopline) reportDialogTopline.hidden = false;
   if (reportDialogItemTitle) reportDialogItemTitle.hidden = false;
   if (reportDialogCopy) reportDialogCopy.hidden = false;
@@ -3541,11 +3590,13 @@ function openReportDialog(item = state.selectedItem, triggerButton = reportProbl
   } else {
     reportDialog.setAttribute("open", "");
   }
-  reportReason?.focus();
+  reportReasonTrigger?.focus();
 }
 
 function closeReportDialog({ restoreFocus = true } = {}) {
   if (!reportDialog) return;
+
+  closeReportReasonPicker();
 
   if (typeof reportDialog.close === "function" && reportDialog.open) {
     reportDialog.close();
@@ -3601,7 +3652,7 @@ async function handleReportSubmit(event) {
   const details = reportDetails.value.trim();
   if (!reason) {
     setReportFormState("Selecciona un motivo.", "error");
-    reportReason.focus();
+    reportReasonTrigger?.focus();
     return;
   }
   if (reason === "otro" && details.length < 10) {
@@ -3835,6 +3886,49 @@ reportDialogClose?.addEventListener("click", () => closeReportDialog());
 reportDialogCancel?.addEventListener("click", () => closeReportDialog());
 reportSuccessClose?.addEventListener("click", () => closeReportDialog());
 reportForm?.addEventListener("submit", handleReportSubmit);
+reportReasonTrigger?.addEventListener("click", () => {
+  const isOpen = reportReasonMenu && !reportReasonMenu.hidden;
+  if (isOpen) {
+    closeReportReasonPicker({ restoreFocus: true });
+  } else {
+    openReportReasonPicker();
+  }
+});
+reportReasonTrigger?.addEventListener("keydown", (event) => {
+  if (event.key === "ArrowDown" || event.key === "ArrowUp" || event.key === " ") {
+    event.preventDefault();
+    openReportReasonPicker();
+  } else if (event.key === "Escape") {
+    event.preventDefault();
+    closeReportReasonPicker();
+  }
+});
+reportReasonOptions.forEach((option, index) => {
+  option.addEventListener("click", () => {
+    setReportReasonValue(option.dataset.reportReasonValue || "", { restoreFocus: true });
+  });
+  option.addEventListener("keydown", (event) => {
+    if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+      event.preventDefault();
+      const direction = event.key === "ArrowDown" ? 1 : -1;
+      const nextIndex = (index + direction + reportReasonOptions.length) % reportReasonOptions.length;
+      reportReasonOptions[nextIndex]?.focus();
+    } else if (event.key === "Home" || event.key === "End") {
+      event.preventDefault();
+      const nextOption = event.key === "Home"
+        ? reportReasonOptions[0]
+        : reportReasonOptions[reportReasonOptions.length - 1];
+      nextOption?.focus();
+    } else if (event.key === "Escape" || event.key === "Tab") {
+      closeReportReasonPicker({ restoreFocus: event.key === "Escape" });
+    }
+  });
+});
+document.addEventListener("click", (event) => {
+  if (reportReasonPicker && !reportReasonPicker.contains(event.target)) {
+    closeReportReasonPicker();
+  }
+});
 reportDialog?.addEventListener("cancel", (event) => {
   event.preventDefault();
   closeReportDialog();
