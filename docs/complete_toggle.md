@@ -14,6 +14,10 @@ validación y actualización:
 ```javascript
 const allowedActions = ['complete', 'reopen', 'hide', 'reserve', 'release'];
 const action = allowedActions.includes(body.action) ? body.action : 'complete';
+const reservationDays = Number(body.reservation_days ?? 1);
+if (action === 'reserve' && (!Number.isInteger(reservationDays) || reservationDays < 1 || reservationDays > 30)) {
+  return [{ json: { ok: false, valid: false, error: 'reservation_days_invalid' } }];
+}
 const storedStatus = String(fields.status ?? '');
 const expiration = fields.reservation_expires_at
   ? new Date(String(fields.reservation_expires_at).replace(' ', 'T')).getTime()
@@ -47,7 +51,7 @@ const nextStatus = action === 'hide'
 
 const reservedAt = nextStatus === 'reserved' ? new Date().toISOString() : null;
 const reservationExpiresAt = nextStatus === 'reserved'
-  ? new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
+  ? new Date(Date.now() + reservationDays * 24 * 60 * 60 * 1000).toISOString()
   : null;
 ```
 

@@ -183,6 +183,11 @@ const reportSuccessClose = document.querySelector("#report-success-close");
 const reserveItemDialog = document.querySelector("#reserve-item-dialog");
 const reserveItemDialogCancel = document.querySelector("#reserve-item-dialog-cancel");
 const reserveItemDialogConfirm = document.querySelector("#reserve-item-dialog-confirm");
+const reserveItemDurationOptions = [...document.querySelectorAll('input[name="reserve-duration"]')];
+const reserveItemCustomDays = document.querySelector("#reserve-item-dialog-days");
+const reserveItemCustomDaysField = document.querySelector("#reserve-item-dialog-custom");
+const reserveItemDurationCopy = document.querySelector("#reserve-item-dialog-duration-copy");
+const reserveItemExpiryCopy = document.querySelector("#reserve-item-dialog-expiry-copy");
 const publishSuccessView = document.querySelector("#publish-success-view");
 const favoritesCount = document.querySelector("#favorites-count");
 const favoritesList = document.querySelector("#favorites-list");
@@ -2955,12 +2960,49 @@ function openDeleteItemDialog(item, triggerButton = deleteItemButton) {
   deleteItemDialogCancel?.focus();
 }
 
+function getReservationDurationDays() {
+  const selectedValue = reserveItemDurationOptions.find((option) => option.checked)?.value ?? "1";
+  if (selectedValue !== "custom") return Number(selectedValue);
+  return Number(reserveItemCustomDays?.value ?? 0);
+}
+
+function formatReservationDuration(days, custom = false) {
+  if (!custom && days === 1) return "24 horas";
+  if (!custom && days === 2) return "48 horas";
+  return `${days} ${days === 1 ? "día" : "días"}`;
+}
+
+function formatReservationDurationPhrase(days, custom = false) {
+  if (!custom && days === 1) return "las próximas 24 horas";
+  if (!custom && days === 2) return "las próximas 48 horas";
+  return days === 1 ? "el próximo día" : `los próximos ${days} días`;
+}
+
+function updateReservationDurationCopy() {
+  const selectedValue = reserveItemDurationOptions.find((option) => option.checked)?.value ?? "1";
+  const custom = selectedValue === "custom";
+  if (reserveItemCustomDaysField) reserveItemCustomDaysField.hidden = !custom;
+
+  const days = getReservationDurationDays();
+  if (reserveItemExpiryCopy && Number.isInteger(days) && days >= 1 && days <= 30) {
+    if (reserveItemDurationCopy) {
+      reserveItemDurationCopy.textContent = `Al hacer clic en Aceptar, este objeto quedará reservado durante ${formatReservationDurationPhrase(days, custom)}.`;
+    }
+    reserveItemExpiryCopy.textContent = `Al pasar ${formatReservationDuration(days, custom)}, volverá a estar disponible.`;
+  }
+}
+
 function openReserveItemDialog(item, triggerButton, feedbackElement) {
   if (!item?.id || !reserveItemDialog || !reserveItemDialogConfirm) return;
 
   reserveDialogItem = item;
   reserveDialogTriggerButton = triggerButton;
   reserveDialogFeedbackElement = feedbackElement;
+  reserveItemDurationOptions.forEach((option) => {
+    option.checked = option.value === "1";
+  });
+  if (reserveItemCustomDays) reserveItemCustomDays.value = "1";
+  updateReservationDurationCopy();
   reserveItemDialogConfirm.disabled = false;
 
   if (typeof reserveItemDialog.showModal === "function") {
@@ -2993,8 +3035,14 @@ function confirmReserveItemDialog() {
   const feedbackElement = reserveDialogFeedbackElement;
   if (!item || !triggerButton) return;
 
+  const reservationDays = getReservationDurationDays();
+  if (!Number.isInteger(reservationDays) || reservationDays < 1 || reservationDays > 30) {
+    reserveItemCustomDays?.reportValidity();
+    return;
+  }
+
   closeReserveItemDialog({ restoreFocus: false });
-  void manageItemAction(item, "reserve", triggerButton, feedbackElement);
+  void manageItemAction(item, "reserve", triggerButton, feedbackElement, { reservationDays });
 }
 
 function closeDeleteItemDialog({ restoreFocus = true } = {}) {
@@ -3069,7 +3117,13 @@ async function hideItem() {
   }
 }
 
-async function manageItemAction(item, action, triggerButton, feedbackElement = detailActionState) {
+async function manageItemAction(
+  item,
+  action,
+  triggerButton,
+  feedbackElement = detailActionState,
+  { reservationDays = 1 } = {},
+) {
   if (!item?.id) return;
 
   if (!auth?.hasInitData()) {
@@ -3088,10 +3142,16 @@ async function manageItemAction(item, action, triggerButton, feedbackElement = d
   triggerButton.textContent = "Guardando…";
 
   try {
+    const normalizedReservationDays = Number.isInteger(Number(reservationDays))
+      && Number(reservationDays) >= 1
+      && Number(reservationDays) <= 30
+      ? Number(reservationDays)
+      : 1;
     const result = await api.completeItem({
       initData: auth.getInitData(),
       item_id: item.id,
       action,
+      ...(action === "reserve" ? { reservation_days: normalizedReservationDays } : {}),
     });
 
     if (!result.ok) {
@@ -3638,6 +3698,10 @@ reserveItemDialog?.addEventListener("cancel", (event) => {
 reserveItemDialog?.addEventListener("click", (event) => {
   if (event.target === reserveItemDialog) closeReserveItemDialog();
 });
+reserveItemDurationOptions.forEach((option) => {
+  option.addEventListener("change", updateReservationDurationCopy);
+});
+reserveItemCustomDays?.addEventListener("input", updateReservationDurationCopy);
 manageStatusButton.addEventListener("click", () => {
   const item = state.selectedItem;
   if (!item) return;

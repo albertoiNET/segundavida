@@ -36,7 +36,7 @@ Al reservar escribe:
 
 - `status = reserved`
 - `reserved_at =` fecha actual generada por n8n
-- `reservation_expires_at =` 24 horas después, calculada por n8n
+- `reservation_expires_at =` el número de días elegido después, calculado por n8n
 
 Al liberar escribe:
 
@@ -101,8 +101,18 @@ con `"action": "reopen"`.
 Para ocultarla sin marcarla como entregada, el frontend envía la misma petición
 con `"action": "hide"`.
 
-Para reservar una publicación disponible, envía `"action": "reserve"`. Para
-liberar una reserva, envía `"action": "release"`.
+Para reservar una publicación disponible, envía `"action": "reserve"` y
+`"reservation_days"` (entero entre 1 y 30; por defecto, 1). Para liberar una
+reserva, envía `"action": "release"`.
+
+```json
+{
+  "initData": "<Telegram.WebApp.initData>",
+  "item_id": "k8Qm2LxP",
+  "action": "reserve",
+  "reservation_days": 2
+}
+```
 
 Respuesta correcta al completar:
 

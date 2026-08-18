@@ -8,8 +8,10 @@ available -> reserved -> completed
 reserved -> available
 ```
 
-`reserve` calcula `reserved_at` y `reservation_expires_at` en n8n. El plazo es
-fijo de 24 horas y nunca se acepta una fecha enviada por el navegador.
+`reserve` calcula `reserved_at` y `reservation_expires_at` en n8n. El navegador
+envía una duración en días (`reservation_days`): 1 por defecto, 2 para 48 horas
+o un valor personalizado entre 1 y 30. n8n valida ese número y calcula la fecha
+de caducidad; nunca se acepta una fecha enviada por el navegador.
 
 El workflow [`sv_expire_reservations.workflow.json`](./sv_expire_reservations.workflow.json)
 se ejecuta cada hora. Busca filas `reserved` cuya `reservation_expires_at` ya

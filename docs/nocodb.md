@@ -26,7 +26,7 @@ deben entrar desde el workflow de publicación o desde una importación validada
 | `expires_at` | DateTime | Sí | Fin de disponibilidad |
 | `completed_at` | DateTime | No | Cuándo se finalizó |
 | `reserved_at` | DateTime | No | Cuándo comenzó la reserva |
-| `reservation_expires_at` | DateTime | No | Cuándo caduca la reserva; siempre 24 horas después de `reserved_at` |
+| `reservation_expires_at` | DateTime | No | Cuándo caduca la reserva, según los días elegidos al reservar |
 | `Fotos` | Attachment | No | Hasta dos fotos públicas; la primera es la portada |
 | `image_url` | URL | No | Compatibilidad: URL de la primera foto |
 | `telegram_chat_id` | SingleLineText | No | Referencia privada para n8n |
@@ -46,8 +46,8 @@ desde el CSV. n8n los expondrá como `created_at` y `updated_at` en la respuesta
 pública. Telegram IDs se guardan como texto para evitar problemas de precisión o
 limitaciones de tamaño en campos numéricos. El modelo no contempla una tabla de
 intereses. Las reservas no se crean automáticamente:
-solo la persona propietaria puede activar `reserved`, con un plazo fijo de 24
-horas. Cuando haya un `owner_username` público,
+solo la persona propietaria puede activar `reserved`, con un plazo elegido entre
+1 y 30 días. Cuando haya un `owner_username` público,
 `Me interesa` abre directamente el chat del vecino o la vecina con un mensaje
 preparado y el enlace a la ficha concreta. Por eso el formulario exige
 configurar un nombre de usuario público antes de publicar. Las

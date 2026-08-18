@@ -3405,6 +3405,45 @@ body.photo-lightbox-open {
   font-size: 1.15rem;
 }
 
+.reserve-item-dialog__duration {
+  display: grid;
+  gap: 0.75rem;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.reserve-item-dialog__duration legend {
+  display: block;
+  margin-bottom: 0.45rem;
+  padding: 0;
+  color: var(--text-main);
+  font-size: 0.78rem;
+  font-weight: 750;
+}
+
+.reserve-item-dialog__custom {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 0.75rem;
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.reserve-item-dialog__custom input {
+  width: 5rem;
+  min-height: 2.35rem;
+  padding: 0.35rem 0.5rem;
+  border: 1px solid var(--border-light);
+  border-radius: 0.55rem;
+  background: var(--bg-card);
+  color: var(--text-main);
+  font: inherit;
+  text-align: center;
+}
+
 .reserve-item-dialog__panel ul {
   margin: 0;
   padding-left: 1.25rem;
@@ -3729,7 +3768,8 @@ body.photo-lightbox-open {
   font-weight: 700;
 }
 
-.duration-options {
+.duration-options,
+.reserve-item-dialog__options {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   overflow: hidden;
@@ -3761,6 +3801,17 @@ body.photo-lightbox-open {
 .duration-options label:has(input:checked) {
   background: var(--color-primary);
   color: var(--bg-container);
+}
+
+.reserve-item-dialog__options {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.2fr);
+}
+
+.reserve-item-dialog__options label {
+  padding: 0 0.3rem;
+  font-size: 0.78rem;
+  text-align: center;
+  white-space: nowrap;
 }
 
 .photo-picker {
@@ -4505,7 +4556,8 @@ body.photo-lightbox-open {
 :root[data-theme="dark"] .catalog-hero {
   background-color: #111412;
   background-image:
-    linear-gradient(90deg, rgb(17 20 18 / 34%) 0%, rgb(17 20 18 / 20%) 42%, rgb(17 20 18 / 5%) 72%, rgb(17 20 18 / 0%) 90%),
+    linear-gradient(90deg, rgb(17 20 18 / 72%) 0%, rgb(17 20 18 / 58%) 45%, rgb(17 20 18 / 32%) 78%, rgb(17 20 18 / 22%) 100%),
+    linear-gradient(rgb(17 20 18 / 18%), rgb(17 20 18 / 18%)),
     url("/assets/segundavida-hero-bg-dark.jpg");
   background-position: 0 0, 68% center;
   background-size: 100% 100%, cover;
@@ -4536,11 +4588,31 @@ body.photo-lightbox-open {
   background: rgb(17 20 18 / 88%);
 }
 
+:root[data-theme="dark"] {
+  --object-image-filter: brightness(0.84) saturate(0.92);
+}
+
+.photo-carousel__image,
+.detail-media__image,
+.detail-media__thumbnail img,
+.photo-lightbox__image,
+.photo-lightbox__thumb img,
+.related-item-card__media img,
+.owned-item-card__thumb img,
+.photo-preview__item img {
+  filter: var(--object-image-filter, none);
+}
+
 @media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --object-image-filter: brightness(0.84) saturate(0.92);
+  }
+
   :root:not([data-theme="light"]) .catalog-hero {
     background-color: #111412;
     background-image:
-      linear-gradient(90deg, rgb(17 20 18 / 34%) 0%, rgb(17 20 18 / 20%) 42%, rgb(17 20 18 / 5%) 72%, rgb(17 20 18 / 0%) 90%),
+      linear-gradient(90deg, rgb(17 20 18 / 72%) 0%, rgb(17 20 18 / 58%) 45%, rgb(17 20 18 / 32%) 78%, rgb(17 20 18 / 22%) 100%),
+      linear-gradient(rgb(17 20 18 / 18%), rgb(17 20 18 / 18%)),
       url("/assets/segundavida-hero-bg-dark.jpg");
     background-position: 0 0, 68% center;
     background-size: 100% 100%, cover;

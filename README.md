@@ -122,7 +122,7 @@ Los workflows importables y sus instrucciones detalladas están en:
 - [`docs/publish.md`](docs/publish.md) y
   [`docs/publish-photos.md`](docs/publish-photos.md): publicación y fotos.
 - [`docs/complete.md`](docs/complete.md): entrega y reapertura.
-- [`docs/reservations.md`](docs/reservations.md): reservas de 24 horas y caducidad automática.
+- [`docs/reservations.md`](docs/reservations.md): reservas configurables y caducidad automática.
 - [`docs/nocodb.md`](docs/nocodb.md): modelo de datos y contrato público.
 
 ### 3. Configurar el frontend
@@ -178,7 +178,7 @@ El sistema visual y las decisiones de accesibilidad se describen en
 - La zona es aproximada: no se publican direcciones exactas.
 - No se almacenan tokens ni sesiones persistentes en el navegador.
 - No hay mensajería interna: el contacto se realiza en Telegram. Las reservas
-  son manuales, visibles públicamente y caducan a las 24 horas.
+  son manuales, visibles públicamente y caducan según la duración elegida.
 - Las publicaciones deben ofrecer objetos legales, seguros, propios y sin
   contraprestación. La moderación puede retirar contenido que incumpla las
   condiciones de la comunidad.
