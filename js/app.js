@@ -61,6 +61,7 @@ let photoLightboxReturnFocus = null;
 let routeOpenInFlight = null;
 let routeOpenItemId = "";
 let reportStartInFlight = null;
+let manageStartInFlight = null;
 let deleteDialogItem = null;
 let deleteDialogTriggerButton = null;
 let contactDialogItem = null;
@@ -80,10 +81,11 @@ const n8nStatusLabel = document.querySelector("#n8n-status-label");
 const identityStatus = document.querySelector("#identity-status");
 const identityStatusLabel = document.querySelector("#identity-status-label");
 const searchInput = document.querySelector("#search-input");
+const searchToggle = document.querySelector("#search-toggle");
+const searchPanel = document.querySelector("#search-panel");
 const categoryFilterSelect = document.querySelector("#category-filter");
 const categoryFilterLabel = document.querySelector("#category-filter-label");
-const statusFilterSelect = document.querySelector("#status-filter");
-const statusFilterLabel = document.querySelector("#status-filter-label");
+const statusToggle = document.querySelector("#status-toggle");
 const itemsCount = document.querySelector("#items-count");
 const itemsState = document.querySelector("#items-state");
 const itemsGrid = document.querySelector("#items-grid");
@@ -138,6 +140,8 @@ const contactDialogClose = document.querySelector("#contact-dialog-close");
 const contactDialogCancel = document.querySelector("#contact-dialog-cancel");
 const contactDialogConfirm = document.querySelector("#contact-dialog-confirm");
 const reportDialog = document.querySelector("#report-dialog");
+const reportDialogTopline = document.querySelector("#report-dialog-topline");
+const reportDialogCopy = document.querySelector("#report-dialog-copy");
 const reportDialogItemTitle = document.querySelector("#report-dialog-item");
 const reportDialogClose = document.querySelector("#report-dialog-close");
 const reportDialogCancel = document.querySelector("#report-dialog-cancel");
@@ -148,6 +152,8 @@ const reportAllowAdminContact = document.querySelector("#report-allow-admin-cont
 const reportContactConsentCopy = document.querySelector("#report-contact-consent-copy");
 const reportFormState = document.querySelector("#report-form-state");
 const reportSubmitButton = document.querySelector("#report-submit-button");
+const reportSuccessView = document.querySelector("#report-success-view");
+const reportSuccessClose = document.querySelector("#report-success-close");
 const reserveItemDialog = document.querySelector("#reserve-item-dialog");
 const reserveItemDialogCancel = document.querySelector("#reserve-item-dialog-cancel");
 const reserveItemDialogConfirm = document.querySelector("#reserve-item-dialog-confirm");
@@ -238,6 +244,18 @@ function setServiceState(element, label, stateName, text) {
   if (!element || !label) return;
   element.dataset.state = stateName;
   label.textContent = text;
+}
+
+function setSearchOpen(isOpen, focusInput = false) {
+  if (!searchPanel || !searchToggle) return;
+  searchPanel.hidden = !isOpen;
+  searchToggle.setAttribute("aria-expanded", String(isOpen));
+  searchToggle.classList.toggle("is-active", isOpen);
+  searchToggle.setAttribute("aria-label", isOpen ? "Ocultar búsqueda" : "Mostrar búsqueda");
+  searchToggle.setAttribute("title", isOpen ? "Ocultar búsqueda" : "Mostrar búsqueda");
+  if (isOpen && focusInput && searchInput) {
+    window.requestAnimationFrame(() => searchInput.focus());
+  }
 }
 
 function createIconElement(iconName, fallback, className = "") {
@@ -366,6 +384,14 @@ function getReportStartItemId() {
   return match ? match[1] : "";
 }
 
+function getManageStartItemId() {
+  if (!telegramRuntime.isTelegram) return "";
+
+  const startParam = String(telegramRuntime.startParam ?? "").trim();
+  const match = startParam.match(/^manage_([A-Za-z0-9][A-Za-z0-9_-]{5,79})$/);
+  return match ? match[1] : "";
+}
+
 function decodeRoutePart(value) {
   try {
     return decodeURIComponent(value).trim();
@@ -423,6 +449,16 @@ function formatDate(value) {
     day: "numeric",
     month: "short",
   }).format(date).replace(" de ", " ");
+}
+
+function formatCompactDate(value) {
+  if (!value) return "";
+
+  const normalized = value.includes(" ") ? value.replace(" ", "T") : value;
+  const date = new Date(normalized);
+  if (Number.isNaN(date.getTime())) return "";
+
+  return `${date.getDate()}/${date.getMonth() + 1}`;
 }
 
 function formatShortDateTime(value) {
@@ -626,13 +662,13 @@ function createItemCard(item, index) {
   meta.className = "item-card__meta";
   const category = document.createElement("span");
   category.className = "item-card__category";
-  category.append(createCategoryIcon(item.category), document.createTextNode(` ${item.category}`));
+  category.append(createCategoryIcon(item.category), document.createTextNode(item.category));
   meta.append(category);
 
   if (item.zone) {
     const zone = document.createElement("span");
     zone.className = "item-card__zone";
-    zone.append(createIconElement("fa-location-dot", "⌖"), document.createTextNode(` ${item.zone}`));
+    zone.append(createIconElement("fa-location-dot", "⌖"), document.createTextNode(item.zone));
     meta.append(zone);
   }
   const availability = document.createElement("span");
@@ -640,7 +676,7 @@ function createItemCard(item, index) {
   const availabilityLabel = item.status === "reserved"
     ? "Reservado"
     : item.expiresAt
-      ? `Hasta ${formatDate(item.expiresAt)}`
+      ? `Hasta ${formatCompactDate(item.expiresAt)}`
       : "Disponible";
   availability.append(
     createIconElement("fa-clock", "◷"),
@@ -716,7 +752,7 @@ function createRelatedItemCard(item) {
   body.append(createTextElement(
     "span",
     "related-item-card__availability",
-    item.expiresAt ? `Hasta ${formatDate(item.expiresAt)}` : "Disponible",
+    item.expiresAt ? `Hasta ${formatCompactDate(item.expiresAt)}` : "Disponible",
   ));
   card.append(body);
 
@@ -1354,6 +1390,7 @@ function setView(viewName, { syncHistory = true, itemId = "" } = {}) {
 
   catalogIntro.hidden = !isExplore;
   catalogTools.hidden = !isExplore;
+  if (!isExplore) setSearchOpen(false);
   catalogSection.hidden = !isExplore;
   offerView.hidden = !isOffer;
   postsView.hidden = !isPosts;
@@ -1404,27 +1441,18 @@ function renderCategories() {
   }));
   if (!categories.includes(state.category)) state.category = "Todo";
   categoryFilterSelect.value = state.category;
-  if (categoryFilterLabel) categoryFilterLabel.textContent = state.category === "Todo" ? "Categoría" : state.category;
+  if (categoryFilterLabel) categoryFilterLabel.textContent = state.category === "Todo" ? "Categorías" : state.category;
 }
 
 function renderStatusFilters() {
-  if (!statusFilterSelect) return;
-  const statuses = [
-    ["all", "Todas"],
-    ["available", "Disponibles"],
-    ["reserved", "Reservados"],
-  ];
-  statusFilterSelect.replaceChildren(...statuses.map(([status, label]) => {
-    const option = document.createElement("option");
-    option.value = status;
-    option.textContent = label;
-    return option;
-  }));
-  statusFilterSelect.value = state.statusFilter;
-  if (statusFilterLabel) {
-    const selectedStatus = statuses.find(([status]) => status === state.statusFilter);
-    statusFilterLabel.textContent = state.statusFilter === "all" ? "Estado" : selectedStatus?.[1] || "Estado";
-  }
+  if (!statusToggle) return;
+  const active = state.statusFilter === "available";
+  statusToggle.setAttribute("aria-checked", String(active));
+  statusToggle.classList.toggle("is-active", active);
+  statusToggle.setAttribute(
+    "title",
+    active ? "Mostrar publicaciones reservadas" : "Mostrar solo publicaciones no reservadas",
+  );
 }
 
 function sortNewestFirst(items) {
@@ -1480,6 +1508,7 @@ async function loadCatalog() {
     itemsState.dataset.state = "error";
     void openItemFromRoute();
     void openReportFromStartParam();
+    void openManageFromStartParam();
     void openReportDemo();
     return;
   }
@@ -1503,6 +1532,7 @@ async function loadCatalog() {
     renderRelatedItems(state.selectedItem);
     void openItemFromRoute();
     void openReportFromStartParam();
+    void openManageFromStartParam();
     void openReportDemo();
   } catch {
     if (requestVersion !== state.catalogRequestVersion) return;
@@ -1512,6 +1542,7 @@ async function loadCatalog() {
     itemsState.dataset.state = "error";
     itemsCount.textContent = "Sin datos";
     void openReportFromStartParam();
+    void openManageFromStartParam();
     void openReportDemo();
     void openItemFromRoute();
   }
@@ -1707,6 +1738,56 @@ async function openReportFromStartParam() {
     return await request;
   } finally {
     if (reportStartInFlight === request) reportStartInFlight = null;
+  }
+}
+
+async function openManageFromStartParam() {
+  const itemId = getManageStartItemId();
+  if (!itemId) return;
+  if (manageStartInFlight) return manageStartInFlight;
+
+  const request = (async () => {
+    const catalogItem = state.items.find((candidate) => candidate.id === itemId)
+      ?? state.myItems.find((candidate) => candidate.id === itemId && isOwnItem(candidate));
+    const initialItem = catalogItem ?? {
+      id: itemId,
+      title: "Cargando publicación…",
+      description: "",
+      category: "Otros",
+      zone: "Valladolid",
+      ownerDisplayName: "Vecindad",
+      ownerUsername: "",
+      status: "available",
+      expiresAt: null,
+      imageUrl: null,
+      imageUrls: [],
+    };
+
+    showDetail(initialItem, { syncHistory: false, live: Boolean(catalogItem) });
+
+    if (!api?.isItemConfigured || typeof api.getItem !== "function") {
+      detailActionState.textContent = "No se puede cargar esta publicación ahora.";
+      detailActionState.dataset.state = "error";
+      return;
+    }
+
+    try {
+      const item = await api.getItem(itemId);
+      showDetail(item, { syncHistory: false, live: true });
+    } catch (error) {
+      const message = error?.code === "not_found"
+        ? "Esta publicación ya no está disponible."
+        : "No se ha podido cargar la publicación. Inténtalo de nuevo.";
+      detailActionState.textContent = message;
+      detailActionState.dataset.state = "error";
+    }
+  })();
+
+  manageStartInFlight = request;
+  try {
+    return await request;
+  } finally {
+    if (manageStartInFlight === request) manageStartInFlight = null;
   }
 }
 
@@ -2919,6 +3000,12 @@ function updateReportContactConsentCopy() {
 
 function resetReportForm() {
   reportForm?.reset();
+  if (reportDialogTopline) reportDialogTopline.hidden = false;
+  if (reportDialogItemTitle) reportDialogItemTitle.hidden = false;
+  if (reportDialogCopy) reportDialogCopy.hidden = false;
+  if (reportDialogClose) reportDialogClose.hidden = false;
+  if (reportForm) reportForm.hidden = false;
+  if (reportSuccessView) reportSuccessView.hidden = true;
   reportForm?.querySelectorAll("input, select, textarea, button").forEach((control) => {
     control.disabled = false;
   });
@@ -2929,6 +3016,16 @@ function resetReportForm() {
   if (reportDialogCancel) reportDialogCancel.textContent = "Ahora no";
   updateReportContactConsentCopy();
   setReportFormState();
+}
+
+function showReportSuccessView() {
+  if (reportDialogTopline) reportDialogTopline.hidden = true;
+  if (reportDialogItemTitle) reportDialogItemTitle.hidden = true;
+  if (reportDialogCopy) reportDialogCopy.hidden = true;
+  if (reportDialogClose) reportDialogClose.hidden = true;
+  if (reportForm) reportForm.hidden = true;
+  if (reportSuccessView) reportSuccessView.hidden = false;
+  reportSuccessClose?.focus();
 }
 
 function openReportDialog(item = state.selectedItem, triggerButton = reportProblemButton) {
@@ -3052,8 +3149,7 @@ async function handleReportSubmit(event) {
       result.message || "Hemos recibido el problema y el equipo lo revisará.",
       "success",
     );
-    reportSubmitButton.textContent = "Problema enviado";
-    if (reportDialogCancel) reportDialogCancel.textContent = "Cerrar";
+    showReportSuccessView();
     window.SecondaVidaAnalytics?.trackEvent("report", "submit", item.id);
   } catch (error) {
     reportForm?.querySelectorAll("input, select, textarea").forEach((control) => {
@@ -3149,13 +3245,24 @@ if (telegramRuntime.isTelegram) {
   setServiceState(telegramStatus, telegramStatusLabel, "connected", "Conectado ✓");
 }
 
+searchToggle?.addEventListener("click", () => {
+  const isOpen = Boolean(searchPanel && !searchPanel.hidden);
+  setSearchOpen(!isOpen, !isOpen);
+});
+
+searchInput.addEventListener("keydown", (event) => {
+  if (event.key !== "Escape") return;
+  setSearchOpen(false);
+  searchToggle?.focus();
+});
+
 searchInput.addEventListener("input", (event) => {
   state.query = event.target.value;
   renderItems();
 });
 
-statusFilterSelect?.addEventListener("change", (event) => {
-  state.statusFilter = event.target.value;
+statusToggle?.addEventListener("click", () => {
+  state.statusFilter = state.statusFilter === "available" ? "all" : "available";
   renderStatusFilters();
   renderItems();
 });
@@ -3200,6 +3307,7 @@ contactDialog?.addEventListener("click", (event) => {
 });
 reportDialogClose?.addEventListener("click", () => closeReportDialog());
 reportDialogCancel?.addEventListener("click", () => closeReportDialog());
+reportSuccessClose?.addEventListener("click", () => closeReportDialog());
 reportForm?.addEventListener("submit", handleReportSubmit);
 reportDialog?.addEventListener("cancel", (event) => {
   event.preventDefault();

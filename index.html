@@ -40,7 +40,7 @@
     />
     <link rel="stylesheet" href="/css/icon-fallback.css?v=sv-20260817-40" />
     <link rel="stylesheet" href="/css/tokens.css?v=sv-20260817-41" />
-    <link rel="stylesheet" href="/css/app.css?v=sv-20260818-cards-1" />
+    <link rel="stylesheet" href="/css/app.css?v=sv-20260818-report-success-1" />
     <script src="https://telegram.org/js/telegram-web-app.js?63"></script>
   </head>
   <body>
@@ -97,25 +97,36 @@
       </section>
 
       <section class="catalog-tools" aria-label="Buscar y filtrar objetos">
-        <label class="search-field">
-          <span class="search-icon" aria-hidden="true"><i class="fa-solid fa-magnifying-glass fa-icon" data-fallback="⌕"></i></span>
-          <span class="sr-only">Buscar objetos</span>
-          <input id="search-input" type="search" placeholder="Buscar objetos" autocomplete="off" />
-        </label>
-        <div class="filter-controls" aria-label="Filtros del catálogo">
-          <label class="filter-control" id="status-filters">
-            <span class="filter-control__label" id="status-filter-label">Estado</span>
-            <select id="status-filter" aria-label="Estado de las publicaciones">
-              <option value="all">Todas</option>
-              <option value="available">Disponibles</option>
-              <option value="reserved">Reservados</option>
-            </select>
-          </label>
-          <label class="filter-control" id="category-filters">
-            <span class="filter-control__label" id="category-filter-label">Categoría</span>
-            <select id="category-filter" aria-label="Categorías">
-              <option value="Todo">Todo</option>
-            </select>
+        <div class="catalog-filter-bar">
+          <div class="filter-controls" aria-label="Filtros del catálogo">
+            <label class="filter-control filter-control--category" id="category-filters">
+              <span class="filter-control__label" id="category-filter-label">Categorías</span>
+              <span class="filter-control__chevron" aria-hidden="true"><i class="fa-solid fa-chevron-down fa-icon" data-fallback="⌄"></i></span>
+              <select id="category-filter" aria-label="Categorías">
+                <option value="Todo">Todo</option>
+              </select>
+            </label>
+            <div id="status-filters" class="status-filter-shell">
+              <button class="status-toggle" id="status-toggle" type="button" role="switch" aria-checked="false" aria-label="Mostrar solo publicaciones no reservadas">
+                <span class="status-toggle__label">No reservados</span>
+              </button>
+              <span id="status-filter-label" class="sr-only">Estado</span>
+              <select id="status-filter" hidden aria-hidden="true" tabindex="-1">
+                <option value="all">Todas</option>
+                <option value="available">Disponibles</option>
+                <option value="reserved">Reservados</option>
+              </select>
+            </div>
+          </div>
+          <button class="search-toggle" id="search-toggle" type="button" aria-expanded="false" aria-controls="search-panel" aria-label="Mostrar búsqueda" title="Mostrar búsqueda">
+            <i class="fa-solid fa-magnifying-glass fa-icon" data-fallback="⌕" aria-hidden="true"></i>
+          </button>
+        </div>
+        <div class="search-panel" id="search-panel" hidden>
+          <label class="search-field">
+            <span class="search-icon" aria-hidden="true"><i class="fa-solid fa-magnifying-glass fa-icon" data-fallback="⌕"></i></span>
+            <span class="sr-only">Buscar objetos</span>
+            <input id="search-input" type="search" placeholder="Buscar objetos" autocomplete="off" />
           </label>
         </div>
       </section>
@@ -502,7 +513,7 @@
 
       <dialog class="report-dialog" id="report-dialog" aria-labelledby="report-dialog-title" aria-describedby="report-dialog-copy">
         <div class="report-dialog__panel">
-          <div class="report-dialog__topline">
+          <div class="report-dialog__topline" id="report-dialog-topline">
             <div>
               <span class="eyebrow">Segunda Vida</span>
               <h2 id="report-dialog-title">Reportar un problema</h2>
@@ -541,6 +552,14 @@
               <button class="primary-button" id="report-submit-button" type="submit">Enviar problema</button>
             </div>
           </form>
+          <div class="report-success-view" id="report-success-view" hidden role="status" aria-live="polite" tabindex="-1">
+            <div class="report-success-view__icon" aria-hidden="true">
+              <i class="fa-solid fa-check fa-icon" data-fallback="✓"></i>
+            </div>
+            <h3>Tu reporte ha sido enviado</h3>
+            <p>Tu reporte ha sido enviado a los administradores. Nos pondremos en contacto contigo lo antes posible si fuera necesario.</p>
+            <button class="primary-button" id="report-success-close" type="button">Cerrar</button>
+          </div>
         </div>
       </dialog>
 
@@ -709,6 +728,6 @@
     <script src="/js/auth.js?v=sv-20260817-42"></script>
     <script src="/js/api.js?v=sv-20260817-43"></script>
     <script src="/js/analytics.js?v=sv-20260817-41"></script>
-    <script src="/js/app.js?v=sv-20260818-report-demo-2"></script>
+    <script src="/js/app.js?v=sv-20260818-report-success-1"></script>
   </body>
 </html>
