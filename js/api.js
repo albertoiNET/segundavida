@@ -4,21 +4,52 @@ const N8N_ITEM_URL = "https://tasks.nukeador.com/webhook/c2b5eab6-9f26-48e9-9561
 const N8N_PUBLISH_URL = "https://tasks.nukeador.com/webhook/segundavida/publish";
 const N8N_COMPLETE_URL = "https://tasks.nukeador.com/webhook/segundavida/complete";
 const N8N_MINE_URL = "https://tasks.nukeador.com/webhook/segundavida/mine";
+const NOCODB_BASE_URL = "https://proyectos.aldeapucela.org";
 
 let catalogInFlight = null;
 const itemInFlight = new Map();
 let mineInFlight = null;
 let mineInFlightSession = "";
 
-function extractImageUrls(value) {
-  if (!Array.isArray(value)) return [];
+function asAttachmentList(value) {
+  if (Array.isArray(value)) return value;
+  if (value && typeof value === "object") return [value];
+  if (typeof value !== "string" || !value.trim()) return [];
 
-  return value
-    .map((attachment) => (
-      typeof attachment === "string"
-        ? attachment
-        : attachment?.url ?? attachment?.signedUrl ?? attachment?.signed_url ?? ""
-    ))
+  try {
+    const parsed = JSON.parse(value);
+    if (Array.isArray(parsed)) return parsed;
+    if (parsed && typeof parsed === "object") return [parsed];
+  } catch {
+    return [];
+  }
+
+  return [];
+}
+
+function normalizeAttachmentUrl(value) {
+  const attachment = typeof value === "string"
+    ? value
+    : value?.url ?? value?.signedUrl ?? value?.signed_url
+      ?? value?.path ?? value?.signedPath ?? value?.signed_path
+      ?? value?.thumbnails?.small?.signedPath
+      ?? value?.thumbnails?.small?.signedUrl
+      ?? value?.thumbnails?.card_cover?.signedPath
+      ?? value?.thumbnails?.card_cover?.signedUrl
+      ?? "";
+  const url = String(attachment).trim();
+
+  if (/^https?:\/\//i.test(url)) return url;
+  if (url.startsWith("/")) return `${NOCODB_BASE_URL}${url}`;
+  if (url.startsWith("download/") || url.startsWith("dltemp/")) {
+    return `${NOCODB_BASE_URL}/${url}`;
+  }
+  return "";
+}
+
+function extractImageUrls(value) {
+  return asAttachmentList(value)
+    .map(normalizeAttachmentUrl)
     .filter(Boolean);
 }
 
@@ -28,7 +59,7 @@ function normalizeItem(record, { privateFields = false } = {}) {
     ...extractImageUrls(fields.image_urls),
     ...extractImageUrls(fields.Fotos ?? fields.fotos ?? fields.photos),
   ])];
-  const imageUrl = fields.image_url ?? imageUrls[0] ?? null;
+  const imageUrl = normalizeAttachmentUrl(fields.image_url) || imageUrls[0] || null;
 
   return {
     id: fields.public_id ?? fields["item-id"] ?? record?.public_id ?? record?.id ?? "",

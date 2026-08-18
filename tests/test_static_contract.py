@@ -101,6 +101,10 @@ class StaticContractTests(unittest.TestCase):
         for endpoint in ("/data", "/publish", "/complete", "/mine"):
             self.assertIn(endpoint, api_source)
         self.assertIn("N8N_ITEM_URL", api_source)
+        self.assertIn("NOCODB_BASE_URL", api_source)
+        self.assertIn("function asAttachmentList", api_source)
+        self.assertIn("signedPath", api_source)
+        self.assertIn("dltemp/", api_source)
         self.assertIn('error.code = "not_found"', api_source)
         self.assertIn('live: false, error: "api_unavailable"', app_source)
         self.assertIn("/i/${encodeURIComponent(item.id)}/", app_source)
@@ -218,6 +222,8 @@ class StaticContractTests(unittest.TestCase):
         mine_code = "\n".join(node.get("parameters", {}).get("jsCode", "") for node in mine_workflow["nodes"])
         self.assertIn("reservedAt", api_source)
         self.assertIn("reservationExpiresAt", api_source)
+        self.assertIn("signed_path", mine_code)
+        self.assertIn("dltemp/", mine_code)
         self.assertIn("reserved_at", mine_code)
         self.assertIn("reservation_expires_at", mine_code)
 
