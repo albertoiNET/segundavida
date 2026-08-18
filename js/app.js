@@ -104,6 +104,11 @@ const detailOwnerActions = document.querySelector("#detail-owner-actions");
 const manageStatusButton = document.querySelector("#manage-status-button");
 const markDeliveredButton = document.querySelector("#mark-delivered-button");
 const deleteItemButton = document.querySelector("#delete-item-button");
+const relatedItemsSection = document.querySelector("#related-items");
+const relatedItemsCopy = document.querySelector("#related-items-copy");
+const relatedItemsTrack = document.querySelector("#related-items-track");
+const relatedItemsEmpty = document.querySelector("#related-items-empty");
+const relatedItemsBrowse = document.querySelector("#related-items-browse");
 const deleteItemDialog = document.querySelector("#delete-item-dialog");
 const deleteItemDialogTitle = document.querySelector("#delete-item-dialog-title");
 const deleteItemDialogCopy = document.querySelector("#delete-item-dialog-copy");
@@ -599,6 +604,143 @@ function createItemCard(item, index) {
   return card;
 }
 
+function getRelatedItems(item) {
+  if (!item?.id || item.status === "not_found") return [];
+
+  return sortNewestFirst(state.items.filter((candidate) => (
+    candidate.id !== item.id &&
+    candidate.category === item.category &&
+    candidate.status === "available" &&
+    isNotExpired(candidate)
+  ))).slice(0, 3);
+}
+
+function createRelatedItemCard(item) {
+  const card = document.createElement("article");
+  card.className = "related-item-card";
+  card.tabIndex = 0;
+  card.setAttribute("role", "button");
+  card.setAttribute("aria-label", `Ver ${item.title}`);
+  card.dataset.itemId = item.id;
+
+  const media = document.createElement("div");
+  media.className = "related-item-card__media";
+  const imageUrls = getItemImageUrls(item);
+  if (imageUrls.length) {
+    const image = document.createElement("img");
+    image.src = imageUrls[0];
+    image.alt = item.title;
+    image.loading = "lazy";
+    media.append(image);
+  } else {
+    media.classList.add("related-item-card__media--placeholder");
+    media.append(createCategoryIcon(item.category));
+  }
+  card.append(media);
+
+  const body = document.createElement("div");
+  body.className = "related-item-card__body";
+  body.append(createTextElement("h3", "related-item-card__title", item.title));
+  body.append(createTextElement(
+    "span",
+    "related-item-card__availability",
+    item.expiresAt ? `Hasta ${formatDate(item.expiresAt)}` : "Disponible",
+  ));
+  card.append(body);
+
+  card.addEventListener("click", () => showDetail(item));
+  card.addEventListener("keydown", (event) => {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      showDetail(item);
+    }
+  });
+  return card;
+}
+
+function showRelatedCategory(category) {
+  state.category = category;
+  state.statusFilter = "available";
+  state.query = "";
+  if (searchInput) searchInput.value = "";
+  setView("explore");
+  renderCategories();
+  renderStatusFilters();
+  renderItems();
+}
+
+function renderRelatedItems(item) {
+  if (!relatedItemsSection || !relatedItemsTrack || !relatedItemsEmpty || !relatedItemsBrowse) return;
+
+  const canShowRelated = Boolean(item?.id && item.status !== "not_found");
+  relatedItemsSection.hidden = !canShowRelated;
+  relatedItemsTrack.replaceChildren();
+  relatedItemsTrack.hidden = !canShowRelated;
+  relatedItemsEmpty.hidden = true;
+  relatedItemsBrowse.hidden = true;
+  if (relatedItemsCopy) relatedItemsCopy.textContent = "";
+
+  if (!canShowRelated) return;
+
+  relatedItemsBrowse.hidden = false;
+  relatedItemsBrowse.href = getHomeUrl();
+  relatedItemsBrowse.dataset.category = item.category;
+  relatedItemsBrowse.setAttribute("aria-label", `Ver más objetos de ${item.category}`);
+
+  const relatedItems = getRelatedItems(item);
+  if (relatedItems.length) {
+    if (relatedItemsCopy) {
+      relatedItemsCopy.textContent = `Más objetos disponibles de ${item.category}.`;
+    }
+    relatedItemsTrack.replaceChildren(...relatedItems.map(createRelatedItemCard));
+    relatedItemsTrack.hidden = false;
+    return;
+  }
+
+  relatedItemsEmpty.hidden = false;
+  relatedItemsBrowse.hidden = false;
+}
+
+function renderCompletedActionState(item) {
+  if (!detailActionState) return;
+
+  detailActionState.replaceChildren();
+  detailActionState.className = "action-state action-state--completed";
+  detailActionState.dataset.state = "success";
+
+  const icon = document.createElement("span");
+  icon.className = "action-state__icon";
+  icon.append(createIconElement("fa-heart", "♥"));
+
+  const content = document.createElement("div");
+  content.className = "action-state__content";
+
+  const title = document.createElement("strong");
+  title.textContent = "Este objeto ya tiene una segunda vida";
+
+  const copy = document.createElement("p");
+  copy.textContent = "Sigue explorando otros objetos parecidos que aún buscan una segunda casa.";
+
+  const action = document.createElement("button");
+  action.className = "secondary-button secondary-button--compact action-state__action";
+  action.type = "button";
+  action.append(
+    createIconElement("fa-arrow-right", "→"),
+    document.createTextNode("Seguir explorando"),
+  );
+  action.addEventListener("click", () => {
+    const hasRelatedItems = getRelatedItems(item).length > 0;
+    if (hasRelatedItems && relatedItemsSection) {
+      relatedItemsSection.scrollIntoView({ behavior: "smooth", block: "start" });
+      return;
+    }
+    setView("explore");
+  });
+
+  content.append(title, copy, action);
+  detailActionState.append(icon, content);
+}
+
 function createPhotoCarousel(item, { className = "", openLightbox = true } = {}) {
   const urls = getItemImageUrls(item);
   const carousel = document.createElement("div");
@@ -1023,22 +1165,25 @@ function renderDetail(item, { live = true, error = "" } = {}) {
       ? `Contactar con ${item.ownerDisplayName || "el vecino o la vecina"} por Telegram`
       : "Mostrar interés por este objeto",
   );
-  detailActionState.textContent = !live
-    ? error === "not_found"
-      ? "Esta publicación ya no está disponible."
-      : "No se puede verificar ahora la disponibilidad ni las acciones."
-    : ownItem
-      ? ""
-      : item.status === "completed"
-      ? "Esta publicación ya se ha entregado."
-      : item.status === "reserved"
-        ? "La recogida está en proceso. No se aceptan nuevos contactos para esta publicación."
-      : item.status === "expired"
-        ? "Esta publicación ha caducado."
-        : ownerUsername
-          ? ""
-          : "Este vecino o vecina no tiene un nombre de usuario público para recibir contactos.";
-  detailActionState.dataset.state = !live || (!ownItem && !ownerUsername && isAvailable) ? "error" : "";
+  if (live && item.status === "completed") {
+    renderCompletedActionState(item);
+  } else {
+    detailActionState.className = "action-state";
+    detailActionState.textContent = !live
+      ? error === "not_found"
+        ? "Esta publicación ya no está disponible."
+        : "No se puede verificar ahora la disponibilidad ni las acciones."
+      : ownItem
+        ? ""
+        : item.status === "reserved"
+          ? "La recogida está en proceso. No se aceptan nuevos contactos para esta publicación."
+        : item.status === "expired"
+          ? "Esta publicación ha caducado."
+          : ownerUsername
+            ? ""
+            : "Este vecino o vecina no tiene un nombre de usuario público para recibir contactos.";
+    detailActionState.dataset.state = !live || (!ownItem && !ownerUsername && isAvailable) ? "error" : "";
+  }
 
   detailOwnerActions.hidden = !canManageItem || !live;
   markDeliveredButton.disabled = false;
@@ -1047,6 +1192,7 @@ function renderDetail(item, { live = true, error = "" } = {}) {
   deleteItemButton.hidden = !canManageItem || !live;
   deleteItemButton.disabled = false;
   configureDeleteButton(deleteItemButton);
+  renderRelatedItems(item);
 }
 
 function showDetail(item, { syncHistory = true, live = true, error = "" } = {}) {
@@ -1214,11 +1360,6 @@ function isNotExpired(item) {
 }
 
 async function loadCatalog() {
-  if (getRouteItemId()) {
-    void openItemFromRoute();
-    return;
-  }
-
   if (!api?.isDataConfigured) {
     setServiceState(n8nStatus, n8nStatusLabel, "error", "No configurado");
     itemsState.textContent = "El catálogo todavía no está configurado.";
@@ -1243,6 +1384,7 @@ async function loadCatalog() {
     renderStatusFilters();
     renderItems();
     renderMyItems();
+    renderRelatedItems(state.selectedItem);
     void openItemFromRoute();
   } catch {
     if (requestVersion !== state.catalogRequestVersion) return;
@@ -1319,9 +1461,24 @@ async function openItemFromRoute() {
 
   const request = (async () => {
     const staticItem = state.staticItem?.id === itemId ? state.staticItem : null;
+    const demoCompletedItem = LOCAL_AUTHOR_DEMO_MODE && itemId === "demo-completed"
+      ? {
+          id: itemId,
+          title: "Sillón de lectura",
+          description: "Cómodo y en buen estado.",
+          category: "Muebles",
+          zone: "Pajarillos Bajos",
+          ownerDisplayName: "Vecindad",
+          ownerUsername: "vecindad_demo",
+          status: "completed",
+          expiresAt: null,
+          imageUrl: null,
+          imageUrls: [],
+        }
+      : null;
     const catalogItem = state.items.find((candidate) => candidate.id === itemId)
       ?? state.myItems.find((candidate) => candidate.id === itemId && isOwnItem(candidate));
-    const initialItem = staticItem ?? catalogItem ?? {
+    const initialItem = demoCompletedItem ?? staticItem ?? catalogItem ?? {
       id: itemId,
       title: "Cargando publicación…",
       description: "",
@@ -1336,6 +1493,11 @@ async function openItemFromRoute() {
       imageUrl: null,
       interestCount: 0,
     };
+
+    if (demoCompletedItem) {
+      showDetail(demoCompletedItem, { syncHistory: false, live: true });
+      return;
+    }
 
     showDetail(initialItem, { syncHistory: false, live: Boolean(catalogItem && !staticItem) });
 
@@ -2589,6 +2751,10 @@ applyTheme(readThemePreference(), false);
 
 offerEmptyButton.addEventListener("click", () => setView("offer"));
 detailShare.addEventListener("click", shareCurrentView);
+relatedItemsBrowse?.addEventListener("click", (event) => {
+  event.preventDefault();
+  showRelatedCategory(relatedItemsBrowse.dataset.category || state.selectedItem?.category || "Todo");
+});
 interestButton.addEventListener("click", () => openContactDialog(state.selectedItem));
 contactDialogClose?.addEventListener("click", () => closeContactDialog());
 contactDialogCancel?.addEventListener("click", () => closeContactDialog());

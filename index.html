@@ -39,7 +39,7 @@
     />
     <link rel="stylesheet" href="/css/icon-fallback.css?v=sv-20260817-40" />
     <link rel="stylesheet" href="/css/tokens.css?v=sv-20260817-41" />
-    <link rel="stylesheet" href="/css/app.css?v=sv-20260818-owner-actions-breathing" />
+    <link rel="stylesheet" href="/css/app.css?v=sv-20260818-related-items-v4" />
     <script src="https://telegram.org/js/telegram-web-app.js?63"></script>
   </head>
   <body>
@@ -160,7 +160,7 @@
             <i class="fa-regular fa-message fa-icon" data-fallback="✉" aria-hidden="true"></i>
             <span>Me interesa</span>
           </button>
-          <p class="action-state" id="detail-action-state" aria-live="polite"></p>
+          <div class="action-state" id="detail-action-state" aria-live="polite"></div>
           <div class="detail-owner-actions" id="detail-owner-actions" hidden>
             <div class="detail-owner-actions__controls">
               <button class="secondary-button delivery-action-button secondary-button--reserve" id="manage-status-button" type="button" hidden>
@@ -186,6 +186,17 @@
               <a class="community-promo__link" href="https://aldeapucela.org/" target="_blank" rel="noopener noreferrer">Conocer la comunidad</a>
             </div>
           </aside>
+          <section class="related-items" id="related-items" hidden aria-labelledby="related-items-title">
+            <div class="related-items__heading">
+              <div>
+                <h2 id="related-items-title">Relacionados</h2>
+              </div>
+            </div>
+            <p class="related-items__copy" id="related-items-copy"></p>
+            <div class="related-items__track" id="related-items-track" role="list" aria-live="polite"></div>
+            <p class="related-items__empty" id="related-items-empty" hidden>No hay más objetos disponibles de esta categoría ahora mismo.</p>
+            <a class="related-items__browse" id="related-items-browse" href="/" hidden>Ver más</a>
+          </section>
         </div>
       </section>
 
@@ -633,6 +644,6 @@
     <script src="/js/auth.js?v=sv-20260817-42"></script>
     <script src="/js/api.js?v=sv-20260817-43"></script>
     <script src="/js/analytics.js?v=sv-20260817-41"></script>
-    <script src="/js/app.js?v=sv-20260818-64"></script>
+    <script src="/js/app.js?v=sv-20260818-67"></script>
   </body>
 </html>
