@@ -196,5 +196,6 @@ en `js/telegram.js`. Es el enlace directo de la Mini App independiente
 requiere activar la Main Mini App. El botón de menú que ya has configurado
 sigue siendo válido y es la ruta principal para entrar.
 
-Las futuras Mini Apps del bot pueden tener sus propios enlaces directos con el
-formato `https://t.me/pucelobot/<short_name>?startapp=offer`.
+Esta Mini App usa enlaces contextuales para conservar la pantalla de origen:
+`?startapp=offer` abre Ofrecer y `?startapp=profile` abre Perfil. El formato
+general es `https://t.me/pucelobot/<short_name>?startapp=<contexto>`.

@@ -1,9 +1,16 @@
 // Punto de entrada del frontend de Segunda Vida.
 document.documentElement.classList.add("app-ready");
 
+const telegramWebApp = window.Telegram?.WebApp;
+const telegramQuery = new URLSearchParams(window.location.search);
 const telegramRuntime = window.SecondaVidaTelegram ?? {
-  isTelegram: false,
-  sdkAvailable: false,
+  isTelegram: Boolean(telegramWebApp?.initData?.trim()),
+  sdkAvailable: Boolean(telegramWebApp?.initData?.trim()),
+  miniAppUrl: "https://t.me/pucelobot/segundavida",
+  startParam: telegramWebApp?.initDataUnsafe?.start_param
+    ?? telegramQuery.get("tgWebAppStartParam")
+    ?? telegramQuery.get("startapp")
+    ?? "",
 };
 const isNotFoundPage = document.body?.dataset.page === "not-found";
 
@@ -433,6 +440,16 @@ function getRouteView() {
   return path === "/favoritos" ? "favorites" : "";
 }
 
+function getTelegramStartView() {
+  const startParam = String(telegramRuntime.startParam ?? "").trim().toLowerCase();
+  return {
+    offer: "offer",
+    profile: "posts",
+    posts: "posts",
+    favorites: "favorites",
+  }[startParam] || "";
+}
+
 function getReportStartItemId() {
   if (!telegramRuntime.isTelegram) return "";
 
@@ -511,7 +528,9 @@ function updateRouteMetadata(viewName, itemId = "") {
 function prepareHistoryState() {
   const currentState = window.history.state ?? {};
   const itemId = getRouteItemId();
-  const view = itemId ? "detail" : getViewFromPath() || (isNotFoundPage ? "not-found" : "explore");
+  const view = itemId
+    ? "detail"
+    : getViewFromPath() || getTelegramStartView() || (isNotFoundPage ? "not-found" : "explore");
   const index = getHistoryIndex(currentState);
 
   const canonicalUrl = new URL(window.location.href);
@@ -855,9 +874,15 @@ function getItemUrl(item) {
   return url.toString();
 }
 
+function getTelegramMiniAppUrl(startParam = "") {
+  const url = new URL(telegramRuntime.miniAppUrl || "https://t.me/pucelobot/segundavida");
+  const normalizedStartParam = String(startParam).trim();
+  if (normalizedStartParam) url.searchParams.set("startapp", normalizedStartParam);
+  return url.toString();
+}
+
 function getReportMiniAppUrl(item) {
-  const miniAppUrl = telegramRuntime.miniAppUrl || "https://t.me/pucelobot/segundavida";
-  return `${miniAppUrl}?startapp=report_${encodeURIComponent(item.id)}`;
+  return getTelegramMiniAppUrl(`report_${encodeURIComponent(item.id)}`);
 }
 
 function getHomeUrl() {
@@ -1616,9 +1641,8 @@ function showDetail(item, { syncHistory = true, live = true, error = "" } = {}) 
 function configurePostsView() {
   if (!postsContent || !postsAuthGate || !postsOpenTelegramLink) return;
 
-  const miniAppUrl = telegramRuntime.miniAppUrl || "https://t.me/pucelobot/segundavida";
   const verified = LOCAL_AUTHOR_DEMO_MODE || Boolean(auth?.hasInitData() && state.telegramUser?.valid);
-  postsOpenTelegramLink.href = miniAppUrl;
+  postsOpenTelegramLink.href = getTelegramMiniAppUrl("profile");
   postsContent.hidden = !verified;
   postsAuthGate.hidden = verified;
 
@@ -2158,8 +2182,7 @@ function setOfferFormEnabled(enabled) {
 function configureOfferAuth(user = state.telegramUser) {
   if (!telegramAuthCard || !offerForm) return;
 
-  const miniAppUrl = telegramRuntime.miniAppUrl || "https://t.me/pucelobot/segundavida";
-  telegramOpenLink.href = miniAppUrl;
+  telegramOpenLink.href = getTelegramMiniAppUrl("offer");
   const verified = LOCAL_AUTHOR_DEMO_MODE || Boolean(auth?.hasInitData() && user?.valid);
   const username = LOCAL_AUTHOR_DEMO_MODE ? LOCAL_AUTHOR_DEMO_USERNAME : normalizeTelegramUsername(user?.username);
   const displayName = LOCAL_AUTHOR_DEMO_MODE ? LOCAL_AUTHOR_DEMO_DISPLAY_NAME : normalizeTelegramDisplayName(user);
