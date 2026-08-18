@@ -108,6 +108,38 @@ input[type="search"] {
   flex: 0 0 auto;
 }
 
+.share-feedback {
+  position: fixed;
+  right: max(1rem, env(safe-area-inset-right));
+  bottom: max(1rem, env(safe-area-inset-bottom));
+  z-index: 40;
+  max-width: min(22rem, calc(100vw - 2rem));
+  margin: 0;
+  padding: 0.7rem 0.95rem;
+  border: 1px solid var(--border-light);
+  border-radius: 0.7rem;
+  background: var(--bg-card);
+  box-shadow: 0 0.55rem 1.4rem color-mix(in srgb, var(--text-main) 14%, transparent);
+  color: var(--text-main);
+  font-size: 0.82rem;
+  line-height: 1.35;
+  animation: fade-up 220ms ease both;
+}
+
+.share-feedback:empty {
+  display: none;
+}
+
+.share-feedback[data-state="connected"] {
+  border-color: color-mix(in srgb, var(--color-secondary) 45%, var(--border-light));
+  color: var(--color-secondary-dark);
+}
+
+.share-feedback[data-state="error"] {
+  border-color: color-mix(in srgb, #c57878 45%, var(--border-light));
+  color: #c57878;
+}
+
 .brand-lockup {
   min-width: 0;
   flex: 1 1 auto;

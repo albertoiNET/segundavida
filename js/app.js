@@ -2786,6 +2786,37 @@ function setShareFeedback(message, stateName = "") {
   feedbackElement.dataset.state = stateName;
 }
 
+async function copyTextToClipboard(text) {
+  try {
+    if (typeof navigator.clipboard?.writeText === "function") {
+      await navigator.clipboard.writeText(text);
+      return;
+    }
+  } catch {
+    // Some browsers expose the Clipboard API but reject it outside a secure context.
+  }
+
+  const textarea = document.createElement("textarea");
+  textarea.value = text;
+  textarea.setAttribute("readonly", "");
+  textarea.style.position = "fixed";
+  textarea.style.top = "-9999px";
+  textarea.style.left = "-9999px";
+  document.body.appendChild(textarea);
+  textarea.focus();
+  textarea.select();
+  textarea.setSelectionRange(0, textarea.value.length);
+
+  let copied = false;
+  try {
+    copied = typeof document.execCommand === "function" && document.execCommand("copy");
+  } finally {
+    textarea.remove();
+  }
+
+  if (!copied) throw new Error("clipboard_unavailable");
+}
+
 async function shareCurrentView() {
   const sharingItem = state.currentView === "detail" && state.selectedItem;
   const shareUrl = sharingItem ? getItemUrl(state.selectedItem) : getHomeUrl();
@@ -2815,13 +2846,8 @@ async function shareCurrentView() {
       return;
     }
 
-    if (navigator.clipboard?.writeText) {
-      await navigator.clipboard.writeText(shareUrl);
-      setShareFeedback("Enlace copiado.", "connected");
-      return;
-    }
-
-    throw new Error("share_unavailable");
+    await copyTextToClipboard(`${shareData.text}\n\n${shareUrl}`);
+    setShareFeedback("URL copiada al portapapeles", "connected");
   } catch (error) {
     if (error?.name === "AbortError") return;
     setShareFeedback("No se ha podido compartir ahora.", "error");
