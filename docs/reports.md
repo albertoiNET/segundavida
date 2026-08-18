@@ -122,3 +122,17 @@ La Mini App lee `start_param`/`tgWebAppStartParam`, extrae el `public_id`, carga
 la publicación y muestra el formulario de **Reportar un problema**. El
 parámetro usa únicamente letras, números, `_` y `-`; los `public_id` actuales
 son suficientemente cortos para este enlace.
+
+## Enlace de administración
+
+El aviso enviado al grupo de administradores usa un enlace de gestión dentro
+de Telegram:
+
+```text
+https://t.me/pucelobot/segundavida?startapp=manage_<public_id>
+```
+
+Al abrirlo, la Mini App carga la publicación y valida al administrador con el
+workflow de identidad existente. Si la cuenta tiene el rol `admin` activo,
+muestra las acciones de gestión de la publicación; una visita desde la web
+pública no permite esas acciones.
