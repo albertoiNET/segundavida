@@ -556,12 +556,19 @@
               <span>¿Qué ha pasado?</span>
               <select id="report-reason" name="reason" required>
                 <option value="">Selecciona un motivo</option>
-                <option value="no_entregado">No me lo entregó</option>
-                <option value="pidio_dinero">Me pidió dinero o algo a cambio</option>
-                <option value="objeto_no_disponible">El objeto no estaba disponible</option>
-                <option value="informacion_falsa">La información no era cierta</option>
-                <option value="planton">Me dejó plantado/a</option>
-                <option value="conducta_abusiva">Tuve una conducta abusiva o inapropiada</option>
+                <optgroup label="Sobre la entrega o el trato">
+                  <option value="no_entregado">No me lo entregó</option>
+                  <option value="pidio_dinero">Me pidió dinero o algo a cambio</option>
+                  <option value="objeto_no_disponible">El objeto no estaba disponible</option>
+                  <option value="planton">Me dejó plantado/a</option>
+                  <option value="conducta_abusiva">Tuve una conducta abusiva o inapropiada</option>
+                </optgroup>
+                <optgroup label="Sobre el anuncio">
+                  <option value="informacion_falsa">La información del anuncio no coincide con la realidad</option>
+                  <option value="contenido_inadecuado">El contenido de este anuncio no es adecuado</option>
+                  <option value="datos_personales">Incluye datos personales o información privada</option>
+                  <option value="spam_publicidad">Es spam, publicidad o no ofrece un objeto</option>
+                </optgroup>
                 <option value="otro">Otro problema</option>
               </select>
             </label>

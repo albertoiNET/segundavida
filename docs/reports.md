@@ -39,6 +39,9 @@ Valores de `reason`:
 - `pidio_dinero`
 - `objeto_no_disponible`
 - `informacion_falsa`
+- `contenido_inadecuado`
+- `datos_personales`
+- `spam_publicidad`
 - `planton`
 - `conducta_abusiva`
 - `otro`
