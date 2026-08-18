@@ -56,7 +56,7 @@ contener:
 
 El endpoint individual recomendado es `GET /item/<public_id>` (o el mismo
 webhook con esa ruta). Debe responder `200` con `{ok:true,item}` para
-`available`, `completed` y `expired`, y `404` con `{ok:false,error:"not_found"}`
+`available`, `reserved`, `completed` y `expired`, y `404` con `{ok:false,error:"not_found"}`
 si no existe o está oculto. Nunca devuelve `telegram_id`, `owner_telegram_id`,
 `telegram_chat_id`, `telegram_thread_id`, `initData` ni secretos.
 

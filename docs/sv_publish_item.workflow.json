@@ -152,6 +152,14 @@
               "fieldValue": "={{ $json.expires_at }}"
             },
             {
+              "fieldName": "reserved_at",
+              "fieldValue": null
+            },
+            {
+              "fieldName": "reservation_expires_at",
+              "fieldValue": null
+            },
+            {
               "fieldName": "interest_count",
               "fieldValue": "={{ $json.interest_count }}"
             },

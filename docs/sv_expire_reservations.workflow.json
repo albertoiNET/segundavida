@@ -1,0 +1,44 @@
+{
+  "name": "SV · Expire reservations",
+  "nodes": [
+    {
+      "parameters": {"rule":{"interval":[{"field":"hours","hoursInterval":1}]}},
+      "type":"n8n-nodes-base.scheduleTrigger",
+      "typeVersion":1.2,
+      "position":[0,0],
+      "id":"5d3f1a9b-4e72-4c8f-a6b1-0d9e2f7c6a10",
+      "name":"Every hour"
+    },
+    {
+      "parameters":{"authentication":"nocoDbApiToken","operation":"search","workspaceId":{"__rl":true,"value":"wfrogvq8","mode":"list","cachedResultName":"Default Workspace"},"projectId":{"__rl":true,"value":"p3amiucxfm0jzoc","mode":"list","cachedResultName":"Aldea Pucela"},"table":{"__rl":true,"value":"mwk20n0679wz5fr","mode":"list","cachedResultName":"Segunda Vida"},"returnAll":true,"options":{},"resource":"row","downloadAttachments":false},
+      "type":"n8n-nodes-base.nocoDb",
+      "typeVersion":4,
+      "position":[224,0],
+      "id":"8b2e4c6d-7f91-4a3b-b5c8-d0e2f4a6b8c1",
+      "name":"Search rows",
+      "credentials":{"nocoDbApiToken":{"id":"t0BGosFerj8egJ4y","name":"NocoDB Token account"}}
+    },
+    {
+      "parameters":{"jsCode":"const now=Date.now(); return $input.all().map(({json})=>{const fields=json.fields ?? json; const expiration=fields.reservation_expires_at ?? null; const timestamp=expiration?new Date(String(expiration).replace(' ','T')).getTime():NaN; const rowId=fields.Id ?? json.Id ?? json.id ?? null; if(String(fields.status ?? '')!=='reserved'||!Number.isFinite(timestamp)||timestamp>now||rowId===null||rowId===undefined||rowId==='')return null; return {json:{Id:rowId,status:'available',reserved_at:null,reservation_expires_at:null,item_id:fields.public_id ?? fields['item-id'] ?? ''}};}).filter(Boolean);"},
+      "type":"n8n-nodes-base.code",
+      "typeVersion":2,
+      "position":[448,0],
+      "id":"9c4d6e8f-1a23-4b5c-7d9e-0f2a4c6b8d10",
+      "name":"Find expired reservations"
+    },
+    {
+      "parameters":{"authentication":"nocoDbApiToken","operation":"update","id":"={{ $json.Id }}","workspaceId":{"__rl":true,"value":"wfrogvq8","mode":"list","cachedResultName":"Default Workspace"},"projectId":{"__rl":true,"value":"p3amiucxfm0jzoc","mode":"list","cachedResultName":"Aldea Pucela"},"table":{"__rl":true,"value":"mwk20n0679wz5fr","mode":"list","cachedResultName":"Segunda Vida"},"fieldsMapper":{"mappingMode":"defineBelow","value":{"status":"={{ $json.status }}","reserved_at":"={{ $json.reserved_at }}","reservation_expires_at":"={{ $json.reservation_expires_at }}"},"matchingColumns":[],"schema":[{"id":"status","displayName":"status","type":"string","display":true,"readOnly":false},{"id":"reserved_at","displayName":"reserved_at","type":"dateTime","display":true,"readOnly":false},{"id":"reservation_expires_at","displayName":"reservation_expires_at","type":"dateTime","display":true,"readOnly":false}],"attemptToConvertTypes":false,"convertFieldsToString":false}},
+      "type":"n8n-nodes-base.nocoDb",
+      "typeVersion":4,
+      "position":[672,0],
+      "id":"0a5e7f91-2b34-4c6d-8e0f-1a3b5c7d9e20",
+      "name":"Release expired reservation",
+      "credentials":{"nocoDbApiToken":{"id":"t0BGosFerj8egJ4y","name":"NocoDB Token account"}}
+    }
+  ],
+  "connections":{"Every hour":{"main":[[{"node":"Search rows","type":"main","index":0}]]},"Search rows":{"main":[[{"node":"Find expired reservations","type":"main","index":0}]]},"Find expired reservations":{"main":[[{"node":"Release expired reservation","type":"main","index":0}]]}},
+  "pinData":{},
+  "active":false,
+  "settings":{"executionOrder":"v1","timezone":"Europe/Madrid"},
+  "tags":[]
+}

@@ -106,7 +106,7 @@ publicar con fotografías, utiliza el workflow de fotos:
 | `POST /segundavida/whoami` | Validación de identidad Telegram | [`sv_validate_telegram_user.workflow.json`](docs/sv_validate_telegram_user.workflow.json) |
 | `POST /segundavida/publish` | Publicación con fotos y consentimiento | [`sv_publish_item_photos.workflow.json`](docs/sv_publish_item_photos.workflow.json) |
 | `POST /segundavida/mine` | Publicaciones de la persona autenticada | [`sv_mine_items.workflow.json`](docs/sv_mine_items.workflow.json) |
-| `POST /segundavida/complete` | Marcar entregado, reabrir u ocultar | [`sv_complete_item.workflow.json`](docs/sv_complete_item.workflow.json) |
+| `POST /segundavida/complete` | Reservar, liberar, marcar entregado, reabrir u ocultar | [`sv_complete_item.workflow.json`](docs/sv_complete_item.workflow.json) |
 
 Configura en n8n la credencial de NocoDB y la variable privada
 `TELEGRAM_BOT_TOKEN`. El token nunca debe guardarse en este repositorio, en el
@@ -119,6 +119,7 @@ Los workflows importables y sus instrucciones detalladas están en:
 - [`docs/publish.md`](docs/publish.md) y
   [`docs/publish-photos.md`](docs/publish-photos.md): publicación y fotos.
 - [`docs/complete.md`](docs/complete.md): entrega y reapertura.
+- [`docs/reservations.md`](docs/reservations.md): reservas de 24 horas y caducidad automática.
 - [`docs/nocodb.md`](docs/nocodb.md): modelo de datos y contrato público.
 
 ### 3. Configurar el frontend
@@ -171,7 +172,8 @@ El sistema visual y las decisiones de accesibilidad se describen en
   público.
 - La zona es aproximada: no se publican direcciones exactas.
 - No se almacenan tokens ni sesiones persistentes en el navegador.
-- No hay reservas ni mensajería interna: el contacto se realiza en Telegram.
+- No hay mensajería interna: el contacto se realiza en Telegram. Las reservas
+  son manuales, visibles públicamente y caducan a las 24 horas.
 - Las publicaciones deben ofrecer objetos legales, seguros, propios y sin
   contraprestación. La moderación puede retirar contenido que incumpla las
   condiciones de la comunidad.

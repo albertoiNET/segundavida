@@ -266,6 +266,8 @@
             "owner_username": "={{ $json.owner_username }}",
             "status": "={{ $json.photo_count > 0 ? 'hidden' : 'available' }}",
             "expires_at": "={{ $json.expires_at }}",
+            "reserved_at": null,
+            "reservation_expires_at": null,
             "interest_count": "={{ $json.interest_count }}",
             "consent_accepted": "={{ $json.consent_accepted }}",
             "consent_version": "={{ $json.consent_version }}",
@@ -339,6 +341,20 @@
             {
               "id": "expires_at",
               "displayName": "expires_at",
+              "type": "dateTime",
+              "display": true,
+              "readOnly": false
+            },
+            {
+              "id": "reserved_at",
+              "displayName": "reserved_at",
+              "type": "dateTime",
+              "display": true,
+              "readOnly": false
+            },
+            {
+              "id": "reservation_expires_at",
+              "displayName": "reservation_expires_at",
               "type": "dateTime",
               "display": true,
               "readOnly": false

@@ -1,7 +1,7 @@
 # Gestionar el estado de una publicación
 
 Importa [`sv_complete_item.workflow.json`](./sv_complete_item.workflow.json) en
-n8n. El workflow crea un único endpoint para las tres acciones:
+n8n. El workflow crea un único endpoint para las cinco acciones:
 
 Si solo necesitas reemplazar el nodo NocoDB, puedes importar
 [`sv_complete_update_node.json`](./sv_complete_update_node.json). Debe recibir
@@ -17,7 +17,8 @@ El workflow usa la credencial existente `NocoDB Token account`, busca la fila
 en la tabla `Segunda Vida`, comprueba la firma de `Telegram.WebApp.initData` y
 permite cambiar la publicación si `owner_telegram_id` coincide con la persona
 autenticada o si la identidad aparece activa con rol `admin` en el Data Table
-`Segunda Vida - Permisos`. La acción recibida puede ser `complete`, `reopen` o `hide`. En el
+`Segunda Vida - Permisos`. La acción recibida puede ser `complete`, `reopen`,
+`hide`, `reserve` o `release`. En el
 nodo `Update NocoDB row`, el campo **Row ID Value** debe quedar exactamente así:
 
 ```text
@@ -28,16 +29,33 @@ Al completar escribe:
 
 - `status = completed`
 - `completed_at =` fecha actual generada por n8n
+- `reserved_at = null`
+- `reservation_expires_at = null`
+
+Al reservar escribe:
+
+- `status = reserved`
+- `reserved_at =` fecha actual generada por n8n
+- `reservation_expires_at =` 24 horas después, calculada por n8n
+
+Al liberar escribe:
+
+- `status = available`
+- `reserved_at = null`
+- `reservation_expires_at = null`
 
 Al reabrir escribe:
 
 - `status = available`
 - `completed_at = null`
+- `reserved_at = null`
+- `reservation_expires_at = null`
 
 Al borrar escribe:
 
 - `status = hidden`
 - conserva `completed_at` si la publicación ya estaba entregada
+- limpia las fechas de reserva si estaba reservada
 
 El borrado es una ocultación reversible para administración y auditoría: la
 fila no se elimina físicamente. Las publicaciones ocultas dejan de aparecer
@@ -59,7 +77,8 @@ Después de importar:
 2. Comprueba que la credencial del nodo `Search rows` y `Update NocoDB row` es
    `NocoDB Token account`.
 3. Comprueba que la tabla seleccionada es `Segunda Vida` y que contiene los
-   campos `Id`, `item-id`, `owner_telegram_id`, `status` y `completed_at`.
+   campos `Id`, `item-id`, `owner_telegram_id`, `status`, `completed_at`,
+   `reserved_at` y `reservation_expires_at`.
    En `Update NocoDB row`, pon `{{ $json.Id }}` en **Row ID Value**.
 4. Comprueba que `Dispatch static page regeneration` usa la credencial
    `GitHub account`. Si no quieres regenerar fichas estáticas desde este
@@ -82,6 +101,9 @@ con `"action": "reopen"`.
 Para ocultarla sin marcarla como entregada, el frontend envía la misma petición
 con `"action": "hide"`.
 
+Para reservar una publicación disponible, envía `"action": "reserve"`. Para
+liberar una reserva, envía `"action": "release"`.
+
 Respuesta correcta al completar:
 
 ```json
@@ -90,7 +112,22 @@ Respuesta correcta al completar:
   "item_id": "k8Qm2LxP",
   "status": "completed",
   "completed_at": "2026-08-16T12:00:00.000Z",
+  "reserved_at": null,
+  "reservation_expires_at": null,
   "message": "Marcado como entregado"
+}
+```
+
+Respuesta correcta al reservar:
+
+```json
+{
+  "ok": true,
+  "item_id": "k8Qm2LxP",
+  "status": "reserved",
+  "reserved_at": "2026-08-16T12:00:00.000Z",
+  "reservation_expires_at": "2026-08-17T12:00:00.000Z",
+  "message": "Publicación reservada"
 }
 ```
 

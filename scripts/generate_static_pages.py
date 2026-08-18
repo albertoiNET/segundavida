@@ -98,7 +98,7 @@ def normalize_item(raw: dict[str, object]) -> dict[str, object]:
     public_id = raw.get("public_id") or raw.get("item-id") or raw.get("item_id") or raw.get("id")
     public_id = safe_public_id(public_id)
     status = str(raw.get("status") or "available").strip().lower()
-    if status not in {"available", "completed", "expired"}:
+    if status not in {"available", "reserved", "completed", "expired"}:
         raise fail(f"unsupported public status for {public_id}: {status}")
 
     return {

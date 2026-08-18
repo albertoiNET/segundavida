@@ -88,7 +88,7 @@ class StaticContractTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             output = Path(directory)
             items = [normalize_item({**self.item(), "public_id": f"safe-{index:03d}", "status": status})
-                     for index, status in enumerate(("available", "completed", "expired"), 1)]
+                     for index, status in enumerate(("available", "reserved", "completed", "expired"), 1)]
             generate(items, output, self.template, self.site_url)
             for item in items:
                 self.assertTrue((output / "i" / item["id"] / "index.html").exists())
@@ -117,19 +117,25 @@ class StaticContractTests(unittest.TestCase):
         self.assertIn("function isAdminUser", app_source)
         self.assertIn("function refreshSelectedDetailForIdentity", app_source)
         self.assertIn("const canManageItem = ownItem || adminUser", app_source)
-        self.assertIn("Gestión de administrador", app_source)
+        self.assertIn('const actionLabel = reserved ? "Liberar reserva" : "Está reservado";', app_source)
+        self.assertIn('const actionLabel = completed ? "Volver a publicar" : "Está entregado";', app_source)
+        self.assertIn('document.createTextNode("Borrar objeto")', app_source)
         self.assertIn("createdAt: result.created_at ?? new Date().toISOString()", app_source)
         self.assertIn("const localImageUrls", app_source)
         self.assertIn("const catalogImageUrls = getItemImageUrls(item)", app_source)
         self.assertIn("function openTelegramChat", app_source)
         self.assertIn('pulsa aquí para abrirlo', app_source)
         self.assertIn('action: "hide"', app_source)
+        self.assertIn('action = item.status === "reserved" ? "release" : "reserve"', app_source)
+        self.assertIn('item.status === "reserved"', app_source)
         self.assertIn("function openDeleteItemDialog", app_source)
         self.assertIn("function hideItem", app_source)
         self.assertIn("createdAt", app_source)
         self.assertIn('"Optimizando…"', app_source)
         self.assertIn("state.offerFiles = [...state.offerFiles, ...filesToAdd]", app_source)
         index_source = (ROOT / "index.html").read_text(encoding="utf-8")
+        self.assertIn('id="status-filters"', index_source)
+        self.assertIn('id="manage-status-button"', index_source)
         self.assertIn('id="offer-camera-button"', index_source)
         self.assertIn('id="camera-dialog"', index_source)
         self.assertIn('id="camera-preview"', index_source)
@@ -138,6 +144,11 @@ class StaticContractTests(unittest.TestCase):
         self.assertIn('quiet-action--delete', index_source)
         self.assertIn('id="detail-created-at"', index_source)
         self.assertIn('capture="environment"', index_source)
+        self.assertIn('class="catalog-intro catalog-hero"', index_source)
+        self.assertIn("Si ya no lo usas", index_source)
+        self.assertIn("¡Dale una segunda vida!", index_source)
+        self.assertNotIn("Enlazando la web.", index_source)
+        self.assertIn("segundavida-hero-bg.jpg", (ROOT / "css" / "app.css").read_text(encoding="utf-8"))
         self.assertIn("community-promo", index_source)
         self.assertIn("https://aldeapucela.org/", index_source)
         self.assertTrue((ROOT / "assets" / "aldea-pucela-mark.jpg").exists())
@@ -181,13 +192,34 @@ class StaticContractTests(unittest.TestCase):
             node.get("parameters", {}).get("jsCode", "") for node in workflow["nodes"]
         )
         self.assertIn("'hide'", code)
-        self.assertIn("status: nextStatus", code)
+        self.assertIn("'reserve'", code)
+        self.assertIn("'release'", code)
+        self.assertIn("reservation_expires_at", code)
+        self.assertIn("status:nextStatus", code)
         self.assertIn("item_already_hidden", code)
         self.assertIn("owner_telegram_id", code)
         self.assertIn("Publicación borrada", code)
         self.assertIn("Dispatch static page regeneration", node_names)
         self.assertIn('"type": "n8n-nodes-base.github"', workflow_text)
         self.assertNotIn('"operation": "delete"', workflow_text)
+
+    def test_reservation_expiry_workflow_is_hourly_and_clears_dates(self):
+        workflow_path = ROOT / "docs" / "sv_expire_reservations.workflow.json"
+        workflow = json.loads(workflow_path.read_text(encoding="utf-8"))
+        self.assertIn("n8n-nodes-base.scheduleTrigger", {node["type"] for node in workflow["nodes"]})
+        code = "\n".join(node.get("parameters", {}).get("jsCode", "") for node in workflow["nodes"])
+        self.assertIn("reservation_expires_at", code)
+        self.assertIn("status:'available'", code)
+        self.assertIn("reserved_at:null", code)
+
+    def test_private_contract_includes_reservation_dates(self):
+        api_source = (ROOT / "js" / "api.js").read_text(encoding="utf-8")
+        mine_workflow = json.loads((ROOT / "docs" / "sv_mine_items.workflow.json").read_text(encoding="utf-8"))
+        mine_code = "\n".join(node.get("parameters", {}).get("jsCode", "") for node in mine_workflow["nodes"])
+        self.assertIn("reservedAt", api_source)
+        self.assertIn("reservationExpiresAt", api_source)
+        self.assertIn("reserved_at", mine_code)
+        self.assertIn("reservation_expires_at", mine_code)
 
     def test_admin_permissions_contract_uses_n8n_data_table(self):
         docs = (ROOT / "docs" / "admin-permissions.md").read_text(encoding="utf-8")

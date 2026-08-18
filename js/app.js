@@ -23,9 +23,13 @@ const AUTH_REFRESH_STORAGE_KEY = "segundavida:auth-refresh:v1";
 const AUTH_REFRESH_WINDOW_MS = 2 * 60 * 1000;
 const PUBLISH_DRAFT_DB_NAME = "segundavida-drafts-v1";
 const PUBLISH_DRAFT_STORE_NAME = "drafts";
+const LOCAL_AUTHOR_DEMO_MODE =
+  ["localhost", "127.0.0.1"].includes(window.location.hostname) &&
+  new URLSearchParams(window.location.search).get("demo") === "author";
 const state = {
   items: [],
   category: "Todo",
+  statusFilter: "all",
   query: "",
   selectedItem: null,
   offerFiles: [],
@@ -61,6 +65,7 @@ const identityStatus = document.querySelector("#identity-status");
 const identityStatusLabel = document.querySelector("#identity-status-label");
 const searchInput = document.querySelector("#search-input");
 const categoryFilters = document.querySelector("#category-filters");
+const statusFilters = document.querySelector("#status-filters");
 const itemsCount = document.querySelector("#items-count");
 const itemsState = document.querySelector("#items-state");
 const itemsGrid = document.querySelector("#items-grid");
@@ -91,10 +96,9 @@ const detailCreatedAt = document.querySelector("#detail-created-at");
 const interestButton = document.querySelector("#interest-button");
 const detailActionState = document.querySelector("#detail-action-state");
 const detailOwnerActions = document.querySelector("#detail-owner-actions");
-const detailOwnerActionsLabel = document.querySelector(".detail-owner-actions__label");
+const manageStatusButton = document.querySelector("#manage-status-button");
 const markDeliveredButton = document.querySelector("#mark-delivered-button");
 const deleteItemButton = document.querySelector("#delete-item-button");
-const detailOwnerActionState = document.querySelector("#detail-owner-action-state");
 const deleteItemDialog = document.querySelector("#delete-item-dialog");
 const deleteItemDialogTitle = document.querySelector("#delete-item-dialog-title");
 const deleteItemDialogCopy = document.querySelector("#delete-item-dialog-copy");
@@ -392,7 +396,7 @@ function createTextElement(tagName, className, text) {
 
 function configureDeliveryButton(button, status) {
   const completed = status === "completed";
-  const actionLabel = completed ? "Volver a publicar" : "Marcar entregado";
+  const actionLabel = completed ? "Volver a publicar" : "Está entregado";
   const actionIcon = completed ? "fa-rotate-left" : "fa-check";
   const fallback = completed ? "↶" : "✓";
 
@@ -403,12 +407,26 @@ function configureDeliveryButton(button, status) {
   button.replaceChildren(createIconElement(actionIcon, fallback), document.createTextNode(actionLabel));
 }
 
+function configureStatusButton(button, status) {
+  if (!button) return;
+
+  const reserved = status === "reserved";
+  const actionLabel = reserved ? "Liberar reserva" : "Está reservado";
+  const actionIcon = reserved ? "fa-rotate-left" : "fa-clock";
+  const fallback = reserved ? "↶" : "◷";
+
+  button.hidden = !["available", "reserved"].includes(status);
+  button.disabled = button.hidden;
+  button.setAttribute("aria-label", actionLabel);
+  button.replaceChildren(createIconElement(actionIcon, fallback), document.createTextNode(actionLabel));
+}
+
 function configureDeleteButton(button) {
   if (!button) return;
-  button.setAttribute("aria-label", "Borrar publicación");
+  button.setAttribute("aria-label", "Borrar objeto");
   button.replaceChildren(
     createIconElement("fa-trash-can", "⌫"),
-    document.createTextNode("Borrar"),
+    document.createTextNode("Borrar objeto"),
   );
 }
 
@@ -481,8 +499,13 @@ function refreshSelectedDetailForIdentity() {
   renderDetail(state.selectedItem, { live: state.selectedItemLive });
 }
 
-function getItemStatusLabel(item) {
+function getItemStatusLabel(item, { privateView = false } = {}) {
   if (item?.status === "completed") return "Entregado";
+  if (item?.status === "reserved") {
+    return privateView && item.reservationExpiresAt
+      ? `Reservado hasta ${formatShortDateTime(item.reservationExpiresAt)}`
+      : "Reservado";
+  }
   if (item?.status === "expired") return "Ya no disponible";
   if (item?.expiresAt) return `Disponible hasta ${formatDate(item.expiresAt)}`;
   return "Disponible ahora";
@@ -541,7 +564,11 @@ function createItemCard(item, index) {
   }
   const availability = document.createElement("span");
   availability.className = "availability";
-  availability.textContent = item.expiresAt ? `Hasta ${formatDate(item.expiresAt)}` : "Disponible";
+  availability.textContent = item.status === "reserved"
+    ? "Reservado"
+    : item.expiresAt
+      ? `Hasta ${formatDate(item.expiresAt)}`
+      : "Disponible";
   meta.append(availability);
   body.append(meta);
 
@@ -718,7 +745,11 @@ function createOwnedItemCard(item) {
   title.setAttribute("role", "heading");
   title.setAttribute("aria-level", "2");
   heading.append(title);
-  heading.append(createTextElement("span", `owned-item-card__status ${item.status === "completed" ? "is-completed" : ""}`, getItemStatusLabel(item)));
+  heading.append(createTextElement(
+    "span",
+    `owned-item-card__status ${item.status === "completed" ? "is-completed" : item.status === "reserved" ? "is-reserved" : ""}`,
+    getItemStatusLabel(item, { privateView: true }),
+  ));
   content.append(heading);
   content.append(createTextElement("span", "owned-item-card__meta", `${item.category} · ${item.zone}`));
   itemLink.append(content);
@@ -731,13 +762,22 @@ function createOwnedItemCard(item) {
   deliveredButton.className = "secondary-button secondary-button--compact delivery-action-button";
   deliveredButton.type = "button";
   configureDeliveryButton(deliveredButton, item.status);
+  const statusButton = document.createElement("button");
+  statusButton.className = "secondary-button secondary-button--compact status-action-button";
+  statusButton.type = "button";
+  configureStatusButton(statusButton, item.status);
   const deleteButton = document.createElement("button");
   deleteButton.className = "quiet-action quiet-action--delete owned-item-card__delete";
   deleteButton.type = "button";
   configureDeleteButton(deleteButton);
   const actionState = createTextElement("p", "owned-item-card__state", "");
   deliveredButton.addEventListener("click", () => completeItem(item, deliveredButton, actionState));
+  statusButton.addEventListener("click", () => {
+    const action = item.status === "reserved" ? "release" : "reserve";
+    void manageItemAction(item, action, statusButton, actionState);
+  });
   deleteButton.addEventListener("click", () => openDeleteItemDialog(item, deleteButton));
+  actions.append(statusButton);
   actions.append(deliveredButton);
   actions.append(deleteButton);
   card.append(actions);
@@ -898,6 +938,8 @@ function renderDetail(item, { live = true, error = "" } = {}) {
 
   const availabilityLabel = item.status === "completed"
     ? "Entregado"
+    : item.status === "reserved"
+      ? "Reservado"
     : item.status === "expired"
       ? "Ya no disponible"
       : item.status === "not_found"
@@ -917,11 +959,12 @@ function renderDetail(item, { live = true, error = "" } = {}) {
   detailZone.textContent = item.zone || "Valladolid";
   detailOwner.textContent = item.ownerDisplayName || "Vecindad";
   if (detailCreatedAt) detailCreatedAt.textContent = formatShortDateTime(item.createdAt) || "—";
-  const ownItem = isOwnItem(item);
+  const ownItem = LOCAL_AUTHOR_DEMO_MODE || isOwnItem(item);
   const adminUser = isAdminUser();
   const canManageItem = ownItem || adminUser;
   const ownerUsername = normalizeTelegramUsername(item.ownerUsername);
   const isAvailable = item.status === "available" && isNotExpired(item);
+  detailView.classList.toggle("detail-view--owner", canManageItem && live);
   interestButton.hidden = ownItem || !live || !isAvailable;
   interestButton.disabled = ownItem || !live || !isAvailable || !ownerUsername;
   interestButton.textContent = "Me interesa";
@@ -935,34 +978,26 @@ function renderDetail(item, { live = true, error = "" } = {}) {
     ? error === "not_found"
       ? "Esta publicación ya no está disponible."
       : "No se puede verificar ahora la disponibilidad ni las acciones."
-    : item.status === "completed"
+    : ownItem
+      ? ""
+      : item.status === "completed"
       ? "Esta publicación ya se ha entregado."
+      : item.status === "reserved"
+        ? "La recogida está en proceso. No se aceptan nuevos contactos para esta publicación."
       : item.status === "expired"
         ? "Esta publicación ha caducado."
-        : ownItem
-          ? "Gestiona el estado de tu publicación desde aquí."
-          : ownerUsername
-            ? "Se abrirá el chat de Telegram de quien lo ofrece."
-            : "Este vecino o vecina no tiene un nombre de usuario público para recibir contactos.";
+        : ownerUsername
+          ? "Se abrirá el chat de Telegram de quien lo ofrece."
+          : "Este vecino o vecina no tiene un nombre de usuario público para recibir contactos.";
   detailActionState.dataset.state = !live || (!ownItem && !ownerUsername && isAvailable) ? "error" : "";
 
   detailOwnerActions.hidden = !canManageItem || !live;
-  if (detailOwnerActionsLabel) {
-    detailOwnerActionsLabel.textContent = ownItem
-      ? "Es tu publicación"
-      : "Gestión de administrador";
-  }
   markDeliveredButton.disabled = false;
   configureDeliveryButton(markDeliveredButton, item.status);
+  configureStatusButton(manageStatusButton, item.status);
   deleteItemButton.hidden = !canManageItem || !live;
   deleteItemButton.disabled = false;
   configureDeleteButton(deleteItemButton);
-  detailOwnerActionState.textContent = adminUser && !ownItem
-    ? "Gestiona esta publicación como administrador."
-    : item.status === "completed"
-      ? "Si vuelve a estar disponible, puedes reactivar esta publicación."
-      : "Cuando se lo entregues a otra persona, márcalo aquí.";
-  detailOwnerActionState.dataset.state = "";
 }
 
 function showDetail(item, { syncHistory = true, live = true, error = "" } = {}) {
@@ -1061,6 +1096,29 @@ function renderCategories() {
   });
 }
 
+function renderStatusFilters() {
+  if (!statusFilters) return;
+  const statuses = [
+    ["all", "Todas"],
+    ["available", "Disponibles"],
+    ["reserved", "Reservados"],
+  ];
+  statusFilters.replaceChildren(...statuses.map(([status, label]) => {
+    const button = document.createElement("button");
+    button.className = "filter-chip filter-chip--status";
+    button.type = "button";
+    button.role = "tab";
+    button.setAttribute("aria-selected", String(state.statusFilter === status));
+    button.textContent = label;
+    button.addEventListener("click", () => {
+      state.statusFilter = status;
+      renderStatusFilters();
+      renderItems();
+    });
+    return button;
+  }));
+}
+
 function sortNewestFirst(items) {
   return [...items].sort((left, right) => {
     const leftDate = Date.parse(String(left.createdAt ?? "").replace(" ", "T"));
@@ -1077,9 +1135,10 @@ function renderItems() {
   const query = state.query.trim().toLocaleLowerCase("es");
   const visibleItems = sortNewestFirst(state.items.filter((item) => {
     const matchesCategory = state.category === "Todo" || item.category === state.category;
+    const matchesStatus = state.statusFilter === "all" || item.status === state.statusFilter;
     const searchableText = `${item.title} ${item.description} ${item.category} ${item.zone}`
       .toLocaleLowerCase("es");
-    return matchesCategory && (!query || searchableText.includes(query));
+    return matchesCategory && matchesStatus && (!query || searchableText.includes(query));
   }));
 
   itemsCount.textContent = `${visibleItems.length} ${visibleItems.length === 1 ? "cosa" : "cosas"}`;
@@ -1092,8 +1151,8 @@ function renderItems() {
   }
 
   itemsState.textContent = state.items.length > 0
-    ? "No encontramos objetos con esa búsqueda."
-    : "Todavía no hay objetos disponibles. Cuando alguien publique algo, aparecerá aquí.";
+    ? "No encontramos publicaciones con esos filtros."
+    : "Todavía no hay publicaciones activas. Cuando alguien publique algo, aparecerá aquí.";
 }
 
 function isNotExpired(item) {
@@ -1128,8 +1187,9 @@ async function loadCatalog() {
     if (requestVersion !== state.catalogRequestVersion) return;
     setServiceState(n8nStatus, n8nStatusLabel, "connected", "Conectado ✓");
     state.catalogNeedsRefresh = false;
-    state.items = records.filter((item) => item.status === "available" && isNotExpired(item));
+    state.items = records.filter((item) => ["available", "reserved"].includes(item.status) && isNotExpired(item));
     renderCategories();
+    renderStatusFilters();
     renderItems();
     renderMyItems();
     void openItemFromRoute();
@@ -1183,11 +1243,12 @@ async function loadMineItems() {
 
     state.items = [
       ...state.items.filter((item) => !mineById.has(item.id)),
-      ...mergedRecords.filter((item) => item.status === "available" && isNotExpired(item)),
+      ...mergedRecords.filter((item) => ["available", "reserved"].includes(item.status) && isNotExpired(item)),
     ];
     state.myItems = mergedRecords.filter(isOwnItem);
     saveOwnItems();
     renderCategories();
+    renderStatusFilters();
     renderItems();
     renderMyItems();
     return records;
@@ -1219,6 +1280,8 @@ async function openItemFromRoute() {
       ownerUsername: "",
       status: "available",
       expiresAt: null,
+      reservedAt: null,
+      reservationExpiresAt: null,
       imageUrl: null,
       interestCount: 0,
     };
@@ -2049,6 +2112,8 @@ async function handleOfferSubmit(event) {
       status: result.status || "available",
       createdAt: result.created_at ?? new Date().toISOString(),
       expiresAt,
+      reservedAt: result.reserved_at ?? null,
+      reservationExpiresAt: result.reservation_expires_at ?? null,
       ownerDisplayName: state.telegramUser?.first_name || "Tú",
       ownerUsername: state.telegramUser?.username || "",
       ownerTelegramId: String(state.telegramUser?.telegram_id ?? state.telegramUser?.id ?? ""),
@@ -2108,7 +2173,9 @@ function openDeleteItemDialog(item, triggerButton = deleteItemButton) {
   deleteDialogItem = item;
   deleteDialogTriggerButton = triggerButton;
   deleteItemDialogTitle.textContent = item.title || "esta publicación";
-  deleteItemDialogCopy.textContent = `«${item.title || "Esta publicación"}» dejará de aparecer en SegundaVida. No se marcará como entregada.`;
+  deleteItemDialogCopy.textContent = item.status === "reserved"
+    ? `«${item.title || "Esta publicación"}» dejará de aparecer en SegundaVida y se cancelará su reserva. No se marcará como entregada.`
+    : `«${item.title || "Esta publicación"}» dejará de aparecer en SegundaVida. No se marcará como entregada.`;
   deleteItemDialogState.textContent = "";
   deleteItemDialogState.dataset.state = "";
   deleteItemDialogConfirm.disabled = false;
@@ -2194,7 +2261,7 @@ async function hideItem() {
   }
 }
 
-async function completeItem(item, triggerButton = markDeliveredButton, feedbackElement = detailOwnerActionState) {
+async function manageItemAction(item, action, triggerButton, feedbackElement = detailActionState) {
   if (!item?.id) return;
 
   if (!auth?.hasInitData()) {
@@ -2204,7 +2271,7 @@ async function completeItem(item, triggerButton = markDeliveredButton, feedbackE
   }
 
   if (!api?.isCompleteConfigured || typeof api.completeItem !== "function") {
-    feedbackElement.textContent = "La opción de marcar entregado todavía no está conectada en n8n.";
+    feedbackElement.textContent = "La gestión de estados todavía no está conectada en n8n.";
     feedbackElement.dataset.state = "error";
     return;
   }
@@ -2216,7 +2283,7 @@ async function completeItem(item, triggerButton = markDeliveredButton, feedbackE
     const result = await api.completeItem({
       initData: auth.getInitData(),
       item_id: item.id,
-      action: item.status === "completed" ? "reopen" : "complete",
+      action,
     });
 
     if (!result.ok) {
@@ -2227,17 +2294,27 @@ async function completeItem(item, triggerButton = markDeliveredButton, feedbackE
     api.invalidateCatalog?.();
     state.catalogRequestVersion += 1;
     state.catalogNeedsRefresh = true;
-    const nextStatus = result.status
-      || (item.status === "completed" ? "available" : "completed");
+    const fallbackStatus = action === "reserve"
+      ? "reserved"
+      : action === "release" || action === "reopen"
+        ? "available"
+        : "completed";
+    const nextStatus = result.status || fallbackStatus;
     const updatedItem = {
       ...item,
       status: nextStatus,
       expiresAt: result.expires_at ?? item.expiresAt ?? null,
+      reservedAt: nextStatus === "reserved"
+        ? result.reserved_at ?? item.reservedAt ?? new Date().toISOString()
+        : null,
+      reservationExpiresAt: nextStatus === "reserved"
+        ? result.reservation_expires_at ?? item.reservationExpiresAt ?? null
+        : null,
       completedAt: nextStatus === "completed"
         ? result.completed_at || new Date().toISOString()
         : null,
     };
-    state.items = nextStatus === "available"
+    state.items = ["available", "reserved"].includes(nextStatus)
       ? [...state.items.filter((candidate) => candidate.id !== item.id), updatedItem]
       : state.items.filter((candidate) => candidate.id !== item.id);
     rememberOwnItem(updatedItem);
@@ -2246,10 +2323,19 @@ async function completeItem(item, triggerButton = markDeliveredButton, feedbackE
     renderDetail(updatedItem);
   } catch (error) {
     triggerButton.disabled = false;
-    configureDeliveryButton(triggerButton, item.status);
+    if (action === "reserve" || action === "release") {
+      configureStatusButton(triggerButton, item.status);
+    } else {
+      configureDeliveryButton(triggerButton, item.status);
+    }
     feedbackElement.textContent = error.message || "No se ha podido actualizar la publicación.";
     feedbackElement.dataset.state = "error";
   }
+}
+
+async function completeItem(item, triggerButton = markDeliveredButton, feedbackElement = detailActionState) {
+  const action = item?.status === "completed" ? "reopen" : "complete";
+  return manageItemAction(item, action, triggerButton, feedbackElement);
 }
 
 function openTelegramChat(url) {
@@ -2378,6 +2464,12 @@ applyTheme(readThemePreference(), false);
 offerEmptyButton.addEventListener("click", () => setView("offer"));
 detailShare.addEventListener("click", shareSelectedItem);
 interestButton.addEventListener("click", handleInterest);
+manageStatusButton.addEventListener("click", () => {
+  const item = state.selectedItem;
+  if (!item) return;
+  const action = item.status === "reserved" ? "release" : "reserve";
+  void manageItemAction(item, action, manageStatusButton);
+});
 markDeliveredButton.addEventListener("click", () => completeItem(state.selectedItem));
 deleteItemButton.addEventListener("click", () => openDeleteItemDialog(state.selectedItem));
 deleteItemDialogClose?.addEventListener("click", () => closeDeleteItemDialog());

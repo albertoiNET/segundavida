@@ -43,6 +43,8 @@ function normalizeItem(record, { privateFields = false } = {}) {
     createdAt: fields.created_at ?? fields.CreatedAt ?? null,
     completedAt: fields.completed_at ?? null,
     expiresAt: fields.expires_at ?? null,
+    reservedAt: privateFields ? fields.reserved_at ?? null : null,
+    reservationExpiresAt: privateFields ? fields.reservation_expires_at ?? null : null,
     imageUrl,
     imageUrls,
     interestCount: Number(fields.interest_count ?? 0),

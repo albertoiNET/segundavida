@@ -117,6 +117,15 @@ input[type="search"] {
   text-decoration: none;
 }
 
+.brand-lockup__copy {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.18rem;
+}
+
 .brand-mark {
   display: grid;
   width: 2.75rem;
@@ -156,6 +165,16 @@ input[type="search"] {
   line-height: 1;
   text-transform: uppercase;
   white-space: nowrap;
+}
+
+.brand-subtitle {
+  color: var(--color-secondary-dark);
+  font-family: var(--font-sans);
+  font-size: 0.56rem;
+  font-weight: 700;
+  letter-spacing: 0.19em;
+  line-height: 1;
+  text-transform: uppercase;
 }
 
 .brand-owner {
@@ -792,6 +811,10 @@ h2 {
   color: var(--text-muted);
 }
 
+.owned-item-card__status.is-reserved {
+  color: var(--color-primary-dark);
+}
+
 .owned-item-card__meta,
 .owned-item-card__state {
   margin: 0;
@@ -892,6 +915,16 @@ h2 {
 
 .delivery-action-button.secondary-button--complete:hover {
   background: color-mix(in srgb, var(--color-secondary-soft) 78%, var(--color-secondary));
+}
+
+.delivery-action-button.secondary-button--reserve {
+  border-color: var(--color-primary);
+  background: color-mix(in srgb, var(--color-primary) 7%, transparent);
+  color: var(--color-primary-dark);
+}
+
+.delivery-action-button.secondary-button--reserve:hover {
+  background: color-mix(in srgb, var(--color-primary) 14%, transparent);
 }
 
 .delivery-action-button.secondary-button--reopen {
@@ -1222,6 +1255,10 @@ body {
   gap: 0.6rem;
 }
 
+.brand-lockup__copy {
+  gap: 0.16rem;
+}
+
 .brand-mark {
   width: 2.5rem;
   height: 2.5rem;
@@ -1232,6 +1269,11 @@ body {
 .brand-name {
   font-size: 0.96rem;
   letter-spacing: 0.095em;
+}
+
+.brand-subtitle {
+  font-size: 0.52rem;
+  letter-spacing: 0.17em;
 }
 
 .runtime-badge {
@@ -1900,6 +1942,10 @@ body.photo-lightbox-open {
   border-top: 1px solid var(--border-light);
 }
 
+.detail-view--owner .detail-facts {
+  margin-bottom: 0;
+}
+
 .detail-facts div {
   display: flex;
   justify-content: space-between;
@@ -1982,26 +2028,27 @@ body.photo-lightbox-open {
 .detail-owner-actions {
   display: grid;
   gap: 0.55rem;
-  margin-top: 1.25rem;
-  padding-top: 1rem;
-  border-top: 1px solid var(--border-light);
+  margin-top: 0;
+  padding-top: 0;
 }
 
 .detail-owner-actions__controls {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   align-items: center;
-  flex-wrap: wrap;
   gap: 0.65rem;
 }
 
 .detail-owner-actions__controls .delivery-action-button {
-  width: auto;
+  width: 100%;
+  min-width: 0;
+  padding-inline: 0.55rem;
+  font-size: 0.82rem;
 }
 
-.detail-owner-actions__label {
-  color: var(--color-primary-dark);
-  font-size: 0.78rem;
-  font-weight: 750;
+.detail-owner-actions__controls .quiet-action--delete {
+  grid-column: 1 / -1;
+  justify-self: center;
 }
 
 .community-promo {
@@ -2085,6 +2132,10 @@ body.photo-lightbox-open {
   color: var(--text-muted);
   font-size: 0.78rem;
   line-height: 1.4;
+}
+
+.action-state:empty {
+  display: none;
 }
 
 .action-state[data-state="error"],
@@ -2831,4 +2882,168 @@ body.photo-lightbox-open {
     text-align: right;
   }
 
+}
+
+/* Portada · hero editorial de SegundaVida */
+.catalog-hero {
+  position: relative;
+  display: flex;
+  min-height: clamp(15.5rem, 46vw, 20rem);
+  align-items: stretch;
+  margin: 1.25rem -1rem 0;
+  overflow: hidden;
+  isolation: isolate;
+  border-radius: 1.15rem;
+  background-color: #f4eee4;
+  background-image:
+    linear-gradient(90deg, rgb(254 251 246 / 96%) 0%, rgb(254 251 246 / 90%) 39%, rgb(254 251 246 / 42%) 67%, rgb(254 251 246 / 0%) 88%),
+    url("/assets/segundavida-hero-bg.jpg");
+  background-position: 0 0, 68% center;
+  background-size: 100% 100%, cover;
+  animation: hero-reveal 650ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.catalog-hero__content {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  width: min(58%, 25rem);
+  flex-direction: column;
+  justify-content: center;
+  padding: clamp(1.5rem, 4vw, 2.55rem) clamp(1.2rem, 4vw, 2.4rem);
+}
+
+.catalog-hero__title {
+  max-width: 16ch;
+  margin: 0;
+  color: var(--text-main);
+  font-family: var(--font-display);
+  font-size: clamp(1.75rem, 5.5vw, 2.7rem);
+  font-weight: 700;
+  letter-spacing: -0.065em;
+  line-height: 1.1;
+  animation: hero-content-reveal 650ms 90ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.catalog-hero__title span,
+.catalog-hero__title strong {
+  display: block;
+}
+
+.catalog-hero__title strong {
+  margin-top: 0.32em;
+  color: var(--color-primary);
+  font: inherit;
+}
+
+.catalog-hero__support {
+  max-width: 24rem;
+  margin: 1.3rem 0 0;
+  color: var(--text-secondary);
+  font-size: clamp(0.86rem, 1.9vw, 1rem);
+  line-height: 1.4;
+  animation: hero-content-reveal 650ms 180ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.catalog-hero__credit {
+  position: absolute;
+  right: clamp(0.75rem, 3vw, 1.6rem);
+  bottom: clamp(0.75rem, 3vw, 1.25rem);
+  z-index: 1;
+  margin: 0;
+  font-size: 0.68rem;
+  line-height: 1.3;
+  text-align: right;
+  animation: hero-credit-reveal 750ms 260ms ease both;
+}
+
+.catalog-hero__credit a {
+  display: grid;
+  gap: 0.12rem;
+  padding: 0.42rem 0.58rem;
+  border-radius: 0.55rem;
+  background: rgb(254 251 246 / 58%);
+  color: var(--color-primary-dark);
+  text-decoration: none;
+  -webkit-backdrop-filter: blur(5px);
+  backdrop-filter: blur(5px);
+  transition: background 180ms ease, transform 180ms ease;
+}
+
+.catalog-hero__credit a:hover,
+.catalog-hero__credit a:focus-visible {
+  background: rgb(254 251 246 / 82%);
+  transform: translateY(-1px);
+}
+
+.catalog-hero__credit span:first-child {
+  font-weight: 750;
+}
+
+.catalog-hero + .catalog-tools {
+  margin-top: clamp(1rem, 3vw, 1.5rem);
+}
+
+@keyframes hero-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(0.7rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes hero-content-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(0.55rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes hero-credit-reveal {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@media (max-width: 560px) {
+  .catalog-hero {
+    min-height: 15.75rem;
+    border-radius: 0.95rem;
+    background-image:
+      linear-gradient(90deg, rgb(254 251 246 / 96%) 0%, rgb(254 251 246 / 88%) 57%, rgb(254 251 246 / 48%) 84%, rgb(254 251 246 / 0%) 100%),
+      url("/assets/segundavida-hero-bg.jpg");
+    background-position: 0 0, 73% center;
+  }
+
+  .catalog-hero__content {
+    width: 86%;
+    padding: 1.35rem 1.1rem;
+  }
+
+  .catalog-hero__title {
+    max-width: 18ch;
+    font-size: clamp(1.7rem, 7.8vw, 2.2rem);
+  }
+
+  .catalog-hero__support {
+    max-width: 20rem;
+    margin-top: 1.05rem;
+    font-size: 0.83rem;
+  }
+
+  .catalog-hero__credit {
+    right: 0.65rem;
+    bottom: 0.65rem;
+    font-size: 0.62rem;
+  }
 }

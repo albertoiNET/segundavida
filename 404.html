@@ -39,7 +39,7 @@
     />
     <link rel="stylesheet" href="/css/icon-fallback.css?v=sv-20260817-40" />
     <link rel="stylesheet" href="/css/tokens.css?v=sv-20260817-41" />
-    <link rel="stylesheet" href="/css/app.css?v=sv-20260817-57" />
+    <link rel="stylesheet" href="/css/app.css?v=sv-20260818-hero" />
     <script src="https://telegram.org/js/telegram-web-app.js?63"></script>
   </head>
   <body>
@@ -56,11 +56,14 @@
             <i class="fa-solid fa-arrow-right fa-icon" data-fallback="→" aria-hidden="true"></i>
           </button>
         </div>
-        <a class="brand-lockup" id="brand-home-link" href="/" aria-label="Ir a la portada de SegundaVida">
+        <a class="brand-lockup" id="brand-home-link" href="/" aria-label="Ir a la portada de Segunda Vida Pucela">
           <span class="brand-mark" aria-hidden="true">
             <img class="brand-mark__image" src="/assets/segundavida-mark.png?v=sv-20260817-40" alt="" />
           </span>
-          <p class="brand-name">Segunda Vida</p>
+          <span class="brand-lockup__copy">
+            <span class="brand-name">Segunda Vida</span>
+            <span class="brand-subtitle">Pucela</span>
+          </span>
         </a>
         <div class="app-header__actions">
           <span class="runtime-badge" aria-live="polite">
@@ -74,13 +77,20 @@
         </div>
       </header>
 
-      <section class="catalog-intro" aria-labelledby="page-title">
-        <h1 class="sr-only" id="page-title">SegundaVida</h1>
-        <p class="catalog-intro__copy">
-          Vecinos/as de Valladolid comparten en esta web cosas que ya no necesitan para que otras personas puedan darles una segunda vida.
-        </p>
-        <p class="catalog-intro__credit">
-          Una iniciativa de <a href="https://aldeapucela.org/" target="_blank" rel="noopener noreferrer">Aldea Pucela</a>.
+      <section class="catalog-intro catalog-hero" aria-labelledby="page-title">
+        <div class="catalog-hero__content">
+          <h1 id="page-title" class="catalog-hero__title">
+            <span>Si ya no lo usas</span>
+            <strong>¡Dale una segunda vida!</strong>
+          </h1>
+          <p class="catalog-hero__support">
+            Vecinos/as de Valladolid ofrecen gratuitamente todo lo que ves aquí.
+          </p>
+        </div>
+        <p class="catalog-hero__credit">
+          <a href="https://aldeapucela.org/" target="_blank" rel="noopener noreferrer">
+            <span>Por Aldea Pucela</span>
+          </a>
         </p>
       </section>
 
@@ -90,13 +100,14 @@
           <span class="sr-only">Buscar objetos</span>
           <input id="search-input" type="search" placeholder="Buscar objetos" autocomplete="off" />
         </label>
+        <div id="status-filters" class="filter-list" role="tablist" aria-label="Estado de las publicaciones"></div>
         <div id="category-filters" class="filter-list" role="tablist" aria-label="Categorías"></div>
       </section>
 
       <section class="catalog-section" aria-labelledby="catalog-title">
         <div class="catalog-heading">
           <div>
-            <h2 id="catalog-title">Disponibles ahora</h2>
+            <h2 id="catalog-title">Publicaciones activas</h2>
           </div>
           <span id="items-count" class="items-count" aria-live="polite">Comprobando...</span>
         </div>
@@ -136,6 +147,10 @@
           <div class="detail-owner-actions" id="detail-owner-actions" hidden>
             <span class="detail-owner-actions__label">Gestiona esta publicación</span>
             <div class="detail-owner-actions__controls">
+              <button class="secondary-button delivery-action-button secondary-button--reserve" id="manage-status-button" type="button" hidden>
+                <i class="fa-solid fa-clock fa-icon" data-fallback="◷" aria-hidden="true"></i>
+                <span>Reservar</span>
+              </button>
               <button class="secondary-button delivery-action-button secondary-button--complete" id="mark-delivered-button" type="button">
                 <i class="fa-solid fa-check fa-icon" data-fallback="✓" aria-hidden="true"></i>
                 <span>Marcar como entregado</span>

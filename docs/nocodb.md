@@ -22,9 +22,11 @@ deben entrar desde el workflow de publicación o desde una importación validada
 | `owner_telegram_id` | SingleLineText | Sí | Identidad privada de Telegram |
 | `owner_display_name` | SingleLineText | Sí | Nombre público mostrado |
 | `owner_username` | SingleLineText | No | Nombre de usuario opcional |
-| `status` | SingleSelect | Sí | `available`, `completed`, `expired`, `hidden` |
+| `status` | SingleSelect | Sí | `available`, `reserved`, `completed`, `expired`, `hidden` |
 | `expires_at` | DateTime | Sí | Fin de disponibilidad |
 | `completed_at` | DateTime | No | Cuándo se finalizó |
+| `reserved_at` | DateTime | No | Cuándo comenzó la reserva |
+| `reservation_expires_at` | DateTime | No | Cuándo caduca la reserva; siempre 24 horas después de `reserved_at` |
 | `Fotos` | Attachment | No | Hasta dos fotos públicas; la primera es la portada |
 | `image_url` | URL | No | Compatibilidad: URL de la primera foto |
 | `telegram_chat_id` | SingleLineText | No | Referencia privada para n8n |
@@ -42,8 +44,10 @@ moderación como para el borrado solicitado por la persona propietaria.
 NocoDB ya aporta `CreatedAt` y `UpdatedAt`; no hay que crearlos ni rellenarlos
 desde el CSV. n8n los expondrá como `created_at` y `updated_at` en la respuesta
 pública. Telegram IDs se guardan como texto para evitar problemas de precisión o
-limitaciones de tamaño en campos numéricos. El modelo actual no contempla
-reservas ni una tabla de intereses. Cuando haya un `owner_username` público,
+limitaciones de tamaño en campos numéricos. El modelo no contempla una tabla de
+intereses. Las reservas no se crean automáticamente:
+solo la persona propietaria puede activar `reserved`, con un plazo fijo de 24
+horas. Cuando haya un `owner_username` público,
 `Me interesa` abre directamente el chat del vecino o la vecina con un mensaje
 preparado y el enlace a la ficha concreta. Por eso el formulario exige
 configurar un nombre de usuario público antes de publicar. Las
@@ -60,7 +64,7 @@ registro del objeto.
    `SingleSelect`, `URL` y `Number`.
 5. Mantener `Id` como clave técnica de NocoDB y usar `public_id` como identificador
    de negocio; crear una vista `Public catalog`.
-6. En esa vista filtrar `status = available` y ordenar por `created_at`
+6. En esa vista filtrar `status` por `available` o `reserved` y ordenar por `created_at`
    descendente.
 
 Antes de activar las fichas públicas, añade `public_id` y asigna a cada fila un
@@ -104,7 +108,7 @@ GET /webhook/segundavida/item/<public_id>
 ```
 
 Debe buscar por `public_id` (y solo durante la transición por `item-id`),
-devolver `200` con `{ ok: true, item }` para `available`, `completed` o
+devolver `200` con `{ ok: true, item }` para `available`, `reserved`, `completed` o
 `expired`, y `404` con `{ ok: false, error: "not_found" }` si no existe o está
 `hidden`. La proyección debe usar solo los campos públicos documentados y no
 incluir IDs de Telegram, chats, hilos, `initData` ni credenciales.
@@ -133,7 +137,7 @@ Flujo previsto:
 ```text
 Webhook
   -> NocoDB: listar sv_items
-  -> filtrar status=available y expires_at futuro
+  -> filtrar status=available o reserved y expires_at futuro
   -> mapear solo campos públicos
   -> Respond to Webhook
 ```
@@ -172,7 +176,7 @@ const publicItems = $input.all()
   })
   .filter((item) => (
     item.id &&
-    item.status === "available" &&
+    ["available", "reserved"].includes(item.status) &&
     (!item.expires_at || timestamp(item.expires_at) >= Date.now())
   ));
 
