@@ -56,6 +56,9 @@ let deleteDialogItem = null;
 let deleteDialogTriggerButton = null;
 let contactDialogItem = null;
 let contactDialogTriggerButton = null;
+let reserveDialogItem = null;
+let reserveDialogTriggerButton = null;
+let reserveDialogFeedbackElement = null;
 
 const runtimeName = document.querySelector("#runtime-name");
 const telegramSdkState = document.querySelector("#telegram-sdk-state");
@@ -122,6 +125,9 @@ const contactDialogOwner = document.querySelector("#contact-dialog-owner");
 const contactDialogClose = document.querySelector("#contact-dialog-close");
 const contactDialogCancel = document.querySelector("#contact-dialog-cancel");
 const contactDialogConfirm = document.querySelector("#contact-dialog-confirm");
+const reserveItemDialog = document.querySelector("#reserve-item-dialog");
+const reserveItemDialogCancel = document.querySelector("#reserve-item-dialog-cancel");
+const reserveItemDialogConfirm = document.querySelector("#reserve-item-dialog-confirm");
 const publishSuccessView = document.querySelector("#publish-success-view");
 const successItemTitle = document.querySelector("#success-item-title");
 const successItemStatus = document.querySelector("#success-item-status");
@@ -767,6 +773,28 @@ function renderCompletedActionState(item) {
   detailActionState.append(icon, content);
 }
 
+function renderReservedActionState() {
+  if (!detailActionState) return;
+
+  detailActionState.replaceChildren();
+  detailActionState.className = "action-state action-state--reserved";
+  detailActionState.dataset.state = "info";
+
+  const icon = document.createElement("span");
+  icon.className = "action-state__icon";
+  icon.append(createIconElement("fa-clock", "◷"));
+
+  const content = document.createElement("div");
+  content.className = "action-state__content";
+  content.append(createTextElement("strong", "", "Este objeto ya está reservado."));
+  content.append(createTextElement(
+    "p",
+    "",
+    "Si no se entregara, el autor podría volver a publicarlo.",
+  ));
+  detailActionState.append(icon, content);
+}
+
 function createPhotoCarousel(item, { className = "", openLightbox = true } = {}) {
   const urls = getItemImageUrls(item);
   const carousel = document.createElement("div");
@@ -958,6 +986,10 @@ function createOwnedItemCard(item) {
   deliveredButton.addEventListener("click", () => completeItem(item, deliveredButton, actionState));
   statusButton.addEventListener("click", () => {
     const action = item.status === "reserved" ? "release" : "reserve";
+    if (action === "reserve") {
+      openReserveItemDialog(item, statusButton, actionState);
+      return;
+    }
     void manageItemAction(item, action, statusButton, actionState);
   });
   deleteButton.addEventListener("click", () => openDeleteItemDialog(item, deleteButton));
@@ -1193,6 +1225,8 @@ function renderDetail(item, { live = true, error = "" } = {}) {
   );
   if (live && item.status === "completed") {
     renderCompletedActionState(item);
+  } else if (live && item.status === "reserved" && !ownItem) {
+    renderReservedActionState();
   } else {
     detailActionState.className = "action-state";
     detailActionState.textContent = !live
@@ -2428,6 +2462,48 @@ function openDeleteItemDialog(item, triggerButton = deleteItemButton) {
   deleteItemDialogCancel?.focus();
 }
 
+function openReserveItemDialog(item, triggerButton, feedbackElement) {
+  if (!item?.id || !reserveItemDialog || !reserveItemDialogConfirm) return;
+
+  reserveDialogItem = item;
+  reserveDialogTriggerButton = triggerButton;
+  reserveDialogFeedbackElement = feedbackElement;
+  reserveItemDialogConfirm.disabled = false;
+
+  if (typeof reserveItemDialog.showModal === "function") {
+    reserveItemDialog.showModal();
+  } else {
+    reserveItemDialog.setAttribute("open", "");
+  }
+  reserveItemDialogCancel?.focus();
+}
+
+function closeReserveItemDialog({ restoreFocus = true } = {}) {
+  if (!reserveItemDialog) return;
+
+  if (typeof reserveItemDialog.close === "function" && reserveItemDialog.open) {
+    reserveItemDialog.close();
+  } else {
+    reserveItemDialog.removeAttribute("open");
+  }
+
+  const triggerButton = reserveDialogTriggerButton;
+  reserveDialogItem = null;
+  reserveDialogTriggerButton = null;
+  reserveDialogFeedbackElement = null;
+  if (restoreFocus && triggerButton?.isConnected) triggerButton.focus();
+}
+
+function confirmReserveItemDialog() {
+  const item = reserveDialogItem;
+  const triggerButton = reserveDialogTriggerButton;
+  const feedbackElement = reserveDialogFeedbackElement;
+  if (!item || !triggerButton) return;
+
+  closeReserveItemDialog({ restoreFocus: false });
+  void manageItemAction(item, "reserve", triggerButton, feedbackElement);
+}
+
 function closeDeleteItemDialog({ restoreFocus = true } = {}) {
   if (!deleteItemDialog) return;
 
@@ -2792,10 +2868,23 @@ contactDialog?.addEventListener("cancel", (event) => {
 contactDialog?.addEventListener("click", (event) => {
   if (event.target === contactDialog) closeContactDialog();
 });
+reserveItemDialogCancel?.addEventListener("click", () => closeReserveItemDialog());
+reserveItemDialogConfirm?.addEventListener("click", confirmReserveItemDialog);
+reserveItemDialog?.addEventListener("cancel", (event) => {
+  event.preventDefault();
+  closeReserveItemDialog();
+});
+reserveItemDialog?.addEventListener("click", (event) => {
+  if (event.target === reserveItemDialog) closeReserveItemDialog();
+});
 manageStatusButton.addEventListener("click", () => {
   const item = state.selectedItem;
   if (!item) return;
   const action = item.status === "reserved" ? "release" : "reserve";
+  if (action === "reserve") {
+    openReserveItemDialog(item, manageStatusButton, detailActionState);
+    return;
+  }
   void manageItemAction(item, action, manageStatusButton);
 });
 markDeliveredButton.addEventListener("click", () => completeItem(state.selectedItem));
