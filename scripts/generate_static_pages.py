@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate deterministic, public-only HTML pages for SegundaVida."""
+"""Generate deterministic, public-only HTML pages for Segunda Vida."""
 
 from __future__ import annotations
 
@@ -103,7 +103,7 @@ def normalize_item(raw: dict[str, object]) -> dict[str, object]:
 
     return {
         "id": public_id,
-        "title": str(raw.get("title") or "Objeto de SegundaVida").strip()[:160],
+        "title": str(raw.get("title") or "Objeto de Segunda Vida").strip()[:160],
         "description": str(raw.get("description") or "").strip()[:1000],
         "category": str(raw.get("category") or "Otros").strip()[:80],
         "zone": str(raw.get("zone") or "Valladolid").strip()[:120],
@@ -153,8 +153,8 @@ def canonical_url(site_url: str, public_id: str) -> str:
 
 
 def render_metadata(item: dict[str, object], site_url: str) -> str:
-    title = f"{item['title']} · SegundaVida"
-    description = (item["description"] or f"{item['title']} disponible en SegundaVida, Aldea Pucela.")[:200]
+    title = f"{item['title']} · Segunda Vida"
+    description = (item["description"] or f"{item['title']} disponible en Segunda Vida, Aldea Pucela.")[:200]
     canonical = canonical_url(site_url, str(item["id"]))
     fallback_image = f"{site_url.rstrip('/')}/assets/segundavida-mark.png"
     image = safe_image_url(item.get("image_url"), fallback_image)
@@ -163,7 +163,7 @@ def render_metadata(item: dict[str, object], site_url: str) -> str:
         f'<link rel="canonical" href="{html.escape(canonical, quote=True)}" />',
         f'<meta property="og:type" content="website" />',
         f'<meta property="og:locale" content="es_ES" />',
-        f'<meta property="og:site_name" content="SegundaVida · Aldea Pucela" />',
+        f'<meta property="og:site_name" content="Segunda Vida · Aldea Pucela" />',
         f'<meta property="og:title" content="{html.escape(title, quote=True)}" />',
         f'<meta property="og:description" content="{html.escape(description, quote=True)}" />',
         f'<meta property="og:url" content="{html.escape(canonical, quote=True)}" />',
@@ -180,7 +180,7 @@ def render_metadata(item: dict[str, object], site_url: str) -> str:
 
 def render_fallback(item: dict[str, object], site_url: str) -> str:
     image = safe_image_url(item.get("image_url"), f"{site_url.rstrip('/')}/assets/segundavida-mark.png")
-    description = item["description"] or "Consulta la disponibilidad actual en SegundaVida."
+    description = item["description"] or "Consulta la disponibilidad actual en Segunda Vida."
     return (
         "<noscript>\n"
         '  <article class="static-item-fallback" itemscope itemtype="https://schema.org/Product">\n'
@@ -195,7 +195,7 @@ def render_fallback(item: dict[str, object], site_url: str) -> str:
 
 
 def render_page(template: str, item: dict[str, object], site_url: str) -> str:
-    title = html.escape(f"{item['title']} · SegundaVida")
+    title = html.escape(f"{item['title']} · Segunda Vida")
     page = re.sub(r"<title>.*?</title>", f"<title>{title}</title>", template, count=1, flags=re.DOTALL)
     page = re.sub(r"\s*<meta\s+name=\"description\"[^>]*?/>", "", page, count=1)
     page = re.sub(

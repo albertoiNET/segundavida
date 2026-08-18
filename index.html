@@ -7,29 +7,29 @@
     <!-- STATIC_HOME_METADATA -->
     <meta
       name="description"
-      content="SegundaVida, una iniciativa de Aldea Pucela para compartir objetos gratis."
+      content="Segunda Vida, una iniciativa de Aldea Pucela para compartir objetos gratis."
     />
     <link rel="canonical" href="https://segundavida.aldeapucela.org/" />
     <meta property="og:locale" content="es_ES" />
-    <meta property="og:site_name" content="SegundaVida · Aldea Pucela" />
+    <meta property="og:site_name" content="Segunda Vida · Aldea Pucela" />
     <meta property="og:type" content="website" />
-    <meta property="og:title" content="SegundaVida · Aldea Pucela" />
+    <meta property="og:title" content="Segunda Vida · Aldea Pucela" />
     <meta property="og:description" content="Comparte objetos que ya no necesitas para que otras personas puedan darles una segunda vida." />
     <meta property="og:url" content="https://segundavida.aldeapucela.org/" />
     <meta property="og:image" content="https://segundavida.aldeapucela.org/assets/segundavida-social-preview.png" />
     <meta property="og:image:width" content="1731" />
     <meta property="og:image:height" content="909" />
     <meta property="og:image:type" content="image/png" />
-    <meta property="og:image:alt" content="SegundaVida: si ya no lo usas, dale una segunda vida" />
+    <meta property="og:image:alt" content="Segunda Vida: si ya no lo usas, dale una segunda vida" />
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="SegundaVida · Aldea Pucela" />
+    <meta name="twitter:title" content="Segunda Vida · Aldea Pucela" />
     <meta name="twitter:description" content="Comparte objetos que ya no necesitas para que otras personas puedan darles una segunda vida." />
     <meta name="twitter:image" content="https://segundavida.aldeapucela.org/assets/segundavida-social-preview.png" />
-    <meta name="twitter:image:alt" content="SegundaVida: si ya no lo usas, dale una segunda vida" />
+    <meta name="twitter:image:alt" content="Segunda Vida: si ya no lo usas, dale una segunda vida" />
     <!-- END_STATIC_HOME_METADATA -->
     <link rel="icon" type="image/png" sizes="1254x1254" href="/assets/segundavida-mark.png?v=sv-20260817-40" />
     <link rel="apple-touch-icon" href="/assets/segundavida-mark.png?v=sv-20260817-40" />
-    <title>SegundaVida · Aldea Pucela</title>
+    <title>Segunda Vida · Aldea Pucela</title>
     <!-- Bump this version whenever static assets change to bypass Mini App caches. -->
     <link
       rel="stylesheet"
@@ -47,7 +47,7 @@
     <!-- STATIC_ITEM_DATA -->
     <!-- STATIC_ITEM_FALLBACK -->
     <main class="app-shell">
-      <header class="app-header" aria-label="SegundaVida">
+      <header class="app-header" aria-label="Segunda Vida">
         <div class="app-header__nav" aria-label="Navegación del contenido">
           <button class="header-nav-button" id="app-back-button" type="button" aria-label="Volver" title="Volver" disabled>
             <i class="fa-solid fa-arrow-left fa-icon" data-fallback="←" aria-hidden="true"></i>
@@ -71,9 +71,10 @@
             <span id="runtime-name">navegador</span>
             <span id="telegram-sdk-state" hidden></span>
           </span>
-          <button class="icon-button header-share-button" id="detail-share" type="button" aria-label="Compartir publicación" title="Compartir publicación" hidden>
+          <button class="icon-button header-share-button" id="detail-share" type="button" aria-label="Compartir Segunda Vida" title="Compartir Segunda Vida">
             <i class="fa-solid fa-share-nodes fa-icon" data-fallback="↗" aria-hidden="true"></i>
           </button>
+          <span class="sr-only" id="share-feedback" aria-live="polite"></span>
         </div>
       </header>
 
@@ -127,22 +128,24 @@
               <span id="detail-availability-label">Disponible</span>
             </p>
           </div>
+          <div class="detail-meta" aria-label="Información de la publicación">
+            <span class="detail-meta__item">
+              <i class="fa-regular fa-user detail-meta__icon fa-icon" data-fallback="●" aria-hidden="true"></i>
+              <span id="detail-owner">Vecindad</span>
+            </span>
+            <span class="detail-meta__separator" aria-hidden="true">·</span>
+            <span class="detail-meta__item">
+              <i class="fa-solid fa-location-dot detail-meta__icon fa-icon" data-fallback="⌖" aria-hidden="true"></i>
+              <span id="detail-zone">—</span>
+            </span>
+            <span class="detail-meta__separator" aria-hidden="true">·</span>
+            <span id="detail-created-at">—</span>
+          </div>
           <p class="detail-description" id="detail-description"></p>
-          <dl class="detail-facts">
-            <div>
-              <dt>Zona</dt>
-              <dd id="detail-zone">—</dd>
-            </div>
-            <div>
-              <dt>Publicado por</dt>
-              <dd id="detail-owner">Vecindad</dd>
-            </div>
-            <div>
-              <dt>Publicado</dt>
-              <dd id="detail-created-at">—</dd>
-            </div>
-          </dl>
-          <button class="primary-button" id="interest-button" type="button">Me interesa</button>
+          <button class="primary-button" id="interest-button" type="button">
+            <i class="fa-regular fa-message fa-icon" data-fallback="✉" aria-hidden="true"></i>
+            <span>Me interesa</span>
+          </button>
           <p class="action-state" id="detail-action-state" aria-live="polite"></p>
           <div class="detail-owner-actions" id="detail-owner-actions" hidden>
             <div class="detail-owner-actions__controls">
@@ -167,7 +170,7 @@
             <div class="community-promo__content">
               <h2 id="community-promo-title">Segunda Vida forma parte de Aldea Pucela</h2>
               <p>Debates, iniciativas y eventos de la mayor comunidad vecinal de Valladolid.</p>
-              <a class="community-promo__link" href="https://aldeapucela.org/" target="_blank" rel="noopener noreferrer"><i class="fa-solid fa-arrow-up-right-from-square fa-icon" data-fallback="↗" aria-hidden="true"></i> Conocer la comunidad</a>
+              <a class="community-promo__link" href="https://aldeapucela.org/" target="_blank" rel="noopener noreferrer">Conocer la comunidad</a>
             </div>
           </aside>
         </div>
@@ -175,7 +178,7 @@
 
       <section class="success-view" id="publish-success-view" hidden aria-labelledby="publish-success-title">
         <div class="success-mark" aria-hidden="true"><i class="fa-solid fa-circle-check fa-icon" data-fallback="✓"></i></div>
-        <span class="eyebrow">SegundaVida</span>
+        <span class="eyebrow">Segunda Vida</span>
         <h1 id="publish-success-title">Se ha publicado</h1>
         <p class="view-copy">Tu objeto ya está disponible para la comunidad.</p>
         <div class="success-item-summary">
@@ -381,7 +384,7 @@
           <div class="consent-block">
             <label class="consent-field" for="offer-consent">
               <input id="offer-consent" name="consent" type="checkbox" value="accepted" required />
-              <span>Acepto que mi publicación sea visible en la web y Telegram, que otras personas puedan contactarme para solicitarla, que ofrezco el objeto gratis y sin contraprestación y que cumple las condiciones de SegundaVida. El contenido que comparto (texto y fotos) se publica bajo la licencia <a href="https://creativecommons.org/licenses/by-sa/4.0/deed.es" target="_blank" rel="noopener noreferrer">CC BY-SA 4.0</a>.</span>
+              <span>Acepto que mi publicación sea visible en la web y Telegram, que otras personas puedan contactarme para solicitarla, que ofrezco el objeto gratis y sin contraprestación y que cumple las condiciones de Segunda Vida. El contenido que comparto (texto y fotos) se publica bajo la licencia <a href="https://creativecommons.org/licenses/by-sa/4.0/deed.es" target="_blank" rel="noopener noreferrer">CC BY-SA 4.0</a>.</span>
             </label>
             <details class="consent-details">
               <summary>Ver qué implica</summary>
@@ -404,7 +407,7 @@
                   <li>Ventas, subastas, precios, pujas, pagos encubiertos, trueques o contraprestaciones obligatorias.</li>
                   <li>Spam, duplicados abusivos, publicaciones engañosas o anuncios que deriven a negocios o servicios externos.</li>
                 </ul>
-                <p>SegundaVida está destinada a objetos legales, seguros, de tu propiedad, todavía útiles para otra persona y entregados completamente gratis. La moderación podrá retirar cualquier publicación que genere riesgos, abusos o problemas legales para la comunidad.</p>
+                <p>Segunda Vida está destinada a objetos legales, seguros, de tu propiedad, todavía útiles para otra persona y entregados completamente gratis. La moderación podrá retirar cualquier publicación que genere riesgos, abusos o problemas legales para la comunidad.</p>
                 <p>El nombre y el usuario público de Telegram se usarán para asociar la publicación y facilitar el contacto. El identificador técnico de Telegram quedará privado.</p>
               </div>
             </details>
@@ -422,7 +425,7 @@
           </div>
           <button class="icon-button" id="telegram-username-dialog-close" type="button" aria-label="Cerrar" title="Cerrar"><i class="fa-solid fa-xmark fa-icon" data-fallback="×" aria-hidden="true"></i></button>
         </div>
-        <p>Para que otras personas puedan ponerse en contacto contigo, SegundaVida necesita un nombre de usuario público.</p>
+        <p>Para que otras personas puedan ponerse en contacto contigo, Segunda Vida necesita un nombre de usuario público.</p>
         <ol>
           <li>Abre Telegram y pulsa el <strong>menú</strong>.</li>
           <li>Entra en <strong>Ajustes</strong>.</li>
@@ -430,6 +433,41 @@
           <li>Elige uno disponible y vuelve a esta Mini App.</li>
         </ol>
         <button class="primary-button" id="telegram-username-retry" type="button">Ya lo he configurado</button>
+      </dialog>
+
+      <dialog class="contact-dialog" id="contact-dialog" aria-labelledby="contact-dialog-title" aria-describedby="contact-dialog-note">
+        <div class="contact-dialog__panel">
+          <div class="contact-dialog__topline">
+            <div>
+              <h2 id="contact-dialog-title">Contactar con <span id="contact-dialog-owner">este vecino o vecina</span></h2>
+            </div>
+            <button class="icon-button" id="contact-dialog-close" type="button" aria-label="Cerrar" title="Cerrar">
+              <i class="fa-solid fa-xmark fa-icon" data-fallback="×" aria-hidden="true"></i>
+            </button>
+          </div>
+          <ol class="contact-dialog__steps">
+            <li>
+              <span class="contact-dialog__step-number" aria-hidden="true">1</span>
+              <p>Te llevaremos al chat de Telegram de esta persona.</p>
+            </li>
+            <li>
+              <span class="contact-dialog__step-number" aria-hidden="true">2</span>
+              <p>El objeto se ofrece gratis: nadie debe pedirte dinero ni nada a cambio.</p>
+            </li>
+            <li>
+              <span class="contact-dialog__step-number" aria-hidden="true">3</span>
+              <p>Acordad por Telegram cómo y cuándo hacer la entrega.</p>
+            </li>
+          </ol>
+          <p class="contact-dialog__note" id="contact-dialog-note">Al continuar, entiendes que organizar el contacto y la entrega es responsabilidad de quien ofrece y quien recibe. Segunda Vida facilita el contacto, pero no interviene en la entrega.</p>
+          <div class="contact-dialog__actions">
+            <button class="secondary-button" id="contact-dialog-cancel" type="button">Ahora no</button>
+            <button class="telegram-open-link contact-dialog__confirm" id="contact-dialog-confirm" type="button">
+              <i class="fa-brands fa-telegram fa-icon" data-fallback="➤" aria-hidden="true"></i>
+              <span>Abrir chat</span>
+            </button>
+          </div>
+        </div>
       </dialog>
 
       <dialog class="camera-dialog" id="camera-dialog" aria-labelledby="camera-dialog-title">
@@ -480,7 +518,7 @@
         <div class="photo-lightbox__panel">
           <div class="photo-lightbox__topline">
             <div>
-              <span class="eyebrow">SegundaVida</span>
+              <span class="eyebrow">Segunda Vida</span>
               <h2 id="photo-lightbox-title">Foto</h2>
             </div>
             <div class="photo-lightbox__actions">
@@ -534,7 +572,7 @@
                 <i class="fa-brands fa-telegram fa-icon" data-fallback="✈"></i>
               </span>
               <div>
-                <h2 id="posts-auth-title">Abre SegundaVida desde Telegram</h2>
+                <h2 id="posts-auth-title">Ábreme desde Telegram</h2>
               </div>
             </div>
           </div>

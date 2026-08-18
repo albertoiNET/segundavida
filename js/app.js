@@ -1,4 +1,4 @@
-// Punto de entrada del frontend de SegundaVida.
+// Punto de entrada del frontend de Segunda Vida.
 document.documentElement.classList.add("app-ready");
 
 const telegramRuntime = window.SecondaVidaTelegram ?? {
@@ -54,6 +54,8 @@ let routeOpenInFlight = null;
 let routeOpenItemId = "";
 let deleteDialogItem = null;
 let deleteDialogTriggerButton = null;
+let contactDialogItem = null;
+let contactDialogTriggerButton = null;
 
 const runtimeName = document.querySelector("#runtime-name");
 const telegramSdkState = document.querySelector("#telegram-sdk-state");
@@ -76,6 +78,7 @@ const offerView = document.querySelector("#offer-view");
 const postsView = document.querySelector("#posts-view");
 const detailView = document.querySelector("#detail-view");
 const detailShare = document.querySelector("#detail-share");
+const shareFeedback = document.querySelector("#share-feedback");
 const detailMedia = document.querySelector("#detail-media");
 const photoLightbox = document.querySelector("#photo-lightbox");
 const photoLightboxTitle = document.querySelector("#photo-lightbox-title");
@@ -106,6 +109,11 @@ const deleteItemDialogState = document.querySelector("#delete-item-dialog-state"
 const deleteItemDialogClose = document.querySelector("#delete-item-dialog-close");
 const deleteItemDialogCancel = document.querySelector("#delete-item-dialog-cancel");
 const deleteItemDialogConfirm = document.querySelector("#delete-item-dialog-confirm");
+const contactDialog = document.querySelector("#contact-dialog");
+const contactDialogOwner = document.querySelector("#contact-dialog-owner");
+const contactDialogClose = document.querySelector("#contact-dialog-close");
+const contactDialogCancel = document.querySelector("#contact-dialog-cancel");
+const contactDialogConfirm = document.querySelector("#contact-dialog-confirm");
 const publishSuccessView = document.querySelector("#publish-success-view");
 const successItemTitle = document.querySelector("#success-item-title");
 const successItemStatus = document.querySelector("#success-item-status");
@@ -519,8 +527,16 @@ function getItemUrl(item) {
   return url.toString();
 }
 
+function getHomeUrl() {
+  const url = new URL(window.location.href);
+  url.pathname = "/";
+  url.search = "";
+  url.hash = "";
+  return url.toString();
+}
+
 function getInterestMessage(item) {
-  return `Hola, he visto que has publicado «${item.title}» en SegundaVida y estoy interesado/a.\n\n${getItemUrl(item)}`;
+  return `Hola, he visto que has publicado «${item.title}» en Segunda Vida y estoy interesado/a.\n\n${getItemUrl(item)}`;
 }
 
 function createItemCard(item, index) {
@@ -967,7 +983,10 @@ function renderDetail(item, { live = true, error = "" } = {}) {
   detailView.classList.toggle("detail-view--owner", canManageItem && live);
   interestButton.hidden = ownItem || !live || !isAvailable;
   interestButton.disabled = ownItem || !live || !isAvailable || !ownerUsername;
-  interestButton.textContent = "Me interesa";
+  interestButton.replaceChildren(
+    createIconElement("fa-message", "✉"),
+    document.createTextNode("Me interesa"),
+  );
   interestButton.setAttribute(
     "aria-label",
     ownerUsername
@@ -987,7 +1006,7 @@ function renderDetail(item, { live = true, error = "" } = {}) {
       : item.status === "expired"
         ? "Esta publicación ha caducado."
         : ownerUsername
-          ? "Se abrirá el chat de Telegram de quien lo ofrece."
+          ? ""
           : "Este vecino o vecina no tiene un nombre de usuario público para recibir contactos.";
   detailActionState.dataset.state = !live || (!ownItem && !ownerUsername && isAvailable) ? "error" : "";
 
@@ -1045,7 +1064,9 @@ function setView(viewName, { syncHistory = true, itemId = "" } = {}) {
   postsView.hidden = !isPosts;
   detailView.hidden = !isDetail;
   publishSuccessView.hidden = !isSuccess;
-  detailShare.hidden = !isDetail;
+  detailShare.hidden = !(isExplore || isDetail);
+  detailShare.setAttribute("aria-label", isDetail ? "Compartir publicación" : "Compartir Segunda Vida");
+  detailShare.setAttribute("title", isDetail ? "Compartir publicación" : "Compartir Segunda Vida");
 
   if (isOffer) configureOfferAuth();
   if (isPosts) configurePostsView();
@@ -2174,8 +2195,8 @@ function openDeleteItemDialog(item, triggerButton = deleteItemButton) {
   deleteDialogTriggerButton = triggerButton;
   deleteItemDialogTitle.textContent = item.title || "esta publicación";
   deleteItemDialogCopy.textContent = item.status === "reserved"
-    ? `«${item.title || "Esta publicación"}» dejará de aparecer en SegundaVida y se cancelará su reserva. No se marcará como entregada.`
-    : `«${item.title || "Esta publicación"}» dejará de aparecer en SegundaVida. No se marcará como entregada.`;
+    ? `«${item.title || "Esta publicación"}» dejará de aparecer en Segunda Vida y se cancelará su reserva. No se marcará como entregada.`
+    : `«${item.title || "Esta publicación"}» dejará de aparecer en Segunda Vida. No se marcará como entregada.`;
   deleteItemDialogState.textContent = "";
   deleteItemDialogState.dataset.state = "";
   deleteItemDialogConfirm.disabled = false;
@@ -2249,7 +2270,7 @@ async function hideItem() {
     closeDeleteItemDialog({ restoreFocus: false });
     setView("posts");
     if (postsActionState) {
-      postsActionState.textContent = "Publicación borrada. Ya no aparece en SegundaVida.";
+      postsActionState.textContent = "Publicación borrada. Ya no aparece en Segunda Vida.";
       postsActionState.dataset.state = "success";
     }
   } catch (error) {
@@ -2394,15 +2415,80 @@ function handleInterest() {
   showInterestFeedback(telegramUrl);
 }
 
-async function shareSelectedItem() {
-  if (!state.selectedItem) return;
+function openContactDialog(item = state.selectedItem, triggerButton = interestButton) {
+  if (!item || isOwnItem(item) || !contactDialog) return;
 
-  const itemUrl = getItemUrl(state.selectedItem);
-  const shareData = {
-    title: state.selectedItem.title,
-    text: `${state.selectedItem.title} · SegundaVida`,
-    url: itemUrl,
-  };
+  const username = normalizeTelegramUsername(item.ownerUsername);
+  if (!username) {
+    handleInterest();
+    return;
+  }
+
+  contactDialogItem = item;
+  contactDialogTriggerButton = triggerButton;
+  contactDialogOwner.textContent = item.ownerDisplayName || "este vecino o vecina";
+
+  if (typeof contactDialog.showModal === "function") {
+    contactDialog.showModal();
+  } else {
+    contactDialog.setAttribute("open", "");
+  }
+  contactDialogCancel?.focus();
+}
+
+function closeContactDialog({ restoreFocus = true } = {}) {
+  if (!contactDialog) return;
+
+  if (typeof contactDialog.close === "function" && contactDialog.open) {
+    contactDialog.close();
+  } else {
+    contactDialog.removeAttribute("open");
+  }
+
+  const triggerButton = contactDialogTriggerButton;
+  contactDialogItem = null;
+  contactDialogTriggerButton = null;
+  if (restoreFocus && triggerButton?.isConnected) triggerButton.focus();
+}
+
+function confirmContactDialog() {
+  const item = contactDialogItem;
+  if (!item) return;
+
+  const username = normalizeTelegramUsername(item.ownerUsername);
+  if (!username) {
+    closeContactDialog();
+    handleInterest();
+    return;
+  }
+
+  const telegramUrl = `https://t.me/${username}?text=${encodeURIComponent(getInterestMessage(item))}`;
+  closeContactDialog({ restoreFocus: false });
+  openTelegramChat(telegramUrl);
+  showInterestFeedback(telegramUrl);
+}
+
+function setShareFeedback(message, stateName = "") {
+  const feedbackElement = state.currentView === "detail" ? detailActionState : shareFeedback;
+  if (!feedbackElement) return;
+  feedbackElement.textContent = message;
+  feedbackElement.dataset.state = stateName;
+}
+
+async function shareCurrentView() {
+  const sharingItem = state.currentView === "detail" && state.selectedItem;
+  const shareUrl = sharingItem ? getItemUrl(state.selectedItem) : getHomeUrl();
+  const shareData = sharingItem
+    ? {
+      title: state.selectedItem.title,
+      text: `${state.selectedItem.title} · Segunda Vida`,
+      url: shareUrl,
+    }
+    : {
+      title: "Segunda Vida · Aldea Pucela",
+      text: "¿Tienes cosas por casa que ya no usas? Dales una segunda vida en Segunda Vida.",
+      url: shareUrl,
+    };
 
   try {
     const webApp = window.Telegram?.WebApp;
@@ -2412,24 +2498,22 @@ async function shareSelectedItem() {
     }
 
     if (telegramRuntime.isTelegram && typeof webApp?.openTelegramLink === "function") {
-      const telegramShareUrl = `https://t.me/share/url?url=${encodeURIComponent(itemUrl)}&text=${encodeURIComponent(shareData.text)}`;
+      const telegramShareUrl = `https://t.me/share/url?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(shareData.text)}`;
       webApp.openTelegramLink(telegramShareUrl);
-      detailActionState.textContent = "Elige dónde compartir la publicación.";
-      detailActionState.dataset.state = "connected";
+      setShareFeedback(sharingItem ? "Elige dónde compartir la publicación." : "Elige dónde compartir Segunda Vida.", "connected");
       return;
     }
 
     if (navigator.clipboard?.writeText) {
-      await navigator.clipboard.writeText(itemUrl);
-      detailActionState.textContent = "Enlace copiado.";
-      detailActionState.dataset.state = "connected";
+      await navigator.clipboard.writeText(shareUrl);
+      setShareFeedback("Enlace copiado.", "connected");
       return;
     }
 
     throw new Error("share_unavailable");
-  } catch {
-    detailActionState.textContent = "No se ha podido compartir ahora.";
-    detailActionState.dataset.state = "error";
+  } catch (error) {
+    if (error?.name === "AbortError") return;
+    setShareFeedback("No se ha podido compartir ahora.", "error");
   }
 }
 
@@ -2462,8 +2546,18 @@ if (themeToggle) {
 applyTheme(readThemePreference(), false);
 
 offerEmptyButton.addEventListener("click", () => setView("offer"));
-detailShare.addEventListener("click", shareSelectedItem);
-interestButton.addEventListener("click", handleInterest);
+detailShare.addEventListener("click", shareCurrentView);
+interestButton.addEventListener("click", () => openContactDialog(state.selectedItem));
+contactDialogClose?.addEventListener("click", () => closeContactDialog());
+contactDialogCancel?.addEventListener("click", () => closeContactDialog());
+contactDialogConfirm?.addEventListener("click", confirmContactDialog);
+contactDialog?.addEventListener("cancel", (event) => {
+  event.preventDefault();
+  closeContactDialog();
+});
+contactDialog?.addEventListener("click", (event) => {
+  if (event.target === contactDialog) closeContactDialog();
+});
 manageStatusButton.addEventListener("click", () => {
   const item = state.selectedItem;
   if (!item) return;

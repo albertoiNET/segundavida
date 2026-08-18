@@ -1230,7 +1230,7 @@ h2 {
   }
 }
 
-/* SegundaVida · app shell nativo y navegación compacta */
+/* Segunda Vida · app shell nativo y navegación compacta */
 [hidden] {
   display: none !important;
 }
@@ -1241,7 +1241,7 @@ body {
 
 .app-shell {
   width: min(100%, 42rem);
-  padding: max(0.75rem, env(safe-area-inset-top)) 1rem
+  padding: env(safe-area-inset-top) 1rem
     calc(5.75rem + env(safe-area-inset-bottom));
 }
 
@@ -1898,12 +1898,39 @@ body.photo-lightbox-open {
   font-size: clamp(1.75rem, 7vw, 2.4rem);
 }
 
+.detail-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.5rem;
+  margin-top: 0.5rem;
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  font-weight: 400;
+  line-height: 1.4;
+}
+
+.detail-meta__separator {
+  color: var(--border-strong);
+}
+
+.detail-meta__item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.detail-meta__icon {
+  color: var(--text-muted);
+  font-size: 0.76rem;
+}
+
 .detail-subline {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
   gap: 0.45rem 0.9rem;
-  margin-top: 0.55rem;
+  margin-top: 0.7rem;
 }
 
 .detail-availability {
@@ -1971,6 +1998,10 @@ body.photo-lightbox-open {
 }
 
 .primary-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.55rem;
   width: 100%;
   min-height: 3rem;
   padding: 0.75rem 1rem;
@@ -1994,6 +2025,10 @@ body.photo-lightbox-open {
   filter: saturate(0.45);
   opacity: 0.62;
   transform: none;
+}
+
+.detail-content > #interest-button {
+  margin-top: 0.85rem;
 }
 
 .primary-button.is-loading {
@@ -2028,8 +2063,9 @@ body.photo-lightbox-open {
 .detail-owner-actions {
   display: grid;
   gap: 0.55rem;
-  margin-top: 0;
-  padding-top: 0;
+  margin-top: 1.4rem;
+  padding-top: 1.15rem;
+  border-top: 1px solid var(--border-light);
 }
 
 .detail-owner-actions__controls {
@@ -2056,10 +2092,10 @@ body.photo-lightbox-open {
   grid-template-columns: 3.5rem minmax(0, 1fr);
   gap: 0.9rem;
   margin-top: 1.45rem;
-  padding: 1rem;
-  border: 1px solid var(--border-light);
-  border-radius: 1rem;
-  background: var(--bg-card);
+  padding: 1.05rem 0.9rem;
+  border: 0;
+  border-radius: 0.65rem;
+  background: var(--bg-card-hover);
 }
 
 .community-promo__mark {
@@ -2101,22 +2137,22 @@ body.photo-lightbox-open {
 .community-promo__link {
   display: inline-flex;
   align-items: center;
-  gap: 0.45rem;
   margin-top: 0.65rem;
-  padding: 0.4rem 0.65rem;
-  border: 1px solid color-mix(in srgb, var(--color-primary) 28%, var(--border-light));
-  border-radius: 0.65rem;
+  padding: 0.35rem 0;
+  border: 0;
+  border-radius: 0;
   background: transparent;
   color: var(--color-primary);
   font-size: 0.76rem;
   font-weight: 750;
   text-decoration: none;
-  transition: border-color 180ms ease, background-color 180ms ease, transform 180ms ease;
+  text-underline-offset: 0.16rem;
+  transition: color 180ms ease, transform 180ms ease;
 }
 
 .community-promo__link:hover {
-  border-color: color-mix(in srgb, var(--color-primary) 45%, var(--border-light));
-  background: color-mix(in srgb, var(--color-primary) 6%, transparent);
+  color: var(--color-primary-dark);
+  text-decoration: underline;
   transform: translateY(-1px);
 }
 
@@ -2344,6 +2380,114 @@ body.photo-lightbox-open {
   color: var(--text-secondary);
   font-size: 0.82rem;
   line-height: 1.45;
+}
+
+.contact-dialog {
+  width: min(calc(100% - 1rem), 31rem);
+  max-height: min(92svh, 44rem);
+  padding: 0;
+  border: 0;
+  border-radius: 1.1rem;
+  background: transparent;
+  color: var(--text-main);
+}
+
+.contact-dialog::backdrop {
+  background: rgb(17 20 18 / 52%);
+  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
+}
+
+.contact-dialog__panel {
+  display: grid;
+  gap: 0.9rem;
+  max-height: min(92svh, 44rem);
+  overflow-y: auto;
+  padding: 1.2rem;
+  border: 1px solid var(--border-light);
+  border-radius: 1.1rem;
+  background: var(--bg-container);
+  box-shadow: 0 1rem 3rem rgb(0 0 0 / 22%);
+}
+
+.contact-dialog__topline {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.contact-dialog h2 {
+  margin: 0;
+  font-size: clamp(1.15rem, 4.8vw, 1.45rem);
+  line-height: 1.15;
+}
+
+.contact-dialog__panel > p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.84rem;
+  line-height: 1.5;
+}
+
+.contact-dialog__steps {
+  display: grid;
+  gap: 0.75rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.contact-dialog__steps li {
+  display: grid;
+  grid-template-columns: 1.8rem minmax(0, 1fr);
+  align-items: start;
+  gap: 0.65rem;
+}
+
+.contact-dialog__step-number {
+  display: grid;
+  width: 1.8rem;
+  height: 1.8rem;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--color-secondary-soft);
+  color: var(--color-primary-dark);
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.contact-dialog__steps p {
+  margin: 0.1rem 0 0;
+  color: var(--text-secondary);
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.contact-dialog__note {
+  padding: 0.75rem 0.8rem;
+  border-left: 3px solid var(--color-primary);
+  background: var(--bg-card-hover);
+  font-size: 0.78rem !important;
+}
+
+.contact-dialog__actions {
+  display: grid;
+  grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
+  gap: 0.55rem;
+  margin-top: 0.2rem;
+}
+
+.contact-dialog__actions button {
+  width: 100%;
+  min-height: 2.8rem;
+}
+
+.contact-dialog__confirm {
+  border: 0;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 750;
 }
 
 .delete-item-dialog {
@@ -2849,7 +2993,8 @@ body.photo-lightbox-open {
 
 @media (max-width: 719px) {
   .item-card {
-    align-self: start;
+    align-self: stretch;
+    min-height: clamp(13.75rem, 59vw, 14.75rem);
   }
 
   .item-card__body {
@@ -2884,16 +3029,16 @@ body.photo-lightbox-open {
 
 }
 
-/* Portada · hero editorial de SegundaVida */
+/* Portada · hero editorial de Segunda Vida */
 .catalog-hero {
   position: relative;
   display: flex;
   min-height: clamp(15.5rem, 46vw, 20rem);
   align-items: stretch;
-  margin: 1.25rem -1rem 0;
+  margin: 0 -1rem;
   overflow: hidden;
   isolation: isolate;
-  border-radius: 1.15rem;
+  border-radius: 0;
   background-color: #f4eee4;
   background-image:
     linear-gradient(90deg, rgb(254 251 246 / 96%) 0%, rgb(254 251 246 / 90%) 39%, rgb(254 251 246 / 42%) 67%, rgb(254 251 246 / 0%) 88%),
@@ -3018,7 +3163,7 @@ body.photo-lightbox-open {
 @media (max-width: 560px) {
   .catalog-hero {
     min-height: 15.75rem;
-    border-radius: 0.95rem;
+    border-radius: 0;
     background-image:
       linear-gradient(90deg, rgb(254 251 246 / 96%) 0%, rgb(254 251 246 / 88%) 57%, rgb(254 251 246 / 48%) 84%, rgb(254 251 246 / 0%) 100%),
       url("/assets/segundavida-hero-bg.jpg");
