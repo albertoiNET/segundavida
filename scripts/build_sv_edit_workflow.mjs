@@ -62,14 +62,27 @@ if (!isAdmin && Number.isFinite(expires) && expires < Date.now()) return invalid
 const updatedAt = String(fields.updated_at ?? fields['Last modified time'] ?? fields.UpdatedAt ?? '').trim();
 if (request.expected_updated_at && updatedAt && request.expected_updated_at !== updatedAt) return invalid('edit_conflict');
 const attachments = list(fields.photos ?? fields.Fotos ?? fields.fotos);
-const indexed = attachments.map((photo, index) => ({ photo, key: key(photo, index), url: url(photo) }));
+const indexed = attachments.map((photo, index) => ({ photo, index, key: key(photo, index), url: url(photo) }));
 const keep = new Set(request.keep_photo_keys);
-const kept = indexed.filter((photo) => keep.has(photo.key));
+const kept = indexed.filter((photo) => keep.has(photo.key) || keep.has('index:' + photo.index));
 const finalCount = kept.length + Number(request.new_photo_count ?? 0);
 if (finalCount < 1) return invalid('photo_required');
 if (finalCount > 2) return invalid('too_many_photos');
 const rowId = entry.json?.id ?? entry.json?.Id ?? fields.id ?? fields.Id ?? '';
-return output({ ...request, ok: true, valid: true, row_id: rowId, current_status: status, keep_photo_attachments: kept.map((entry) => entry.photo), current_photo_urls: kept.map((entry) => entry.url).filter(Boolean), current_photo_keys: kept.map((entry) => entry.key), final_photo_count: finalCount });`;
+const currentValues = {
+  title: String(fields.title ?? '').trim(),
+  description: String(fields.description ?? '').trim(),
+  category: String(fields.category ?? '').trim(),
+  zone: String(fields.zone ?? '').trim(),
+};
+const changedFields = Object.keys(currentValues).filter((field) => request[field] !== currentValues[field]);
+const textModerationRequired = changedFields.includes('title') || changedFields.includes('description');
+const photoModerationRequired = Number(request.new_photo_count ?? 0) > 0;
+const moderationText = [
+  changedFields.includes('title') ? 'Título editado: ' + request.title : '',
+  changedFields.includes('description') ? 'Descripción editada: ' + request.description : '',
+].filter(Boolean).join('\\n');
+return output({ ...request, ok: true, valid: true, row_id: rowId, current_status: status, changed_fields: changedFields, text_moderation_required: textModerationRequired, photo_moderation_required: photoModerationRequired, moderation_required: textModerationRequired || photoModerationRequired, moderation_text: moderationText, keep_photo_attachments: kept.map((entry) => entry.photo), current_photo_urls: kept.map((entry) => entry.url).filter(Boolean), current_photo_keys: kept.map((entry) => entry.key), final_photo_count: finalCount });`;
 
 const explodeModerationJs = String.raw`const source = $('Verify owner and version').first() ?? {};
 const binary = source.binary ?? {};
@@ -101,6 +114,11 @@ function model(name) { return languageModel({ type: '@n8n/n8n-nodes-langchain.lm
 function parser(name) { return outputParser({ type: '@n8n/n8n-nodes-langchain.outputParserStructured', version: 1.3, config: { name, parameters: { schemaType: 'manual', inputSchema: schema } } }); }
 function chain(name, position, text, messages, modelNode, parserNode) { return node({ type: '@n8n/n8n-nodes-langchain.chainLlm', version: 1.9, config: { name, position, parameters: { promptType: 'define', text: expr(text), hasOutputParser: true, messages: { messageValues: messages }, batching: { batchSize: 2, delayBetweenBatches: 0 } }, subnodes: { model: modelNode, outputParser: parserNode } } }); }
 
+const skipModerationJs = [
+  "const source = $('Verify owner and version').first() ?? {};",
+  "return [{ json: { ...(source.json ?? {}), moderation_ok: true, moderation_skipped: true }, binary: source.binary ?? {} }];",
+].join('\\n');
+
 const code = `import { workflow, node, trigger, languageModel, outputParser, newCredential, ifElse, expr } from '@n8n/workflow-sdk';
 const systemPrompt = ${js(systemPrompt)};
 const schema = ${js(schema)};
@@ -112,14 +130,16 @@ const whoami = node({ type: 'n8n-nodes-base.httpRequest', version: 4.5, config: 
 const auth = node({ type: 'n8n-nodes-base.code', version: 2, config: { name: 'Attach validated identity', position: [-448, 0], parameters: { mode: 'runOnceForAllItems', jsCode: ${js(authJs)} } } });
 const search = node({ type: 'n8n-nodes-base.nocoDb', version: 4, config: { name: 'Search item and attachments', position: [-224, 0], credentials: { nocoDbApiToken: newCredential('NocoDB Token account') }, parameters: { resource: 'row', operation: 'search', ...noco, returnAll: true, downloadAttachments: true, downloadFieldNames: ['ch5e05viwhejny9'], options: {} } } });
 const verify = node({ type: 'n8n-nodes-base.code', version: 2, config: { name: 'Verify owner and version', position: [0, 0], parameters: { mode: 'runOnceForAllItems', jsCode: ${js(verifyJs)} } } });
+const verificationPassed = ifElse({ version: 2.2, config: { name: 'Edit verification passed?', position: [224, -240], parameters: { conditions: { options: { caseSensitive: true, leftValue: '', typeValidation: 'strict', version: 2 }, conditions: [{ leftValue: expr('={{ $json.ok === true && $json.valid === true }}'), rightValue: true, operator: { type: 'boolean', operation: 'equals' } }], combinator: 'and' } } } });
 const hasPhotos = ifElse({ version: 2.2, config: { name: 'Has replacement photos?', position: [224, 0], parameters: { conditions: { options: { caseSensitive: true, leftValue: '', typeValidation: 'strict', version: 2 }, conditions: [{ leftValue: expr('={{ $json.new_photo_count > 0 }}'), rightValue: true, operator: { type: 'boolean', operation: 'equals' } }], combinator: 'and' } } } });
+const hasEditedText = ifElse({ version: 2.2, config: { name: 'Has edited text?', position: [448, 320], parameters: { conditions: { options: { caseSensitive: true, leftValue: '', typeValidation: 'strict', version: 2 }, conditions: [{ leftValue: expr('={{ $json.text_moderation_required === true }}'), rightValue: true, operator: { type: 'boolean', operation: 'equals' } }], combinator: 'and' } } } });
 const textModel = languageModel({ type: '@n8n/n8n-nodes-langchain.lmChatOpenRouter', version: 1, config: { name: 'OpenRouter moderation model (edit text)', credentials: { openRouterApi: newCredential('OpenRouter account') }, parameters: { model: 'google/gemma-4-26b-a4b-it', options: { maxTokens: 120, responseFormat: 'json_object', temperature: 0, timeout: 30000, maxRetries: 1 } } } });
 const textParser = outputParser({ type: '@n8n/n8n-nodes-langchain.outputParserStructured', version: 1.3, config: { name: 'Moderation output parser (edit text)', parameters: { schemaType: 'manual', inputSchema: schema } } });
-const textChain = node({ type: '@n8n/n8n-nodes-langchain.chainLlm', version: 1.9, config: { name: 'Moderate edited text', position: [448, -160], parameters: { promptType: 'define', text: expr("={{ 'Título: ' + ($json.title || '(sin título)') + '\\nDescripción: ' + ($json.description || '(sin descripción)') }}"), hasOutputParser: true, messages: { messageValues: [{ type: 'SystemMessagePromptTemplate', message: systemPrompt }] }, batching: { batchSize: 2, delayBetweenBatches: 0 } }, subnodes: { model: textModel, outputParser: textParser } } });
+const textChain = node({ type: '@n8n/n8n-nodes-langchain.chainLlm', version: 1.9, config: { name: 'Moderate edited text', position: [672, 320], parameters: { promptType: 'define', text: expr("={{ $json.moderation_text || '' }}"), hasOutputParser: true, messages: { messageValues: [{ type: 'SystemMessagePromptTemplate', message: systemPrompt }] }, batching: { batchSize: 2, delayBetweenBatches: 0 } }, subnodes: { model: textModel, outputParser: textParser } } });
 const photoModel = languageModel({ type: '@n8n/n8n-nodes-langchain.lmChatOpenRouter', version: 1, config: { name: 'OpenRouter moderation model (edit photo)', credentials: { openRouterApi: newCredential('OpenRouter account') }, parameters: { model: 'google/gemma-4-26b-a4b-it', options: { maxTokens: 120, responseFormat: 'json_object', temperature: 0, timeout: 30000, maxRetries: 1 } } } });
 const photoParser = outputParser({ type: '@n8n/n8n-nodes-langchain.outputParserStructured', version: 1.3, config: { name: 'Moderation output parser (edit photo)', parameters: { schemaType: 'manual', inputSchema: schema } } });
 const explodeModeration = node({ type: 'n8n-nodes-base.code', version: 2, config: { name: 'Prepare new photos for moderation', position: [448, 160], parameters: { mode: 'runOnceForAllItems', jsCode: ${js(explodeModerationJs)} } } });
-const photoChain = node({ type: '@n8n/n8n-nodes-langchain.chainLlm', version: 1.9, config: { name: 'Moderate edited text and photos', position: [672, 160], parameters: { promptType: 'define', text: expr("={{ 'Título: ' + ($json.title || '(sin título)') + '\\nDescripción: ' + ($json.description || '(sin descripción)') + '\\nAnaliza también la imagen adjunta.' }}"), hasOutputParser: true, messages: { messageValues: [{ type: 'SystemMessagePromptTemplate', message: systemPrompt }, { type: 'HumanMessagePromptTemplate', messageType: 'imageBinary', binaryImageDataKey: 'data', imageDetail: 'low' }] }, batching: { batchSize: 2, delayBetweenBatches: 0 } }, subnodes: { model: photoModel, outputParser: photoParser } } });
+const photoChain = node({ type: '@n8n/n8n-nodes-langchain.chainLlm', version: 1.9, config: { name: 'Moderate edited text and photos', position: [672, 160], parameters: { promptType: 'define', text: expr("={{ ($json.moderation_text || '') + '\\nAnaliza únicamente la imagen nueva adjunta.' }}"), hasOutputParser: true, messages: { messageValues: [{ type: 'SystemMessagePromptTemplate', message: systemPrompt }, { type: 'HumanMessagePromptTemplate', messageType: 'imageBinary', binaryImageDataKey: 'data', imageDetail: 'low' }] }, batching: { batchSize: 2, delayBetweenBatches: 0 } }, subnodes: { model: photoModel, outputParser: photoParser } } });
 const evaluate = node({ type: 'n8n-nodes-base.code', version: 2, config: { name: 'Evaluate edit moderation', position: [896, 0], parameters: { mode: 'runOnceForAllItems', jsCode: ${js(evaluateJs)} } } });
 const approved = ifElse({ version: 2.2, config: { name: 'Edit moderation approved?', position: [1120, 0], parameters: { conditions: { options: { caseSensitive: true, leftValue: '', typeValidation: 'strict', version: 2 }, conditions: [{ leftValue: expr('={{ $json.moderation_ok }}'), rightValue: true, operator: { type: 'boolean', operation: 'equals' } }], combinator: 'and' } } } });
 const hasUploads = ifElse({ version: 2.2, config: { name: 'Has photos to upload?', position: [1344, 0], parameters: { conditions: { options: { caseSensitive: true, leftValue: '', typeValidation: 'strict', version: 2 }, conditions: [{ leftValue: expr('={{ $json.new_photo_count > 0 }}'), rightValue: true, operator: { type: 'boolean', operation: 'equals' } }], combinator: 'and' } } } });
@@ -132,12 +152,13 @@ const prepareUpload = node({ type: 'n8n-nodes-base.code', version: 2, config: { 
 const upload = node({ type: 'n8n-nodes-base.nocoDb', version: 4, config: { name: 'Upload normalized edited photo', position: [2464, -160], credentials: { nocoDbApiToken: newCredential('NocoDB Token account') }, parameters: { resource: 'row', operation: 'upload', ...noco, id: expr('={{ $json.row_id }}'), uploadMode: 'base64', uploadFieldName: uploadField, filename: expr('={{ $json.photo_filename }}'), contentType: expr('={{ $json.photo_mime_type }}'), base64value: expr('={{ $json.photo_base64 }}') } } });
 const response = node({ type: 'n8n-nodes-base.code', version: 2, config: { name: 'Build edit response', position: [2688, 0], executeOnce: true, parameters: { mode: 'runOnceForAllItems', jsCode: ${js(responseJs)} } } });
 const respond = node({ type: 'n8n-nodes-base.respondToWebhook', version: 1.5, config: { name: 'Respond to edit webhook', position: [2912, 0], parameters: { respondWith: 'json', responseBody: expr('={{ $json }}'), options: {} } } });
+const skipModeration = node({ type: 'n8n-nodes-base.code', version: 2, config: { name: 'Skip moderation for unchanged content', position: [672, 480], parameters: { mode: 'runOnceForAllItems', jsCode: ${js(skipModerationJs)} } } });
 const dispatch = node({ type: 'n8n-nodes-base.github', version: 1.1, config: { name: 'Regenerate static pages', position: [3136, 0], credentials: { githubApi: newCredential('GitHub account') }, parameters: { resource: 'workflow', operation: 'dispatch', owner: { __rl: true, mode: 'list', value: 'aldeapucela', cachedResultName: 'aldeapucela' }, repository: { __rl: true, mode: 'list', value: 'segundavida', cachedResultName: 'segundavida' }, workflowId: { __rl: true, mode: 'list', value: '336174137', cachedResultName: 'Generate SegundaVida static item pages' }, ref: { __rl: true, mode: 'list', value: 'main', cachedResultName: 'main' } } } });
 
 export default workflow('sv-edit-item', 'Editar publicación · Segunda Vida')
   .add(webhook).to(validate).to(whoami).to(auth).to(search).to(verify)
-  .to(hasPhotos.onTrue(explodeModeration.to(photoChain.to(evaluate))).onFalse(textChain.to(evaluate)))
+  .to(verificationPassed.onTrue(hasPhotos.onTrue(explodeModeration.to(photoChain.to(evaluate))).onFalse(hasEditedText.onTrue(textChain.to(evaluate)).onFalse(skipModeration.to(approved)))).onFalse(respond))
   .add(evaluate).to(approved.onTrue(hasUploads.onTrue(updateWithPhotos.to(explodeUpload.to(normalize.to(prepareUpload.to(upload.to(response)))))).onFalse(updateNoPhotos.to(response))).onFalse(respond))
   .add(response).to(respond).to(dispatch);`;
 
-process.stdout.write(code);
+process.stdout.write(code.replaceAll('__DOLLAR__', '$'));

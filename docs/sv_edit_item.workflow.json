@@ -138,7 +138,7 @@
       ],
       "parameters": {
         "mode": "runOnceForAllItems",
-        "jsCode": "const request = $('Attach validated identity').first()?.json ?? {};\nconst source = $('Attach validated identity').first() ?? {};\nconst rows = $input.all();\nfunction output(json) { return [{ json, binary: source.binary ?? {} }]; }\nfunction invalid(error) { return output({ ok: false, valid: false, error_code: error, error: error === 'edit_conflict' ? 'La publicación ha cambiado. Recarga la ficha antes de volver a editarla.' : error }); }\nfunction list(value) { if (Array.isArray(value)) return value; if (value && typeof value === 'object') return [value]; if (typeof value !== 'string' || !value.trim()) return []; try { const parsed = JSON.parse(value); return Array.isArray(parsed) ? parsed : parsed && typeof parsed === 'object' ? [parsed] : []; } catch { return []; } }\nfunction key(value, index) { const item = typeof value === 'string' ? value : value ?? {}; return String(item.path ?? item.signedPath ?? item.url ?? item.signedUrl ?? item.title ?? 'index:' + index).trim(); }\nfunction url(value) { const item = typeof value === 'string' ? value : value ?? {}; const raw = String(item.url ?? item.signedUrl ?? item.path ?? item.signedPath ?? item.thumbnails?.small?.signedPath ?? '').trim(); if (raw.startsWith('http://') || raw.startsWith('https://')) return raw; if (raw.startsWith('/')) return 'https://proyectos.aldeapucela.org' + raw; if (raw.startsWith('download/') || raw.startsWith('dltemp/')) return 'https://proyectos.aldeapucela.org/' + raw; return ''; }\nconst entry = rows.find((row) => { const fields = row.json?.fields ?? row.json ?? {}; return String(fields.public_id ?? fields['item-id'] ?? '') === String(request.item_id); });\nif (!entry) return invalid('not_found');\nconst fields = entry.json?.fields ?? entry.json ?? {};\nconst status = String(fields.status ?? '').toLowerCase();\nconst isAdmin = request.is_admin === true;\nif (!isAdmin && String(fields.owner_telegram_id ?? '') !== String(request.owner_telegram_id)) return invalid('not_owner');\nif (!['available', 'reserved', 'completed', 'expired'].includes(status) || (!isAdmin && status !== 'available')) return invalid('edit_not_available');\nconst expires = fields.expires_at ? Date.parse(String(fields.expires_at).replace(' ', 'T')) : NaN;\nif (!isAdmin && Number.isFinite(expires) && expires < Date.now()) return invalid('edit_expired');\nconst updatedAt = String(fields.updated_at ?? fields['Last modified time'] ?? fields.UpdatedAt ?? '').trim();\nif (request.expected_updated_at && updatedAt && request.expected_updated_at !== updatedAt) return invalid('edit_conflict');\nconst attachments = list(fields.photos ?? fields.Fotos ?? fields.fotos);\nconst indexed = attachments.map((photo, index) => ({ photo, key: key(photo, index), url: url(photo) }));\nconst keep = new Set(request.keep_photo_keys);\nconst kept = indexed.filter((photo) => keep.has(photo.key));\nconst finalCount = kept.length + Number(request.new_photo_count ?? 0);\nif (finalCount < 1) return invalid('photo_required');\nif (finalCount > 2) return invalid('too_many_photos');\nconst rowId = entry.json?.id ?? entry.json?.Id ?? fields.id ?? fields.Id ?? '';\nreturn output({ ...request, ok: true, valid: true, row_id: rowId, current_status: status, keep_photo_attachments: kept.map((entry) => entry.photo), current_photo_urls: kept.map((entry) => entry.url).filter(Boolean), current_photo_keys: kept.map((entry) => entry.key), final_photo_count: finalCount });"
+        "jsCode": "const request = $('Attach validated identity').first()?.json ?? {};\nconst source = $('Attach validated identity').first() ?? {};\nconst rows = $input.all();\nfunction output(json) { return [{ json, binary: source.binary ?? {} }]; }\nfunction invalid(error) { return output({ ok: false, valid: false, error_code: error, error: error === 'edit_conflict' ? 'La publicación ha cambiado. Recarga la ficha antes de volver a editarla.' : error }); }\nfunction list(value) { if (Array.isArray(value)) return value; if (value && typeof value === 'object') return [value]; if (typeof value !== 'string' || !value.trim()) return []; try { const parsed = JSON.parse(value); return Array.isArray(parsed) ? parsed : parsed && typeof parsed === 'object' ? [parsed] : []; } catch { return []; } }\nfunction key(value, index) { const item = typeof value === 'string' ? value : value ?? {}; return String(item.path ?? item.signedPath ?? item.url ?? item.signedUrl ?? item.title ?? 'index:' + index).trim(); }\nfunction url(value) { const item = typeof value === 'string' ? value : value ?? {}; const raw = String(item.url ?? item.signedUrl ?? item.path ?? item.signedPath ?? item.thumbnails?.small?.signedPath ?? '').trim(); if (raw.startsWith('http://') || raw.startsWith('https://')) return raw; if (raw.startsWith('/')) return 'https://proyectos.aldeapucela.org' + raw; if (raw.startsWith('download/') || raw.startsWith('dltemp/')) return 'https://proyectos.aldeapucela.org/' + raw; return ''; }\nconst entry = rows.find((row) => { const fields = row.json?.fields ?? row.json ?? {}; return String(fields.public_id ?? fields['item-id'] ?? '') === String(request.item_id); });\nif (!entry) return invalid('not_found');\nconst fields = entry.json?.fields ?? entry.json ?? {};\nconst status = String(fields.status ?? '').toLowerCase();\nconst isAdmin = request.is_admin === true;\nif (!isAdmin && String(fields.owner_telegram_id ?? '') !== String(request.owner_telegram_id)) return invalid('not_owner');\nif (!['available', 'reserved', 'completed', 'expired'].includes(status) || (!isAdmin && status !== 'available')) return invalid('edit_not_available');\nconst expires = fields.expires_at ? Date.parse(String(fields.expires_at).replace(' ', 'T')) : NaN;\nif (!isAdmin && Number.isFinite(expires) && expires < Date.now()) return invalid('edit_expired');\nconst updatedAt = String(fields.updated_at ?? fields['Last modified time'] ?? fields.UpdatedAt ?? '').trim();\nif (request.expected_updated_at && updatedAt && request.expected_updated_at !== updatedAt) return invalid('edit_conflict');\nconst attachments = list(fields.photos ?? fields.Fotos ?? fields.fotos);\nconst indexed = attachments.map((photo, index) => ({ photo, index, key: key(photo, index), url: url(photo) }));\nconst keep = new Set(request.keep_photo_keys);\nconst kept = indexed.filter((photo) => keep.has(photo.key) || keep.has('index:' + photo.index));\nconst finalCount = kept.length + Number(request.new_photo_count ?? 0);\nif (finalCount < 1) return invalid('photo_required');\nif (finalCount > 2) return invalid('too_many_photos');\nconst rowId = entry.json?.id ?? entry.json?.Id ?? fields.id ?? fields.Id ?? '';\nconst currentValues = {\n  title: String(fields.title ?? '').trim(),\n  description: String(fields.description ?? '').trim(),\n  category: String(fields.category ?? '').trim(),\n  zone: String(fields.zone ?? '').trim(),\n};\nconst changedFields = Object.keys(currentValues).filter((field) => request[field] !== currentValues[field]);\nconst textModerationRequired = changedFields.includes('title') || changedFields.includes('description');\nconst photoModerationRequired = Number(request.new_photo_count ?? 0) > 0;\nconst moderationText = [\n  changedFields.includes('title') ? 'Título editado: ' + request.title : '',\n  changedFields.includes('description') ? 'Descripción editada: ' + request.description : '',\n].filter(Boolean).join('\\n');\nreturn output({ ...request, ok: true, valid: true, row_id: rowId, current_status: status, changed_fields: changedFields, text_moderation_required: textModerationRequired, photo_moderation_required: photoModerationRequired, moderation_required: textModerationRequired || photoModerationRequired, moderation_text: moderationText, keep_photo_attachments: kept.map((entry) => entry.photo), current_photo_urls: kept.map((entry) => entry.url).filter(Boolean), current_photo_keys: kept.map((entry) => entry.key), final_photo_count: finalCount });"
       }
     },
     {
@@ -197,7 +197,7 @@
       ],
       "parameters": {
         "promptType": "define",
-        "text": "={{ 'Título: ' + ($json.title || '(sin título)') + '\\nDescripción: ' + ($json.description || '(sin descripción)') + '\\nAnaliza también la imagen adjunta.' }}",
+        "text": "={{ ($json.moderation_text || '') + '\\nAnaliza únicamente la imagen nueva adjunta.' }}",
         "hasOutputParser": true,
         "messages": {
           "messageValues": [
@@ -278,7 +278,7 @@
       ],
       "parameters": {
         "promptType": "define",
-        "text": "={{ 'Título: ' + ($json.title || '(sin título)') + '\\nDescripción: ' + ($json.description || '(sin descripción)') }}",
+        "text": "={{ $json.moderation_text || '' }}",
         "hasOutputParser": true,
         "messages": {
           "messageValues": [
@@ -709,6 +709,82 @@
         }
       },
       "webhookId": "bbfda0e9-6ae7-4588-b4f8-18580f33db4e"
+    },
+    {
+      "id": "8a9c1d7e-4b3f-4b1a-9d25-2e4c7f8a1101",
+      "name": "Edit verification passed?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        224,
+        -240
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.ok === true && $json.valid === true }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "id": "7b2e6c4d-9a1f-4e38-b572-0d6a8c9f2202",
+      "name": "Has edited text?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        448,
+        320
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.text_moderation_required === true }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "id": "6c5d4e3f-8b2a-4d17-a960-1f7e3c5b3303",
+      "name": "Skip moderation for unchanged content",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        672,
+        480
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const source = $('Verify owner and version').first() ?? {};\nreturn [{ json: { ...(source.json ?? {}), moderation_ok: true, moderation_skipped: true }, binary: source.binary ?? {} }];"
+      }
     }
   ],
   "connections": {
@@ -767,17 +843,6 @@
         ]
       ]
     },
-    "Verify owner and version": {
-      "main": [
-        [
-          {
-            "node": "Has replacement photos?",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "Has replacement photos?": {
       "main": [
         [
@@ -789,7 +854,7 @@
         ],
         [
           {
-            "node": "Moderate edited text",
+            "node": "Has edited text?",
             "type": "main",
             "index": 0
           }
@@ -998,6 +1063,64 @@
       ]
     },
     "Evaluate edit moderation": {
+      "main": [
+        [
+          {
+            "node": "Edit moderation approved?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verify owner and version": {
+      "main": [
+        [
+          {
+            "node": "Edit verification passed?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit verification passed?": {
+      "main": [
+        [
+          {
+            "node": "Has replacement photos?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond to edit webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has edited text?": {
+      "main": [
+        [
+          {
+            "node": "Moderate edited text",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Skip moderation for unchanged content",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Skip moderation for unchanged content": {
       "main": [
         [
           {
