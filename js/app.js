@@ -92,6 +92,7 @@ let lastTrackedViewKey = "";
 const trackedInterestTelegramItems = new Set();
 const pendingInteractions = new Set();
 const pendingFavoriteInteractions = new Map();
+const favoriteCountOverrides = new Map();
 let routeOpenInFlight = null;
 let routeOpenItemId = "";
 let reportStartInFlight = null;
@@ -974,13 +975,21 @@ function toggleFavorite(item, triggerButton = null) {
 function updateFavoriteCount(item, count) {
   if (!item?.id) return;
   const normalizedCount = Math.max(0, Number.isFinite(Number(count)) ? Number(count) : 0);
+  favoriteCountOverrides.set(item.id, normalizedCount);
   const update = (candidate) => candidate?.id === item.id
     ? { ...candidate, favoriteCount: normalizedCount }
     : candidate;
   state.items = state.items.map(update);
   state.myItems = state.myItems.map(update);
+  state.staticItem = update(state.staticItem);
   state.selectedItem = update(state.selectedItem);
-  refreshFavoriteControls({ ...item, favoriteCount: normalizedCount });
+  const updatedItem = state.selectedItem?.id === item.id
+    ? state.selectedItem
+    : { ...item, favoriteCount: normalizedCount };
+  refreshFavoriteControls(updatedItem);
+  if (state.currentView === "detail" && state.selectedItem?.id === item.id) {
+    updateFavoriteButton(detailFavorite, updatedItem);
+  }
 }
 
 async function recordFavoriteInteraction(item, action) {
@@ -2088,6 +2097,10 @@ async function saveInlineEdit() {
 }
 
 function renderDetail(item, { live = true, error = "" } = {}) {
+  const favoriteCountOverride = item?.id ? favoriteCountOverrides.get(item.id) : undefined;
+  if (favoriteCountOverride !== undefined) {
+    item = { ...item, favoriteCount: favoriteCountOverride };
+  }
   if (state.inlineEdit && state.inlineEdit.itemId !== item?.id) {
     revokeInlineEditPreviewUrls();
     state.inlineEdit = null;
