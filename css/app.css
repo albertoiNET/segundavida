@@ -210,7 +210,7 @@ input[type="search"] {
 }
 
 .brand-owner {
-  margin-top: 0.2rem;
+  margin-top: 0.55rem;
   color: var(--text-muted);
   font-size: 0.82rem;
 }
@@ -2438,7 +2438,7 @@ body.photo-lightbox-open {
   flex: 1 1 auto;
   overflow: hidden;
   margin: 0;
-  padding-left: 0.3rem;
+  padding-left: 0;
   color: var(--text-muted);
   font-size: 0.72rem;
   font-weight: 550;
@@ -2566,6 +2566,7 @@ body.photo-lightbox-open {
   display: flex;
   min-width: 0;
   min-height: 1.7rem;
+  margin-top: 0.2rem;
   align-items: center;
   justify-content: space-between;
   gap: 0.75rem;
@@ -2575,7 +2576,7 @@ body.photo-lightbox-open {
   margin-top: 1.5625rem;
 }
 
-.detail-contact-actions .report-problem-button {
+.detail-contact-actions__meta .report-problem-button {
   display: inline-flex;
   width: fit-content;
   flex: 0 0 auto;
@@ -3047,15 +3048,15 @@ body.photo-lightbox-open {
 
 .action-state--reserved {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  align-items: start;
+  grid-template-columns: 1.55rem minmax(0, 1fr);
+  align-items: center;
   gap: 0.75rem;
   min-height: 0;
   margin-top: 1rem;
   padding: 0.9rem;
-  border: 1px solid var(--border-light);
+  border: 1px solid color-mix(in srgb, #b98522 42%, var(--border-light));
   border-radius: 0.65rem;
-  background: var(--color-secondary-soft);
+  background: color-mix(in srgb, #f2c95c 24%, var(--bg-card));
   animation: fade-up 280ms ease both;
 }
 
@@ -3064,7 +3065,8 @@ body.photo-lightbox-open {
 }
 
 .action-state--reserved .action-state__icon {
-  color: var(--color-primary);
+  align-self: center;
+  color: #a36f15;
 }
 
 .action-state[data-state="success"].action-state--completed {
@@ -3075,7 +3077,7 @@ body.photo-lightbox-open {
   display: block;
   width: 1.55rem;
   height: auto;
-  padding-top: 0.05rem;
+  padding-top: 0;
   color: var(--color-secondary-dark);
   font-size: 1.35rem;
   line-height: 1.2;
