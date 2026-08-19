@@ -1677,6 +1677,35 @@ function setInlineEditMessage(message = "", stateName = "") {
   detailActionState.dataset.state = stateName;
 }
 
+function setInlineEditSaveButtonState(isSaving) {
+  if (!editSaveButton) return;
+
+  editSaveButton.disabled = isSaving;
+  if (editCancelButton) editCancelButton.disabled = isSaving;
+  editSaveButton.classList.toggle("is-loading", isSaving);
+  editSaveButton.setAttribute("aria-busy", String(isSaving));
+
+  if (isSaving) {
+    const spinner = document.createElement("span");
+    spinner.className = "button-loading";
+    spinner.setAttribute("aria-hidden", "true");
+    const label = document.createElement("span");
+    label.textContent = "Guardando…";
+    editSaveButton.replaceChildren(spinner, label);
+    return;
+  }
+
+  editSaveButton.replaceChildren(
+    createIconElement("fa-check", "✓"),
+    document.createTextNode("Guardar cambios"),
+  );
+}
+
+function resetInlineEditButtons() {
+  setInlineEditSaveButtonState(false);
+  if (editCancelButton) editCancelButton.disabled = false;
+}
+
 function getInlineEditSelectOptions(selectId) {
   const source = document.querySelector(`#${selectId}`);
   return source
@@ -1798,6 +1827,7 @@ function openInlineEdit(item = state.selectedItem) {
   const ownerEditable = isOwnItem(source) && source?.status === "available" && isNotExpired(source);
   if (!source?.id || (!adminEditable && !ownerEditable)) return;
 
+  resetInlineEditButtons();
   state.inlineEdit = {
     itemId: source.id,
     baseUpdatedAt: source.updatedAt ?? null,
@@ -1921,10 +1951,7 @@ async function saveInlineEdit() {
     return;
   }
 
-  editSaveButton.disabled = true;
-  editCancelButton.disabled = true;
-  editSaveButton.classList.add("button-loading");
-  editSaveButton.querySelector("span")?.replaceChildren(document.createTextNode("Guardando…"));
+  setInlineEditSaveButtonState(true);
   setInlineEditMessage("Comprobando contenido y guardando…", "pending");
 
   try {
@@ -1973,8 +2000,7 @@ async function saveInlineEdit() {
     editCancelButton.disabled = false;
     setInlineEditMessage(error.message || "No se han podido guardar los cambios.", "error");
   } finally {
-    editSaveButton.classList.remove("button-loading");
-    editSaveButton.querySelector("span")?.replaceChildren(document.createTextNode("Guardar cambios"));
+    resetInlineEditButtons();
   }
 }
 
