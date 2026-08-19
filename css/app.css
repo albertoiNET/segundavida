@@ -2572,7 +2572,7 @@ body.photo-lightbox-open {
 }
 
 .detail-content .detail-contact-actions > #interest-button {
-  margin-top: 1.125rem;
+  margin-top: 1.5625rem;
 }
 
 .detail-contact-actions .report-problem-button {
@@ -5047,7 +5047,8 @@ body.photo-lightbox-open {
   }
 
   .detail-subline {
-    margin-top: 0.2rem;
+    margin-top: 0.5125rem;
+    margin-bottom: 0.5rem;
   }
 
 }
