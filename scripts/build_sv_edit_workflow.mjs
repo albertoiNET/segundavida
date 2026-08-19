@@ -49,7 +49,7 @@ function output(json) { return [{ json, binary: source.binary ?? {} }]; }
 function invalid(error) { return output({ ok: false, valid: false, error_code: error, error: error === 'edit_conflict' ? 'La publicación ha cambiado. Recarga la ficha antes de volver a editarla.' : error }); }
 function list(value) { if (Array.isArray(value)) return value; if (value && typeof value === 'object') return [value]; if (typeof value !== 'string' || !value.trim()) return []; try { const parsed = JSON.parse(value); return Array.isArray(parsed) ? parsed : parsed && typeof parsed === 'object' ? [parsed] : []; } catch { return []; } }
 function key(value, index) { const item = typeof value === 'string' ? value : value ?? {}; return String(item.path ?? item.signedPath ?? item.url ?? item.signedUrl ?? item.title ?? 'index:' + index).trim(); }
-function url(value) { const item = typeof value === 'string' ? value : value ?? {}; const raw = String(item.url ?? item.signedUrl ?? item.path ?? item.signedPath ?? item.thumbnails?.small?.signedPath ?? '').trim(); if (/^https?:\\/\\//i.test(raw)) return raw; if (raw.startsWith('/')) return 'https://proyectos.aldeapucela.org' + raw; if (raw.startsWith('download/') || raw.startsWith('dltemp/')) return 'https://proyectos.aldeapucela.org/' + raw; return ''; }
+function url(value) { const item = typeof value === 'string' ? value : value ?? {}; const raw = String(item.url ?? item.signedUrl ?? item.path ?? item.signedPath ?? item.thumbnails?.small?.signedPath ?? '').trim(); if (raw.startsWith('http://') || raw.startsWith('https://')) return raw; if (raw.startsWith('/')) return 'https://proyectos.aldeapucela.org' + raw; if (raw.startsWith('download/') || raw.startsWith('dltemp/')) return 'https://proyectos.aldeapucela.org/' + raw; return ''; }
 const entry = rows.find((row) => { const fields = row.json?.fields ?? row.json ?? {}; return String(fields.public_id ?? fields['item-id'] ?? '') === String(request.item_id); });
 if (!entry) return invalid('not_found');
 const fields = entry.json?.fields ?? entry.json ?? {};
@@ -74,7 +74,7 @@ return output({ ...request, ok: true, valid: true, row_id: rowId, current_status
 const explodeModerationJs = String.raw`const source = $('Verify owner and version').first() ?? {};
 const binary = source.binary ?? {};
 return Object.keys(binary).filter((name) => /^photo_[01]$/.test(name) && binary[name]).sort().map((name, index) => ({ json: { ...source.json, moderation_photo_index: index }, binary: { data: binary[name] } }));`;
-const evaluateJs = String.raw`const results = $input.all().map((item) => { let value = item.json?.output ?? item.json?.response ?? item.json?.text ?? item.json; if (typeof value === 'string') { try { value = JSON.parse(value.replace(/^\x60\x60\x60json\\s*|\x60\x60\x60$/g, '').trim()); } catch { value = null; } } return value && typeof value === 'object' ? value : null; });
+const evaluateJs = String.raw`const results = $input.all().map((item) => { let value = item.json?.output ?? item.json?.response ?? item.json?.text ?? item.json; if (typeof value === 'string') { try { value = JSON.parse(value.replace(/^\x60\x60\x60json\s*|\x60\x60\x60$/g, '').trim()); } catch { value = null; } } return value && typeof value === 'object' ? value : null; });
 const base = $('Verify owner and version').first() ?? {};
 function output(json) { return [{ json, binary: base.binary ?? {} }]; }
 if (results.some((value) => !value)) return output({ ok: false, valid: false, error_code: 'photo_moderation_unavailable', error: 'No se ha podido comprobar el contenido. Inténtalo de nuevo en unos segundos.' });
@@ -89,7 +89,7 @@ const prepareUploadJs = String.raw`const input = $input.first() ?? {};
 const file = input.binary?.data;
 if (!file?.data) throw new Error('No se encontró la imagen normalizada.');
 const buffer = await this.helpers.getBinaryDataBuffer(0, 'data');
-const baseName = String(input.json?.photo_filename ?? file.fileName ?? 'photo.jpg').replace(/\\.[^.]+$/, '') || 'photo';
+const baseName = String(input.json?.photo_filename ?? file.fileName ?? 'photo.jpg').replace(/\.[^.]+$/, '') || 'photo';
 return [{ json: { ...(input.json ?? {}), photo_base64: buffer.toString('base64'), photo_filename: baseName + '.jpg', photo_mime_type: 'image/jpeg' } }];`;
 const responseJs = String.raw`const base = $('Verify owner and version').first()?.json ?? {};
 const urls = Array.isArray(base.current_photo_urls) ? base.current_photo_urls : [];
