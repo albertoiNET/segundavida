@@ -22,10 +22,13 @@ no utiliza un framework ni necesita un proceso de compilación.
 - Favoritos guardados en el navegador, disponibles sin iniciar sesión.
 - Fichas individuales con descripción, zona aproximada, persona que lo ofrece,
   disponibilidad y hasta dos fotografías.
+- Perfiles públicos (`/u/<username>/`) con todas las publicaciones de una
+  persona, incluidas las entregadas, y acceso al formulario de reporte.
 - URLs públicas estables (`/i/<public_id>/`) con metadatos para buscadores y
   redes sociales.
-- Navegación interna con rutas reales: `/ofrecer/`, `/perfil/` y la ruta
-  reservada `/favoritos/`; las vistas internas no se indexan.
+- Navegación interna con rutas reales: `/ofrecer/`, `/perfil/`, `/u/<username>/`
+  y la ruta reservada `/favoritos/`; las vistas de gestión no se indexan y los
+  perfiles públicos sí.
 - Diseño responsive, navegación atrás/adelante, tema claro/oscuro y soporte
   para el modo Mini App de Telegram.
 
@@ -82,7 +85,7 @@ levantar un servidor HTTP local:
 ```bash
 git clone https://github.com/aldeapucela/segundavida.git
 cd segundavida
-python3 -m http.server 8000
+python3 scripts/serve_static.py 8000
 ```
 
 Abre [http://localhost:8000/](http://localhost:8000/) en el navegador. El
@@ -90,6 +93,11 @@ frontend usa por defecto los endpoints de producción definidos en
 [`js/api.js`](js/api.js), por lo que esta instalación sirve para revisar la
 interfaz y consultar el catálogo existente. Para una instalación independiente
 hay que sustituir esas URLs por las de la instancia propia de n8n.
+
+El servidor local incluye el fallback necesario para que las rutas profundas,
+como `/u/<username>/` y `/i/<public_id>/`, también funcionen al recargar la
+página. En producción, el `404.html` cumple esa misma función en el hosting
+estático.
 
 ## Replicar la aplicación
 

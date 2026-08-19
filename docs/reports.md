@@ -73,6 +73,11 @@ Body esperado:
 }
 ```
 
+El mismo endpoint y formulario se reutilizan desde el perfil público de una
+persona. En ese caso el cliente envía una publicación representativa de ese
+perfil en `item_id` y mantiene exactamente el mismo contrato de campos y la
+misma tabla de incidencias.
+
 El endpoint devuelve solo el resultado de la operación y nunca devuelve IDs de
 Telegram ni los detalles guardados.
 

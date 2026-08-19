@@ -70,8 +70,9 @@ carácter anónimo de la interacción.
    `SingleSelect`, `URL` y `Number`.
 5. Mantener `Id` como clave técnica de NocoDB y usar `public_id` como identificador
    de negocio; crear una vista `Public catalog`.
-6. En esa vista filtrar `status` por `available` o `reserved` y ordenar por `created_at`
-   descendente.
+6. Ordenar por `created_at` descendente. El endpoint `/data` conserva su
+   respuesta ligera por defecto para la portada; el historial completo se pide
+   explícitamente con `scope=all`.
 
 Antes de activar las fichas públicas, añade `public_id` y asigna a cada fila un
 valor opaco generado aleatoriamente. Durante la transición, copia el mismo
@@ -105,7 +106,25 @@ GET /webhook/segundavida/data
 
 Devuelve una envoltura JSON con `ok`, `items` y `total`. n8n proyecta solo los
 campos públicos antes de responder; los campos privados de Telegram no salen al
-navegador.
+navegador. Sin modificador devuelve las publicaciones activas que ya consumía
+la web (`available` y `reserved`, respetando sus caducidades).
+
+Para los perfiles públicos existe un modo histórico explícito:
+
+```text
+GET /webhook/segundavida/data?scope=all
+```
+
+`scope=all` incluye `available`, `reserved`, `completed` y `expired`, también
+cuando la fecha de disponibilidad ya pasó. Para un perfil se añade el filtro
+del propietario:
+
+```text
+GET /webhook/segundavida/data?scope=all&owner_username=Xenopose
+```
+
+Así NocoDB filtra por `owner_username` antes de devolver las filas; el perfil no
+descarga el catálogo completo. El estado `hidden` nunca se expone.
 
 El endpoint individual disponible en n8n es:
 
@@ -143,58 +162,35 @@ Flujo previsto:
 ```text
 Webhook
   -> NocoDB: listar sv_items
-  -> filtrar status=available o reserved y expires_at futuro
+  -> filtrar status público y conservar available, reserved, completed o expired
   -> mapear solo campos públicos
   -> Respond to Webhook
 ```
 
 ### Workflow actual
 
-El flujo activo tiene `Webhook -> Search rows -> Code -> Respond to Webhook`. El
-nodo `Code` está en modo **Run Once for All Items** y proyecta el resultado con
-este código:
+El flujo activo tiene `Webhook -> Search rows -> Code -> Respond to Webhook`.
+El filtro está en `Search rows > Options > Where` y se evalúa en NocoDB antes
+de traer los registros:
 
-```javascript
-function timestamp(value) {
-  if (!value) return null;
-  const date = new Date(String(value).replace(" ", "T"));
-  return Number.isNaN(date.getTime()) ? null : date.getTime();
-}
-
-const publicItems = $input.all()
-  .map(({ json }) => {
-    const fields = json.fields ?? json;
-    return {
-      id: fields.public_id ?? fields["item-id"] ?? null,
-      title: fields.title ?? "",
-      description: fields.description ?? "",
-      category: fields.category ?? "Otros",
-      zone: fields.zone ?? "Valladolid",
-      status: fields.status ?? "hidden",
-      created_at: fields.CreatedAt ?? fields.created_at ?? null,
-      updated_at: fields.UpdatedAt ?? fields.updated_at ?? null,
-      expires_at: fields.expires_at ?? null,
-      image_url: fields.image_url || null,
-      owner_display_name: fields.owner_display_name ?? "Vecindad",
-      owner_username: fields.owner_username || null,
-      interest_count: Number(fields.interest_count ?? 0),
-      favorite_count: Math.max(0, Number(fields.favorite_count ?? 0)),
-    };
-  })
-  .filter((item) => (
-    item.id &&
-    ["available", "reserved"].includes(item.status) &&
-    (!item.expires_at || timestamp(item.expires_at) >= Date.now())
-  ));
-
-return [{
-  json: {
-    ok: true,
-    items: publicItems,
-    total: publicItems.length,
-  },
-}];
+```text
+scope=all + owner_username -> (owner_username,eq,<username>)
+scope=all sin propietario -> sin filtro de estado, solo para una petición histórica explícita
+sin scope=all -> (status,eq,available)~or(status,eq,reserved)
 ```
+
+El nodo `Code` lee el mismo modificador y aplica la última barrera de
+visibilidad. En el modo normal conserva `available` y `reserved`, valida las
+caducidades y las reservas; con `scope=all` permite además `completed` y
+`expired` y no descarta el histórico por `expires_at`. En ambos casos proyecta
+solo los campos públicos y excluye `hidden`.
+
+Los demás workflows que consultan publicaciones también filtran en NocoDB:
+
+- `/item/<public_id>` busca una única fila por `item-id`/`public_id` compatible.
+- `/mine` filtra por `owner_telegram_id` después de validar `initData`.
+- `/report` busca únicamente la publicación que se quiere reportar antes de
+  comprobar propietario y deduplicación.
 
 En `Respond to Webhook`, cambia `Respond With` de `All Incoming Items` a
 `JSON` y pon como `Response Body`:
@@ -233,7 +229,8 @@ inicial de cada objeto:
 }
 ```
 
-La respuesta completa del endpoint puede ser:
+La respuesta completa solo se solicita para el historial del perfil. La portada
+continúa recibiendo la respuesta activa por defecto:
 
 ```json
 {

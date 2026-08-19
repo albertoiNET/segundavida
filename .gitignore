@@ -2,6 +2,9 @@
 .generated-site/
 generated-site/
 
+# Local QA screenshots and generated artifacts.
+artifacts/
+
 # Item pages are generated locally/CI and must never be committed to the repo.
 /i/
 

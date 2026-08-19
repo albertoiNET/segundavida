@@ -10,6 +10,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
 
 from generate_static_pages import ContractError, generate, normalize_item  # noqa: E402
+from serve_static import resolve_request_path  # noqa: E402
 from sync_static_asset_urls import sync_asset_urls  # noqa: E402
 
 
@@ -38,6 +39,12 @@ class StaticContractTests(unittest.TestCase):
         legacy = {key: value for key, value in self.item().items() if key != "public_id"}
         legacy["item-id"] = "legacy-001"
         self.assertEqual(normalize_item(legacy)["id"], "legacy-001")
+
+    def test_local_server_falls_back_for_profile_and_item_routes(self):
+        self.assertEqual(resolve_request_path("/u/Xenopose/"), "/u/index.html")
+        self.assertEqual(resolve_request_path("/u/Xenopose?from=detail"), "/u/index.html")
+        self.assertEqual(resolve_request_path("/i/not-generated/"), "/index.html")
+        self.assertEqual(resolve_request_path("/css/app.css"), "/css/app.css")
 
     def test_numeric_telegram_style_id_and_sensitive_data_are_rejected(self):
         with self.assertRaises(ContractError):

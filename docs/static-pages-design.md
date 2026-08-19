@@ -22,12 +22,14 @@ la navegación no recargue la Mini App:
 - `/` — Explorar, la única vista pública de catálogo.
 - `/ofrecer/` — Ofrecer algo.
 - `/perfil/` — Mi perfil y publicaciones propias.
+- `/u/<username>/` — Perfil público e historial de publicaciones de una persona.
 - `/favoritos/` — reserva de ruta para Favoritos; la entrada permanece
   desactivada mientras no exista la funcionalidad.
 
-Las tres rutas internas incluyen una entrada estática que carga la aplicación
+Las rutas internas incluyen una entrada estática que carga la aplicación
 compartida y conserva la ruta al recargar, incluso cuando el navegador sirve la
-página desde caché. `404.html` sigue siendo el fallback para rutas desconocidas.
+página desde caché. Los perfiles públicos dinámicos usan `/u/index.html` cuando
+el servidor lo resuelve y `404.html` como fallback para `/u/<username>/`.
 
 La generación pesada de fichas se ejecuta al hacer push a `main` solo cuando
 cambia la plantilla HTML o el propio generador, además de poder ejecutarse por
@@ -90,6 +92,12 @@ La ficha hidrata `interest_count` desde el endpoint vivo y muestra una señal
 discreta solo cuando el contador es mayor que cero. Los contadores de interés y
 de apertura de contacto se registran mediante `POST /segundavida/interaction`;
 no provocan regeneraciones de fichas.
+
+`/data` mantiene por defecto la respuesta ligera de la portada, con
+`available` y `reserved` vigentes. Los perfiles públicos solicitan
+`/data?scope=all&owner_username=<username>`, que incluye también `completed` y
+`expired` para agrupar todas las publicaciones de un único `owner_username`.
+NocoDB aplica ese filtro antes de devolver las filas; `hidden` nunca se expone.
 
 El endpoint individual recomendado es `GET /item/<public_id>` (o el mismo
 webhook con esa ruta). Debe responder `200` con `{ok:true,item}` para

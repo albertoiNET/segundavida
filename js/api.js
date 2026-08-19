@@ -9,7 +9,7 @@ const N8N_REPORT_URL = "https://tasks.nukeador.com/webhook/segundavida/report";
 const N8N_INTERACTION_URL = "https://tasks.nukeador.com/webhook/segundavida/interaction";
 const NOCODB_BASE_URL = "https://proyectos.aldeapucela.org";
 
-let catalogInFlight = null;
+const catalogInFlight = new Map();
 const itemInFlight = new Map();
 let mineInFlight = null;
 let mineInFlightSession = "";
@@ -148,17 +148,24 @@ async function listMineItems(initData) {
   }
 }
 
-async function listItems() {
+async function listItems({ scope = "active", ownerUsername = "" } = {}) {
   if (!N8N_DATA_URL) {
     return [];
   }
 
-  if (catalogInFlight) {
-    return catalogInFlight;
+  const normalizedScope = scope === "all" ? "all" : "active";
+  const params = new URLSearchParams();
+  if (normalizedScope === "all") params.set("scope", "all");
+  const normalizedOwnerUsername = String(ownerUsername ?? "").trim().replace(/^@/, "");
+  if (normalizedScope === "all" && /^[A-Za-z][A-Za-z0-9_]{4,31}$/.test(normalizedOwnerUsername)) {
+    params.set("owner_username", normalizedOwnerUsername);
   }
+  const queryString = params.toString();
+  const requestUrl = queryString ? `${N8N_DATA_URL}?${queryString}` : N8N_DATA_URL;
+  if (catalogInFlight.has(requestUrl)) return catalogInFlight.get(requestUrl);
 
   const request = (async () => {
-    const response = await fetch(N8N_DATA_URL, {
+    const response = await fetch(requestUrl, {
       method: "GET",
       headers: { Accept: "application/json" },
     });
@@ -177,13 +184,11 @@ async function listItems() {
     return records;
   })();
 
-  catalogInFlight = request;
+  catalogInFlight.set(requestUrl, request);
   try {
     return await request;
   } finally {
-    if (catalogInFlight === request) {
-      catalogInFlight = null;
-    }
+    if (catalogInFlight.get(requestUrl) === request) catalogInFlight.delete(requestUrl);
   }
 }
 
