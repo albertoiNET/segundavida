@@ -30,7 +30,9 @@ if (title.length < 3 || title.length > 80) return invalid('title_invalid');
 if (!categories.has(category)) return invalid('category_invalid');
 if (!zones.has(zone)) return invalid('zone_invalid');
 if (description.length > 600) return invalid('description_too_long');
-if (/(?:https?:\\/\\/|ftp:\\/\\/|www\\.)[^\\s<>"']+|(?:^|[\\s(])(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\\.)+[a-z]{2,}/iu.test(title + ' ' + description)) return invalid('url_not_allowed');
+const textValue = (title + ' ' + description).toLowerCase();
+const hasBareDomain = textValue.split(" ").some((token) => { const dot = token.indexOf("."); return dot > 0 && token.length - dot > 2 && !token.startsWith("."); });
+if (textValue.includes("http://") || textValue.includes("https://") || textValue.includes("www.") || hasBareDomain) return invalid('url_not_allowed');
 if (photoEntries.length > 2) return invalid('too_many_photos');
 for (const [, file] of photoEntries) { const mime = file.mimeType ?? file.mimetype ?? ''; if (!['image/jpeg', 'image/png', 'image/webp'].includes(mime)) return invalid('photo_type_invalid'); if (!Number.isFinite(size(file)) || size(file) <= 0 || size(file) > 20 * 1024 * 1024) return invalid('photo_too_large'); }
 return output({ ok: true, valid: true, mode: 'edit', initData, item_id: itemId, title, description, category, zone, expected_updated_at: String(body.expected_updated_at ?? '').trim(), keep_photo_keys: keepPhotoKeys, new_photo_count: photoEntries.length });`;
