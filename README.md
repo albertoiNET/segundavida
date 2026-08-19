@@ -117,7 +117,7 @@ publicar con fotografías, utiliza el workflow de fotos:
 | `POST /segundavida/edit` | Edición inline autenticada y moderada de publicaciones propias o gestionadas por administración | [`sv_edit_item.workflow.json`](docs/sv_edit_item.workflow.json) |
 | `POST /segundavida/mine` | Publicaciones de la persona autenticada | [`sv_mine_items.workflow.json`](docs/sv_mine_items.workflow.json) |
 | `POST /segundavida/complete` | Reservar, liberar, marcar entregado, reabrir u ocultar | [`sv_complete_item.workflow.json`](docs/sv_complete_item.workflow.json) |
-| `POST /segundavida/interaction` | Incrementar interés o intento de contacto de una ficha | [`sv_record_interaction.workflow.json`](docs/sv_record_interaction.workflow.json) |
+| `POST /segundavida/interaction` | Incrementar interés, intento de contacto o contador aproximado de corazones | [`sv_record_interaction.workflow.json`](docs/sv_record_interaction.workflow.json) |
 
 Configura en n8n la credencial de NocoDB y la variable privada
 `TELEGRAM_BOT_TOKEN`. El token nunca debe guardarse en este repositorio, en el

@@ -115,7 +115,8 @@ def normalize_item(raw: dict[str, object]) -> dict[str, object]:
         "image_url": first_safe_image_url(raw.get("image_url"), raw.get("image_urls")),
         "owner_display_name": str(raw.get("owner_display_name") or "Vecindad").strip()[:120],
         "owner_username": str(raw.get("owner_username") or "").strip()[:40],
-        "interest_count": int(raw.get("interest_count") or 0),
+        "interest_count": max(0, int(raw.get("interest_count") or 0)),
+        "favorite_count": max(0, int(raw.get("favorite_count") or 0)),
     }
 
 

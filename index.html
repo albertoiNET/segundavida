@@ -40,7 +40,7 @@
     />
     <link rel="stylesheet" href="/css/icon-fallback.css?v=sv-20260817-40" />
     <link rel="stylesheet" href="/css/tokens.css?v=sv-20260817-41" />
-    <link rel="stylesheet" href="/css/app.css?v=sv-20260818-dark-hero-v1" />
+    <link rel="stylesheet" href="/css/app.css?v=sv-20260819-favorite-count-v6" />
     <script src="https://telegram.org/js/telegram-web-app.js?63"></script>
   </head>
   <body>
@@ -151,6 +151,7 @@
             <h1 id="detail-title">Objeto</h1>
             <button class="favorite-toggle favorite-toggle--detail" id="detail-favorite" type="button" aria-pressed="false" aria-label="Añadir este objeto a favoritos" title="Añadir a favoritos">
               <i class="fa-regular fa-heart fa-icon" data-fallback="♡" aria-hidden="true"></i>
+              <span class="favorite-count" aria-hidden="true"></span>
             </button>
           </div>
           <div class="detail-subline">
@@ -174,15 +175,19 @@
             <span class="detail-meta__separator" aria-hidden="true">·</span>
             <span id="detail-created-at">—</span>
           </div>
-          <p class="detail-interest-signal" id="detail-interest-signal" hidden aria-live="polite"></p>
-          <button class="primary-button" id="interest-button" type="button">
-            <i class="fa-regular fa-message fa-icon" data-fallback="✉" aria-hidden="true"></i>
-            <span>Me interesa</span>
-          </button>
-          <button class="quiet-action report-problem-button" id="report-problem-button" type="button" hidden>
-            <i class="fa-solid fa-triangle-exclamation fa-icon" data-fallback="!" aria-hidden="true"></i>
-            <span>Reportar un problema</span>
-          </button>
+          <div class="detail-contact-actions">
+            <button class="primary-button" id="interest-button" type="button">
+              <i class="fa-regular fa-message fa-icon" data-fallback="✉" aria-hidden="true"></i>
+              <span>Me interesa</span>
+            </button>
+            <div class="detail-contact-actions__meta">
+              <p class="detail-interest-signal" id="detail-interest-signal" hidden aria-live="polite"></p>
+              <button class="quiet-action report-problem-button" id="report-problem-button" type="button" hidden>
+                <i class="fa-solid fa-triangle-exclamation fa-icon" data-fallback="!" aria-hidden="true"></i>
+                <span>Reportar un problema</span>
+              </button>
+            </div>
+          </div>
           <div class="action-state" id="detail-action-state" aria-live="polite"></div>
           <div class="detail-owner-actions" id="detail-owner-actions" hidden>
             <div class="detail-owner-actions__controls">
@@ -885,6 +890,6 @@
     <script src="/js/auth.js?v=sv-20260817-42"></script>
     <script src="/js/api.js?v=sv-20260819-44"></script>
     <script src="/js/analytics.js?v=sv-20260817-41"></script>
-    <script src="/js/app.js?v=sv-20260819-photo-dots-v1"></script>
+    <script src="/js/app.js?v=sv-20260819-favorite-count-v1"></script>
   </body>
 </html>

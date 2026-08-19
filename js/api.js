@@ -58,6 +58,7 @@ function extractImageUrls(value) {
 
 function normalizeItem(record, { privateFields = false } = {}) {
   const fields = record?.fields ?? record ?? {};
+  const favoriteCount = Number(fields.favorite_count ?? 0);
   const imageUrls = [...new Set([
     ...extractImageUrls(fields.image_urls),
     ...extractImageUrls(fields.Fotos ?? fields.fotos ?? fields.photos),
@@ -86,6 +87,7 @@ function normalizeItem(record, { privateFields = false } = {}) {
       ? [...new Set(asAttachmentList(fields.photo_keys ?? fields.photoKeys).map((key) => String(key).trim()).filter(Boolean))]
       : [],
     interestCount: Number(fields.interest_count ?? 0),
+    favoriteCount: Number.isFinite(favoriteCount) ? Math.max(0, favoriteCount) : 0,
   };
 }
 

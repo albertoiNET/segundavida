@@ -30,6 +30,7 @@ class StaticContractTests(unittest.TestCase):
             "owner_display_name": "Vecindad",
             "owner_username": "vecino",
             "interest_count": 0,
+            "favorite_count": 0,
         }
 
     def test_public_id_is_stable_and_legacy_alias_is_accepted(self):
@@ -74,6 +75,11 @@ class StaticContractTests(unittest.TestCase):
 
             embedded = page.split('id="static-item-data">', 1)[1].split("</script>", 1)[0]
             self.assertEqual(json.loads(embedded)["id"], "safe-001")
+            self.assertEqual(json.loads(embedded)["favorite_count"], 0)
+
+    def test_favorite_count_is_normalized_and_never_negative(self):
+        self.assertEqual(normalize_item({**self.item(), "favorite_count": 7})["favorite_count"], 7)
+        self.assertEqual(normalize_item({**self.item(), "favorite_count": -4})["favorite_count"], 0)
 
     def test_shared_asset_sync_updates_existing_generated_pages_without_data_regeneration(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -119,6 +125,13 @@ class StaticContractTests(unittest.TestCase):
             "is_admin",
             "expected_updated_at",
             "keep_photo_keys",
+            "changed_fields",
+            "text_moderation_required",
+            "moderation_text",
+            "Edit verification passed?",
+            "Has edited text?",
+            "Skip moderation for unchanged content",
+            "index:' + photo.index",
             "current_status",
             "['available', 'reserved', 'completed', 'expired']",
             "Moderate edited text",
@@ -222,6 +235,10 @@ class StaticContractTests(unittest.TestCase):
             self.assertIn(endpoint, api_source)
         self.assertIn("N8N_ITEM_URL", api_source)
         self.assertIn("NOCODB_BASE_URL", api_source)
+        self.assertIn("N8N_INTERACTION_URL", api_source)
+        self.assertIn("isInteractionConfigured", api_source)
+        self.assertIn("recordInteraction", api_source)
+        self.assertIn("favoriteCount", api_source)
         self.assertIn("function asAttachmentList", api_source)
         self.assertIn("signedPath", api_source)
         self.assertIn("dltemp/", api_source)
@@ -253,6 +270,10 @@ class StaticContractTests(unittest.TestCase):
         self.assertIn("reservation_days: normalizedReservationDays", app_source)
         self.assertIn("function getExplorationItems", app_source)
         self.assertIn("function createRelatedItemCard", app_source)
+        self.assertIn("function recordFavoriteInteraction", app_source)
+        self.assertIn("favorite-actor:v1", app_source)
+        self.assertIn('action: interactionAction', app_source)
+        self.assertIn('actor_id: getFavoriteActorId()', app_source)
         self.assertIn("function renderRelatedItems", app_source)
         self.assertIn("function showRelatedCategory", app_source)
         self.assertIn('relatedItemsTitle.textContent = isFallback ? "Sigue explorando" : "Relacionados"', app_source)
@@ -311,6 +332,10 @@ class StaticContractTests(unittest.TestCase):
         self.assertIn('id="favorites-view"', index_source)
         self.assertIn('id="favorites-explore-button"', index_source)
         self.assertIn('id="detail-favorite"', index_source)
+        self.assertIn('class="favorite-count"', index_source)
+        self.assertIn('class="detail-contact-actions"', index_source)
+        self.assertIn('class="detail-contact-actions__meta"', index_source)
+        self.assertNotIn("favorite-feedback", index_source)
         self.assertIn('data-view="favorites"', index_source)
         self.assertIn('id="related-items"', index_source)
         self.assertIn('href="/ofrecer/" data-view="offer"', index_source)
@@ -379,9 +404,12 @@ class StaticContractTests(unittest.TestCase):
         self.assertIn(".detail-meta", app_css)
         self.assertIn("margin-top: 1.4rem", app_css)
         self.assertIn("padding-top: 1.15rem", app_css)
-        self.assertIn(".detail-content > #interest-button", app_css)
+        self.assertIn(".detail-contact-actions", app_css)
+        self.assertIn(".detail-contact-actions__meta", app_css)
         self.assertIn(".related-items__track", app_css)
         self.assertIn(".related-item-card", app_css)
+        self.assertIn(".favorite-count", app_css)
+        self.assertIn("border: 0", app_css)
         self.assertIn(".reserve-item-dialog", app_css)
         self.assertIn(".reserve-item-dialog__panel ul", app_css)
         self.assertIn(".reserve-item-dialog__options", app_css)
@@ -402,6 +430,10 @@ class StaticContractTests(unittest.TestCase):
         self.assertIn('id="favorites-view"', fallback_source)
         self.assertIn('id="detail-favorite"', fallback_source)
         self.assertIn('href="/favoritos/" data-view="favorites"', fallback_source)
+        self.assertIn('class="favorite-count"', fallback_source)
+        self.assertIn('class="detail-contact-actions"', fallback_source)
+        self.assertIn('class="detail-contact-actions__meta"', fallback_source)
+        self.assertNotIn("favorite-feedback", fallback_source)
         self.assertIn("Ábreme desde Telegram", fallback_source)
         self.assertIn('id="delete-item-button"', fallback_source)
         self.assertIn('id="delete-item-dialog"', fallback_source)
@@ -426,6 +458,32 @@ class StaticContractTests(unittest.TestCase):
             (ROOT / "scripts" / "generate_static_pages.py").read_text(encoding="utf-8"),
         ):
             self.assertNotIn("SegundaVida", source)
+
+    def test_favorite_counter_workflows_validate_and_update_aggregate(self):
+        workflow_path = ROOT / "docs" / "sv_record_interaction.workflow.json"
+        workflow = json.loads(workflow_path.read_text(encoding="utf-8"))
+        workflow_text = json.dumps(workflow)
+        code = "\n".join(
+            node.get("parameters", {}).get("jsCode", "") for node in workflow["nodes"]
+        )
+        self.assertIn("favorite_add", code)
+        self.assertIn("favorite_remove", code)
+        self.assertIn("actorIdPattern", code)
+        self.assertIn("favoriteRateBuckets", code)
+        self.assertIn("rate_limited", code)
+        self.assertIn("Math.max(0, favoriteCount + favoriteDelta)", code)
+        self.assertIn('"favorite_count"', workflow_text)
+        self.assertIn("favorite_count: input.favorite_count", code)
+
+        for path in (
+            ROOT / "docs" / "sv_publish_item.workflow.json",
+            ROOT / "docs" / "sv_publish_item_photos.workflow.json",
+        ):
+            source = path.read_text(encoding="utf-8")
+            self.assertIn("favorite_count", source)
+
+        get_item_source = (ROOT / "docs" / "sv_get_item.workflow.json").read_text(encoding="utf-8")
+        self.assertIn("favorite_count", get_item_source)
 
     def test_publish_workflow_writes_opaque_public_id_and_keeps_legacy_alias(self):
         workflow = json.loads((ROOT / "docs" / "sv_publish_item.workflow.json").read_text(encoding="utf-8"))

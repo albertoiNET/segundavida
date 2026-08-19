@@ -34,6 +34,7 @@ deben entrar desde el workflow de publicación o desde una importación validada
 | `telegram_message_id` | SingleLineText | No | Referencia privada para n8n |
 | `interest_count` | Number | Sí | Contador agregado, valor inicial `0` |
 | `contact_attempt_count` | Number | Sí | Contador agregado de aperturas confirmadas del chat, valor inicial `0` |
+| `favorite_count` | Number | Sí | Contador aproximado de corazones, valor inicial `0` |
 | `consent_accepted` | Checkbox | Sí | Confirmación de aceptación de publicación y contacto |
 | `consent_version` | SingleLineText | Sí | Versión del texto aceptado por la persona |
 | `consent_at` | DateTime | Sí | Fecha generada por n8n al publicar |
@@ -53,9 +54,12 @@ solo la persona propietaria puede activar `reserved`, con un plazo elegido entre
 preparado y el enlace a la ficha concreta. Por eso el formulario exige
 configurar un nombre de usuario público antes de publicar. Las
 publicaciones antiguas sin nombre de usuario se mantienen visibles, pero no ofrecen un
-canal de contacto. El contador de intereses es agregado y se mantiene en el
-registro del objeto. `contact_attempt_count` registra las aperturas confirmadas
-del chat desde la ficha; no demuestra que el mensaje se haya enviado.
+canal de contacto. Los contadores de intereses, aperturas y corazones son
+agregados y se mantienen en el registro del objeto. `contact_attempt_count`
+registra las aperturas confirmadas del chat desde la ficha; no demuestra que el
+mensaje se haya enviado. `favorite_count` es una señal aproximada: no identifica
+personas únicas y puede sufrir manipulaciones o pequeñas desviaciones por el
+carácter anónimo de la interacción.
 
 ## Importación en NocoDB
 
@@ -174,6 +178,7 @@ const publicItems = $input.all()
       owner_display_name: fields.owner_display_name ?? "Vecindad",
       owner_username: fields.owner_username || null,
       interest_count: Number(fields.interest_count ?? 0),
+      favorite_count: Math.max(0, Number(fields.favorite_count ?? 0)),
     };
   })
   .filter((item) => (
@@ -223,7 +228,8 @@ inicial de cada objeto:
   "image_url": null,
   "owner_display_name": "Pepe",
   "owner_username": "pepe_demo",
-  "interest_count": 0
+  "interest_count": 0,
+  "favorite_count": 0
 }
 ```
 
@@ -257,7 +263,30 @@ En el nodo Code de n8n, acceder al campo de NocoDB y normalizarlo así:
   owner_display_name: row.owner_display_name,
   owner_username: row.owner_username || null,
   interest_count: Number(row.interest_count || 0),
+  favorite_count: Math.max(0, Number(row.favorite_count || 0)),
 }
 ```
 
 No usar `row.item-id`, porque JavaScript lo interpretaría como una resta.
+
+### Interacciones y contador de corazones
+
+`POST /segundavida/interaction` acepta las acciones existentes `interest` y
+`contact_attempt`, además de `favorite_add` y `favorite_remove`. Para los
+corazones el cuerpo debe incluir un UUID v4 anónimo en `actor_id`:
+
+```json
+{
+  "item_id": "k8Qm2LxP",
+  "action": "favorite_add",
+  "actor_id": "550e8400-e29b-41d4-a716-446655440000"
+}
+```
+
+El cliente no envía el contador. n8n calcula el delta (`+1` o `-1`), limita la
+frecuencia por actor y por IP cuando está disponible, y devuelve el valor
+resultante en `favorite_count`, sin permitir valores negativos. La publicación
+de este workflow debe ejecutarse con concurrencia `1` (o detrás de una cola
+serializada) para que la lectura y actualización de NocoDB no pierda
+incrementos simultáneos; el nodo de actualización no acepta una expresión de
+incremento atómico.

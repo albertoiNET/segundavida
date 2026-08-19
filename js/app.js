@@ -26,6 +26,7 @@ const ALLOWED_PHOTO_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 const OWN_ITEMS_STORAGE_KEY = "segundavida:my-items:v1";
 const FAVORITES_STORAGE_KEY = "segundavida:favorites:v1";
 const INTERACTION_STORAGE_KEY = "segundavida:interaction-events:v1";
+const FAVORITE_ACTOR_STORAGE_KEY = "segundavida:favorite-actor:v1";
 const THEME_STORAGE_KEY = "segundavida:theme:v1";
 const PUBLISH_DRAFT_STORAGE_KEY = "segundavida:publish-draft:v1";
 const PUBLISH_DRAFT_VALUES_KEY = "segundavida:publish-draft-values:v1";
@@ -90,6 +91,7 @@ let photoLightboxReturnFocus = null;
 let lastTrackedViewKey = "";
 const trackedInterestTelegramItems = new Set();
 const pendingInteractions = new Set();
+const pendingFavoriteInteractions = new Map();
 let routeOpenInFlight = null;
 let routeOpenItemId = "";
 let reportStartInFlight = null;
@@ -828,6 +830,39 @@ function isUsableFavoriteId(value) {
   return /^[A-Za-z0-9][A-Za-z0-9_-]{5,79}$/.test(id);
 }
 
+function isUsableFavoriteActorId(value) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(value ?? "").trim());
+}
+
+function createFavoriteActorId() {
+  if (window.crypto?.randomUUID) return window.crypto.randomUUID();
+  if (window.crypto?.getRandomValues) {
+    const bytes = new Uint8Array(16);
+    window.crypto.getRandomValues(bytes);
+    bytes[6] = (bytes[6] & 0x0f) | 0x40;
+    bytes[8] = (bytes[8] & 0x3f) | 0x80;
+    const hex = [...bytes].map((byte) => byte.toString(16).padStart(2, "0"));
+    return `${hex.slice(0, 4).join("")}-${hex.slice(4, 6).join("")}-${hex.slice(6, 8).join("")}-${hex.slice(8, 10).join("")}-${hex.slice(10).join("")}`;
+  }
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (character) => {
+    const value = Math.floor(Math.random() * 16);
+    const next = character === "x" ? value : (value & 0x3) | 0x8;
+    return next.toString(16);
+  });
+}
+
+function getFavoriteActorId() {
+  try {
+    const stored = window.localStorage.getItem(FAVORITE_ACTOR_STORAGE_KEY);
+    if (isUsableFavoriteActorId(stored)) return stored;
+    const created = createFavoriteActorId();
+    window.localStorage.setItem(FAVORITE_ACTOR_STORAGE_KEY, created);
+    return created;
+  } catch {
+    return createFavoriteActorId();
+  }
+}
+
 function readFavorites() {
   try {
     const stored = JSON.parse(window.localStorage.getItem(FAVORITES_STORAGE_KEY) ?? "[]");
@@ -867,9 +902,11 @@ function isFavorite(item) {
 function updateFavoriteButton(button, item) {
   if (!button || !item?.id) return;
   const active = isFavorite(item);
-  const actionLabel = active
+  const baseLabel = active
     ? `Quitar «${item.title}» de favoritos`
     : `Añadir «${item.title}» a favoritos`;
+  const count = Math.max(0, Number(item.favoriteCount ?? 0));
+  const actionLabel = count > 0 ? `${baseLabel}, ${count} favoritos` : baseLabel;
   const icon = document.createElement("i");
   icon.className = `${active ? "fa-solid" : "fa-regular"} fa-heart fa-icon`;
   icon.dataset.fallback = active ? "♥" : "♡";
@@ -879,6 +916,13 @@ function updateFavoriteButton(button, item) {
   button.setAttribute("aria-label", actionLabel);
   button.setAttribute("title", active ? "Quitar de favoritos" : "Añadir a favoritos");
   button.replaceChildren(icon);
+  if (count > 0) {
+    const countElement = document.createElement("span");
+    countElement.className = "favorite-count";
+    countElement.setAttribute("aria-hidden", "true");
+    countElement.textContent = String(count);
+    button.append(countElement);
+  }
 }
 
 function refreshFavoriteControls(item) {
@@ -923,7 +967,46 @@ function toggleFavorite(item, triggerButton = null) {
   }
 
   window.SecondaVidaAnalytics?.trackEvent("favorite", action, item.id);
+  void recordFavoriteInteraction(item, action);
   if (triggerButton?.isConnected) triggerButton.focus();
+}
+
+function updateFavoriteCount(item, count) {
+  if (!item?.id) return;
+  const normalizedCount = Math.max(0, Number.isFinite(Number(count)) ? Number(count) : 0);
+  const update = (candidate) => candidate?.id === item.id
+    ? { ...candidate, favoriteCount: normalizedCount }
+    : candidate;
+  state.items = state.items.map(update);
+  state.myItems = state.myItems.map(update);
+  state.selectedItem = update(state.selectedItem);
+  refreshFavoriteControls({ ...item, favoriteCount: normalizedCount });
+}
+
+async function recordFavoriteInteraction(item, action) {
+  if (!item?.id || !api?.isInteractionConfigured || typeof api.recordInteraction !== "function") return;
+  const interactionAction = action === "add" ? "favorite_add" : "favorite_remove";
+  const previous = pendingFavoriteInteractions.get(item.id) ?? Promise.resolve();
+  const request = previous.catch(() => {}).then(async () => {
+    const result = await api.recordInteraction({
+      item_id: item.id,
+      action: interactionAction,
+      actor_id: getFavoriteActorId(),
+    });
+    if (result?.favorite_count !== undefined) {
+      updateFavoriteCount(item, result.favorite_count);
+    }
+  });
+  pendingFavoriteInteractions.set(item.id, request);
+  try {
+    await request;
+  } catch {
+    // El contador es una señal secundaria; el favorito local nunca se revierte.
+  } finally {
+    if (pendingFavoriteInteractions.get(item.id) === request) {
+      pendingFavoriteInteractions.delete(item.id);
+    }
+  }
 }
 
 function getFavoriteItems() {
@@ -2448,6 +2531,7 @@ async function openItemFromRoute() {
       reservedAt: null,
       reservationExpiresAt: null,
       imageUrl: null,
+      favoriteCount: 0,
       interestCount: 0,
     };
 
@@ -3439,6 +3523,7 @@ async function handleOfferSubmit(event) {
       ownerTelegramId: String(state.telegramUser?.telegram_id ?? state.telegramUser?.id ?? ""),
       imageUrl: result.image_url ?? publishedImageUrls[0] ?? null,
       imageUrls: publishedImageUrls,
+      favoriteCount: 0,
       interestCount: 0,
     };
 

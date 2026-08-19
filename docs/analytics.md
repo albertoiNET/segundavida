@@ -57,6 +57,15 @@ No se genera un evento adicional al mostrar una ficha: las visitas y páginas
 virtuales de Matomo cubren ese comportamiento. Tampoco se instrumentan
 búsquedas, filtros, formularios, fotos ni navegación interna.
 
+El contador público de corazones se mantiene en NocoDB mediante las acciones
+`favorite_add` y `favorite_remove` del endpoint de interacciones. El
+`actor_id` anónimo solo se usa para aplicar límites temporales en n8n y nunca
+se envía a Matomo.
+
+El workflow de interacciones debe desplegarse con concurrencia serializada para
+que dos actualizaciones simultáneas no sobrescriban el mismo valor leído de
+NocoDB.
+
 `interest/telegram-open` mide el salto correcto o el intento aceptado de abrir
 Telegram. La web no puede confirmar que la persona haya enviado el mensaje
 dentro de Telegram; para eso haría falta un flujo mediado por un bot o un
