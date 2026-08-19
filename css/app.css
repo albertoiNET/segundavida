@@ -658,6 +658,138 @@ h2 {
   line-height: 1.5;
 }
 
+.user-profile-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.user-profile-heading h1 {
+  margin: 0.35rem 0 0;
+  color: var(--color-primary-dark);
+  font-family: var(--font-display);
+  font-size: clamp(2rem, 8vw, 3.2rem);
+  letter-spacing: -0.045em;
+  line-height: 1;
+}
+
+.user-profile-heading .view-copy {
+  margin-top: 0.65rem;
+}
+
+.user-profile-report-button {
+  flex: 0 0 auto;
+  margin-top: 0.15rem;
+}
+
+.user-profile-state {
+  min-height: 1.35rem;
+  margin-top: 1.35rem;
+}
+
+.user-profile-list {
+  display: grid;
+  margin-top: 1.2rem;
+  border-top: 1px solid var(--border-light);
+}
+
+.user-profile-item {
+  border-bottom: 1px solid var(--border-light);
+  animation: fade-up 350ms ease both;
+}
+
+.user-profile-item__link {
+  display: grid;
+  grid-template-columns: 4.35rem minmax(0, 1fr);
+  gap: 0.85rem;
+  align-items: stretch;
+  min-width: 0;
+  padding: 0.85rem 0.15rem;
+  color: inherit;
+  text-decoration: none;
+  transition: color 160ms ease, background-color 160ms ease;
+}
+
+.user-profile-item__link:hover,
+.user-profile-item__link:focus-visible {
+  color: var(--color-primary-dark);
+}
+
+.user-profile-item__link:focus-visible {
+  outline: 2px solid var(--color-secondary);
+  outline-offset: -2px;
+  border-radius: 0.55rem;
+}
+
+.user-profile-item__thumb {
+  display: grid;
+  width: 4.35rem;
+  min-height: 4.35rem;
+  height: 100%;
+  align-self: stretch;
+  place-items: center;
+  overflow: hidden;
+  border-radius: 0.7rem;
+  background: var(--bg-card-hover);
+  color: var(--color-secondary);
+  font-size: 1.35rem;
+}
+
+.user-profile-item__thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.user-profile-item__content {
+  display: grid;
+  min-width: 0;
+  align-content: center;
+  gap: 0.2rem;
+}
+
+.user-profile-item__title {
+  overflow: hidden;
+  color: var(--text-main);
+  font-size: 1rem;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.user-profile-item__meta {
+  overflow: hidden;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.user-profile-item__published {
+  overflow: hidden;
+  color: var(--text-muted);
+  font-size: 0.76rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.user-profile-item__status {
+  max-width: none;
+  color: var(--color-secondary-dark);
+  font-size: 0.74rem;
+  font-weight: 750;
+  text-align: left;
+}
+
+.user-profile-item__status.is-muted {
+  color: var(--text-muted);
+}
+
+.user-profile-empty {
+  margin-top: 1.2rem;
+}
+
 .empty-state {
   display: grid;
   gap: 0.55rem;
@@ -1712,6 +1844,10 @@ h2 {
   inset: 0;
 }
 
+.photo-carousel--detail .photo-carousel__indicators {
+  bottom: 1.25rem;
+}
+
 .detail-media__trigger {
   display: block;
   width: 100%;
@@ -1952,10 +2088,10 @@ body.photo-lightbox-open {
 
 @media (max-width: 719px) {
   .detail-content {
-    width: calc(100% - 2rem);
-    margin-right: auto;
-    margin-left: auto;
-    padding: 1.15rem 0 1rem;
+    width: 100%;
+    margin-right: 0;
+    margin-left: 0;
+    padding: 1.15rem 1rem 1rem;
   }
 }
 
@@ -2375,7 +2511,12 @@ body.photo-lightbox-open {
 }
 
 .detail-content {
+  position: relative;
+  z-index: 1;
+  margin-top: -1rem;
   padding: 1.15rem 0.1rem 1rem;
+  border-radius: 1.35rem 1.35rem 0 0;
+  background: var(--bg-card);
 }
 
 .detail-content h1 {
@@ -2422,6 +2563,23 @@ body.photo-lightbox-open {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.detail-owner-link {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  color: inherit;
+  text-decoration: none;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.detail-owner-link:hover,
+.detail-owner-link:focus-visible {
+  color: var(--color-primary-dark);
+  text-decoration: underline;
+  text-underline-offset: 0.16rem;
 }
 
 #detail-created-at {
@@ -2566,7 +2724,7 @@ body.photo-lightbox-open {
   display: flex;
   min-width: 0;
   min-height: 1.7rem;
-  margin-top: 0.2rem;
+  margin-top: 1.2rem;
   align-items: center;
   justify-content: space-between;
   gap: 0.75rem;
@@ -3215,6 +3373,27 @@ body.photo-lightbox-open {
   padding-left: 1.15rem;
   color: var(--color-secondary-dark) !important;
   font-size: 0.76rem !important;
+}
+
+.telegram-auth-guidance {
+  display: grid;
+  gap: 0.5rem;
+  margin: 0;
+  padding-left: 1.15rem;
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+
+.telegram-auth-guidance .telegram-download-link {
+  min-height: 0;
+  padding: 0;
+  font-size: inherit;
+}
+
+.telegram-auth-guidance li:last-child {
+  margin-top: 0.3rem;
+  list-style: none;
 }
 
 .telegram-auth-card__badge {
@@ -4403,6 +4582,26 @@ body.photo-lightbox-open {
 
 }
 
+@media (max-width: 560px) {
+  .user-profile-heading {
+    display: grid;
+  }
+
+  .user-profile-report-button {
+    justify-self: start;
+  }
+
+  .user-profile-item__link {
+    grid-template-columns: 4.05rem minmax(0, 1fr);
+    gap: 0.75rem;
+  }
+
+  .user-profile-item__thumb {
+    width: 4.05rem;
+    min-height: 4.05rem;
+  }
+}
+
 /* Catálogo · tarjetas verticales con lectura editorial */
 .items-grid {
   gap: 1rem;
@@ -5032,10 +5231,10 @@ body.photo-lightbox-open {
 
 @media (max-width: 719px) {
   .detail-content {
-    width: calc(100% - 2rem);
-    margin-right: auto;
-    margin-left: auto;
-    padding: 1.15rem 0 1rem;
+    width: 100%;
+    margin-right: 0;
+    margin-left: 0;
+    padding: 1.15rem 1rem 1rem;
   }
 
   .detail-description {

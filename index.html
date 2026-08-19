@@ -40,7 +40,7 @@
     />
     <link rel="stylesheet" href="/css/icon-fallback.css?v=sv-20260817-40" />
     <link rel="stylesheet" href="/css/tokens.css?v=sv-20260817-41" />
-    <link rel="stylesheet" href="/css/app.css?v=sv-20260819-reserved-warning-v3" />
+    <link rel="stylesheet" href="/css/app.css?v=sv-20260819-detail-gallery-dots-v1" />
     <script src="https://telegram.org/js/telegram-web-app.js?63"></script>
   </head>
   <body>
@@ -165,7 +165,9 @@
           <div class="detail-meta" aria-label="Información de la publicación">
             <span class="detail-meta__item detail-meta__item--owner">
               <i class="fa-regular fa-user detail-meta__icon fa-icon" data-fallback="●" aria-hidden="true"></i>
-              <span id="detail-owner">Vecindad</span>
+              <a class="detail-owner-link" id="detail-owner-link" href="/u/" hidden>
+                <span id="detail-owner">Vecindad</span>
+              </a>
             </span>
             <span class="detail-meta__separator" aria-hidden="true">·</span>
             <span class="detail-meta__item detail-meta__item--zone">
@@ -296,6 +298,16 @@
             </div>
           </div>
           <p id="telegram-auth-message">Abre esta aplicación dentro de Telegram para continuar.</p>
+          <ul class="telegram-auth-guidance" id="telegram-auth-guidance">
+            <li>Necesitas abrir esta app dentro de Telegram para continuar.</li>
+            <li>Esto permite que te contacten sin compartir tu número de teléfono.</li>
+            <li>
+              <a class="telegram-download-link" id="telegram-download-link" href="https://telegram.org/dl" target="_blank" rel="noopener">
+                <i class="fa-solid fa-download fa-icon" data-fallback="↓" aria-hidden="true"></i>
+                <span>Si aún no tienes Telegram, descárgalo aquí</span>
+              </a>
+            </li>
+          </ul>
           <ul class="telegram-auth-privacy" id="telegram-auth-privacy" hidden>
             <li id="telegram-auth-name-privacy">Se compartirá tu nombre público y tu nombre de usuario para que puedan contactar contigo.</li>
             <li><strong>Tu número de teléfono no es visible para nadie en ningún momento, ni siquiera para esta web.</strong></li>
@@ -304,10 +316,6 @@
             <a class="primary-button telegram-open-link" id="telegram-open-link" href="https://t.me/pucelobot/segundavida?startapp=offer" target="_blank" rel="noopener" hidden>
               <i class="fa-brands fa-telegram fa-icon" data-fallback="✈" aria-hidden="true"></i>
               <span>Abrir en Telegram</span>
-            </a>
-            <a class="telegram-download-link" id="telegram-download-link" href="https://telegram.org/dl" target="_blank" rel="noopener" hidden>
-              <i class="fa-solid fa-download fa-icon" data-fallback="↓" aria-hidden="true"></i>
-              <span>Si aún no tienes Telegram, descárgalo</span>
             </a>
           </div>
           <button class="telegram-help-link" id="telegram-username-help" type="button" hidden>
@@ -837,6 +845,27 @@
             </a>
           </div>
         </section>
+      </section>
+
+      <section class="secondary-view user-profile-view" id="user-profile-view" hidden aria-labelledby="user-profile-title">
+        <div class="user-profile-heading">
+          <div>
+            <span class="eyebrow">Perfil público</span>
+            <h1 id="user-profile-title">Usuario</h1>
+            <p class="view-copy" id="user-profile-copy">Cargando publicaciones…</p>
+          </div>
+          <button class="quiet-action user-profile-report-button" id="user-profile-report-button" type="button" hidden>
+            <i class="fa-solid fa-triangle-exclamation fa-icon" data-fallback="!" aria-hidden="true"></i>
+            <span>Reportar usuario</span>
+          </button>
+        </div>
+        <p class="action-state user-profile-state" id="user-profile-state" aria-live="polite"></p>
+        <div class="user-profile-list" id="user-profile-list" role="list" aria-live="polite"></div>
+        <div class="empty-state user-profile-empty" id="user-profile-empty" hidden>
+          <span class="empty-state__icon" aria-hidden="true"><i class="fa-solid fa-box-open fa-icon" data-fallback="⌂"></i></span>
+          <strong>Este usuario aún no tiene publicaciones</strong>
+          <p>No hay objetos públicos asociados a este nombre de usuario.</p>
+        </div>
       </section>
 
       <section class="secondary-view" id="favorites-view" hidden aria-labelledby="favorites-title">

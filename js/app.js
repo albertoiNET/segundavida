@@ -52,18 +52,25 @@ const VIEW_ROUTES = Object.freeze({
   posts: "/perfil/",
   favorites: "/favoritos/",
 });
-const ROUTE_VIEW_NAMES = new Set(Object.keys(VIEW_ROUTES));
+const USER_PROFILE_VIEW = "user-profile";
+const ROUTE_VIEW_NAMES = new Set([...Object.keys(VIEW_ROUTES), USER_PROFILE_VIEW]);
 const PRIVATE_VIEW_NAMES = new Set(["offer", "posts", "favorites", "publish-success"]);
 const VIEW_TITLES = Object.freeze({
   explore: "Segunda Vida · Aldea Pucela",
   offer: "Ofrecer algo · Segunda Vida",
   posts: "Mi perfil · Segunda Vida",
   favorites: "Favoritos · Segunda Vida",
+  [USER_PROFILE_VIEW]: "Perfil público · Segunda Vida",
   "publish-success": "Publicación realizada · Segunda Vida",
   "not-found": "Página no encontrada · Segunda Vida",
 });
 const state = {
   items: [],
+  catalogItems: [],
+  catalogLoaded: false,
+  profileCatalogItems: [],
+  profileCatalogLoaded: false,
+  profileCatalogUsername: "",
   category: "Todo",
   statusFilter: "all",
   query: "",
@@ -77,6 +84,7 @@ const state = {
   postsFilter: "active",
   currentView: "explore",
   currentItemId: "",
+  currentUserUsername: "",
   historyMaxIndex: 0,
   staticItem: null,
   selectedItemLive: false,
@@ -102,6 +110,7 @@ let deleteDialogTriggerButton = null;
 let contactDialogItem = null;
 let contactDialogTriggerButton = null;
 let reportDialogTargetItem = null;
+let reportDialogTargetUser = null;
 let reportDialogTriggerButton = null;
 let reserveDialogItem = null;
 let reserveDialogTriggerButton = null;
@@ -154,6 +163,7 @@ const detailCategory = document.querySelector("#detail-category");
 const detailDescription = document.querySelector("#detail-description");
 const detailZone = document.querySelector("#detail-zone");
 const detailOwner = document.querySelector("#detail-owner");
+const detailOwnerLink = document.querySelector("#detail-owner-link");
 const detailCreatedAt = document.querySelector("#detail-created-at");
 const detailInterestSignal = document.querySelector("#detail-interest-signal");
 const interestButton = document.querySelector("#interest-button");
@@ -229,6 +239,7 @@ const telegramAuthCard = document.querySelector("#telegram-auth-card");
 const brandHomeLink = document.querySelector("#brand-home-link");
 const telegramAuthTitle = document.querySelector("#telegram-auth-title");
 const telegramAuthMessage = document.querySelector("#telegram-auth-message");
+const telegramAuthGuidance = document.querySelector("#telegram-auth-guidance");
 const telegramAuthPrivacy = document.querySelector("#telegram-auth-privacy");
 const telegramAuthNamePrivacy = document.querySelector("#telegram-auth-name-privacy");
 const telegramDownloadLink = document.querySelector("#telegram-download-link");
@@ -266,6 +277,13 @@ const offerEmptyButton = document.querySelector("#offer-empty-button");
 const postsTabs = [...document.querySelectorAll(".posts-tab")];
 const postsActiveCount = document.querySelector("#posts-active-count");
 const postsCompletedCount = document.querySelector("#posts-completed-count");
+const userProfileView = document.querySelector("#user-profile-view");
+const userProfileTitle = document.querySelector("#user-profile-title");
+const userProfileCopy = document.querySelector("#user-profile-copy");
+const userProfileReportButton = document.querySelector("#user-profile-report-button");
+const userProfileState = document.querySelector("#user-profile-state");
+const userProfileList = document.querySelector("#user-profile-list");
+const userProfileEmpty = document.querySelector("#user-profile-empty");
 const appBackButton = document.querySelector("#app-back-button");
 const appForwardButton = document.querySelector("#app-forward-button");
 const themeToggle = document.querySelector("#theme-toggle");
@@ -396,27 +414,38 @@ function getViewRoute(viewName, itemId = "") {
   if (viewName === "detail" && itemId) {
     return `/i/${encodeURIComponent(itemId)}/`;
   }
+  if (viewName === USER_PROFILE_VIEW && state.currentUserUsername) {
+    return `/u/${encodeURIComponent(state.currentUserUsername)}/`;
+  }
   return VIEW_ROUTES[viewName] || "/";
 }
 
 function getViewFromPath(path = window.location.pathname) {
   const normalizedPath = normalizeRoutePath(path);
-  return Object.entries(VIEW_ROUTES).find(([, route]) => normalizeRoutePath(route) === normalizedPath)?.[0] || "";
+  const routeView = Object.entries(VIEW_ROUTES)
+    .find(([, route]) => normalizeRoutePath(route) === normalizedPath)?.[0];
+  if (routeView) return routeView;
+  return getRouteUserUsername(path) ? USER_PROFILE_VIEW : "";
 }
 
-function pushViewHistory(viewName, itemId = "") {
+function pushViewHistory(viewName, itemId = "", username = state.currentUserUsername) {
   const currentState = window.history.state ?? {};
   const nextIndex = getHistoryIndex(currentState) + 1;
   const url = new URL(window.location.href);
   url.search = LOCAL_AUTHOR_DEMO_MODE ? "?demo=author" : "";
   url.hash = "";
-  url.pathname = getViewRoute(viewName, itemId);
+  if (viewName === USER_PROFILE_VIEW) {
+    url.pathname = getUserProfileUrl(username, { absolute: false });
+  } else {
+    url.pathname = getViewRoute(viewName, itemId);
+  }
 
   window.history.pushState({
     ...currentState,
     svApp: true,
     svView: viewName,
     svItemId: itemId || null,
+    svUserUsername: viewName === USER_PROFILE_VIEW ? username : null,
     svIndex: nextIndex,
   }, "", url);
   state.historyMaxIndex = nextIndex;
@@ -489,8 +518,17 @@ function getReportStartItemId() {
   if (!telegramRuntime.isTelegram) return "";
 
   const startParam = getTelegramStartParam();
+  if (startParam.startsWith("report_user_")) return "";
   const match = startParam.match(/^report_([A-Za-z0-9][A-Za-z0-9_-]{5,79})$/);
   return match ? match[1] : "";
+}
+
+function getReportStartUsername() {
+  if (!telegramRuntime.isTelegram) return "";
+
+  const startParam = getTelegramStartParam();
+  const match = startParam.match(/^report_user_([A-Za-z][A-Za-z0-9_]{4,31})$/i);
+  return match ? normalizeTelegramUsername(match[1]) : "";
 }
 
 function getManageStartItemId() {
@@ -509,6 +547,21 @@ function decodeRoutePart(value) {
   }
 }
 
+function getRouteUserUsername(path = window.location.pathname) {
+  const match = normalizeRoutePath(path).match(/^\/u\/([^/]+)$/i);
+  if (!match) return "";
+  return normalizeTelegramUsername(decodeRoutePart(match[1]));
+}
+
+function getUserProfileUrl(username, { absolute = true } = {}) {
+  const normalizedUsername = normalizeTelegramUsername(username);
+  if (!normalizedUsername) return absolute ? `${PUBLIC_SITE_ORIGIN}/` : "/";
+
+  const path = `/u/${encodeURIComponent(normalizedUsername)}/`;
+  if (!absolute) return path;
+  return `${window.location.origin}${path}`;
+}
+
 function getStaticItem() {
   const dataElement = document.querySelector("#static-item-data");
   if (!dataElement) return null;
@@ -522,11 +575,16 @@ function getStaticItem() {
 }
 
 function updateRouteMetadata(viewName, itemId = "") {
-  if (VIEW_TITLES[viewName]) document.title = VIEW_TITLES[viewName];
+  if (viewName === USER_PROFILE_VIEW && state.currentUserUsername) {
+    document.title = `@${state.currentUserUsername} · Segunda Vida`;
+  } else if (VIEW_TITLES[viewName]) {
+    document.title = VIEW_TITLES[viewName];
+  }
 
   const isPrivateView = PRIVATE_VIEW_NAMES.has(viewName);
   const isPublicDetail = viewName === "detail" && itemId && !isNotFoundPage;
-  const isNotFoundRoute = viewName === "not-found" || (viewName === "detail" && isNotFoundPage);
+  const isNotFoundRoute = viewName === "not-found"
+    || (viewName === "detail" && isNotFoundPage);
   const robotsDirective = isPrivateView
     ? "noindex, nofollow"
     : isNotFoundRoute
@@ -557,12 +615,15 @@ function updateRouteMetadata(viewName, itemId = "") {
     canonical.rel = "canonical";
     document.head.appendChild(canonical);
   }
-  canonical.href = `${PUBLIC_SITE_ORIGIN}${getViewRoute(viewName, itemId)}`;
+  canonical.href = viewName === USER_PROFILE_VIEW
+    ? `${PUBLIC_SITE_ORIGIN}${getUserProfileUrl(state.currentUserUsername, { absolute: false })}`
+    : `${PUBLIC_SITE_ORIGIN}${getViewRoute(viewName, itemId)}`;
 }
 
 function prepareHistoryState() {
   const currentState = window.history.state ?? {};
   const itemId = getRouteItemId();
+  const username = getRouteUserUsername();
   const view = itemId
     ? "detail"
     : getTelegramStartView() || getViewFromPath() || (isNotFoundPage ? "not-found" : "explore");
@@ -574,7 +635,9 @@ function prepareHistoryState() {
     canonicalUrl.search = "";
     canonicalUrl.hash = "";
   } else if (ROUTE_VIEW_NAMES.has(view)) {
-    canonicalUrl.pathname = getViewRoute(view);
+    canonicalUrl.pathname = view === USER_PROFILE_VIEW
+      ? getUserProfileUrl(username, { absolute: false })
+      : getViewRoute(view);
     canonicalUrl.search = "";
     canonicalUrl.hash = "";
   }
@@ -584,10 +647,12 @@ function prepareHistoryState() {
     svApp: true,
     svView: view,
     svItemId: itemId || null,
+    svUserUsername: view === USER_PROFILE_VIEW ? username : null,
     svIndex: index,
   }, "", canonicalUrl);
   state.currentView = view;
   state.currentItemId = itemId;
+  state.currentUserUsername = username;
   state.historyMaxIndex = index;
   updateRouteMetadata(view, itemId);
   updateNavigationControls();
@@ -614,6 +679,26 @@ function formatCompactDate(value) {
   if (Number.isNaN(date.getTime())) return "";
 
   return `${date.getDate()}/${date.getMonth() + 1}`;
+}
+
+function formatDayMonth(value) {
+  if (!value) return "";
+
+  const normalized = String(value).includes(" ") ? String(value).replace(" ", "T") : value;
+  const date = new Date(normalized);
+  if (Number.isNaN(date.getTime())) return "";
+
+  return `${String(date.getDate()).padStart(2, "0")}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+}
+
+function formatPublicationDate(value) {
+  if (!value) return "";
+
+  const normalized = String(value).includes(" ") ? String(value).replace(" ", "T") : value;
+  const date = new Date(normalized);
+  if (Number.isNaN(date.getTime())) return "";
+
+  return `${String(date.getDate()).padStart(2, "0")}/${String(date.getMonth() + 1).padStart(2, "0")}/${date.getFullYear()}`;
 }
 
 function formatShortDateTime(value) {
@@ -1110,6 +1195,7 @@ function getItemStatusLabel(item, { privateView = false } = {}) {
       : "Reservado";
   }
   if (item?.status === "expired") return "Ya no disponible";
+  if (item?.expiresAt && !isNotExpired(item)) return "Ya no disponible";
   if (item?.expiresAt) return `Disponible hasta ${formatDate(item.expiresAt)}`;
   return "Disponible ahora";
 }
@@ -2155,12 +2241,16 @@ function renderDetail(item, { live = true, error = "" } = {}) {
   detailDescription.hidden = !item.description;
   detailZone.textContent = item.zone || "Valladolid";
   detailOwner.textContent = item.ownerDisplayName || "Vecindad";
+  const ownerUsername = normalizeTelegramUsername(item.ownerUsername);
+  if (detailOwnerLink) {
+    detailOwnerLink.hidden = !ownerUsername;
+    detailOwnerLink.href = ownerUsername ? getUserProfileUrl(ownerUsername, { absolute: false }) : "/";
+  }
   if (detailCreatedAt) detailCreatedAt.textContent = formatRelativeAge(item.createdAt) || "—";
   renderInterestSignal(item);
   const ownItem = LOCAL_AUTHOR_DEMO_MODE || isOwnItem(item);
   const adminUser = isAdminUser();
   const canManageItem = ownItem || adminUser;
-  const ownerUsername = normalizeTelegramUsername(item.ownerUsername);
   const isAvailable = item.status === "available" && isNotExpired(item);
   const canEditItem = live && (
     (adminUser && ["available", "reserved", "completed", "expired"].includes(item.status))
@@ -2250,23 +2340,159 @@ function configurePostsView() {
   }
 }
 
-function setView(viewName, { syncHistory = true, itemId = "" } = {}) {
+function setUserProfileState(message = "", stateName = "") {
+  if (!userProfileState) return;
+  userProfileState.textContent = message;
+  userProfileState.dataset.state = stateName;
+}
+
+function getUserProfileItems(username) {
+  const normalizedUsername = normalizeTelegramUsername(username);
+  if (!normalizedUsername || state.profileCatalogUsername !== normalizedUsername) return [];
+  const lookupUsername = normalizedUsername.toLowerCase();
+  return sortNewestFirst(state.profileCatalogItems.filter((item) => (
+    normalizeTelegramUsername(item.ownerUsername).toLowerCase() === lookupUsername
+  )));
+}
+
+function createUserProfileItem(item, index) {
+  const article = document.createElement("article");
+  article.className = "user-profile-item";
+  article.setAttribute("role", "listitem");
+  article.style.animationDelay = `${Math.min(index * 45, 240)}ms`;
+
+  const link = document.createElement("a");
+  link.className = "user-profile-item__link";
+  link.href = `/i/${encodeURIComponent(item.id)}/`;
+  link.setAttribute("aria-label", `Ver publicación: ${item.title}`);
+  link.addEventListener("click", (event) => {
+    event.preventDefault();
+    showDetail(item);
+  });
+
+  const thumbnail = document.createElement("span");
+  thumbnail.className = "user-profile-item__thumb";
+  const imageUrl = getItemImageUrls(item)[0];
+  if (imageUrl) {
+    const image = document.createElement("img");
+    image.src = imageUrl;
+    image.alt = "";
+    image.loading = index < 2 ? "eager" : "lazy";
+    thumbnail.append(image);
+  } else {
+    thumbnail.classList.add("user-profile-item__thumb--placeholder");
+    thumbnail.append(createCategoryIcon(item.category));
+  }
+
+  const content = document.createElement("span");
+  content.className = "user-profile-item__content";
+  content.append(
+    createTextElement("strong", "user-profile-item__title", item.title),
+    createTextElement("span", "user-profile-item__meta", `${item.category} · ${item.zone}`),
+    createTextElement(
+      "span",
+      "user-profile-item__published",
+      `Publicado ${formatPublicationDate(item.createdAt) || "—"}`,
+    ),
+  );
+
+  const statusLabel = item.status === "reserved"
+    ? "Reservado"
+    : item.status === "completed"
+      ? "Entregado"
+      : item.status === "expired" || (item.expiresAt && !isNotExpired(item))
+        ? "Caducado"
+        : item.expiresAt
+          ? `Hasta ${formatDate(item.expiresAt)}`
+          : "Disponible";
+  const status = createTextElement(
+    "span",
+    `user-profile-item__status ${item.status === "completed" || item.status === "expired" ? "is-muted" : ""}`,
+    statusLabel,
+  );
+  content.append(status);
+  link.append(thumbnail, content);
+  article.append(link);
+  return article;
+}
+
+function renderUserProfile(username = state.currentUserUsername) {
+  const normalizedUsername = normalizeTelegramUsername(username);
+  if (!userProfileView || !userProfileList || !normalizedUsername) return;
+
+  state.currentUserUsername = normalizedUsername;
+  const items = getUserProfileItems(normalizedUsername);
+  const profileCatalogReady = state.profileCatalogLoaded
+    && state.profileCatalogUsername === normalizedUsername;
+  const displayName = items.find((item) => item.ownerDisplayName)?.ownerDisplayName || "";
+  if (userProfileTitle) userProfileTitle.textContent = displayName || `@${normalizedUsername}`;
+  if (userProfileCopy) {
+    const usernameLabel = `@${normalizedUsername}`;
+    const publicationCount = `${items.length} ${items.length === 1 ? "publicación" : "publicaciones"}`;
+    userProfileCopy.textContent = displayName
+      ? `${usernameLabel} · ${publicationCount}`
+      : usernameLabel;
+  }
+  userProfileList.replaceChildren(...items.map(createUserProfileItem));
+  userProfileList.hidden = !profileCatalogReady || items.length === 0;
+  if (userProfileEmpty) userProfileEmpty.hidden = !profileCatalogReady || items.length > 0;
+  const canReportUser = items.some((item) => !isOwnItem(item));
+  if (userProfileReportButton) {
+    userProfileReportButton.hidden = !canReportUser;
+    userProfileReportButton.disabled = !canReportUser;
+  }
+  setUserProfileState(
+    profileCatalogReady ? "" : "Cargando publicaciones…",
+    profileCatalogReady ? "" : "pending",
+  );
+}
+
+function openUserProfile(username, { syncHistory = true } = {}) {
+  const normalizedUsername = normalizeTelegramUsername(username);
+  if (!normalizedUsername) return;
+  state.currentUserUsername = normalizedUsername;
+  renderUserProfile(normalizedUsername);
+  setView(USER_PROFILE_VIEW, { syncHistory, username: normalizedUsername });
+}
+
+function getUserProfileReportItem(username = state.currentUserUsername) {
+  return getUserProfileItems(username).find((item) => !isOwnItem(item))
+    ?? getUserProfileItems(username)[0]
+    ?? null;
+}
+
+function setView(viewName, { syncHistory = true, itemId = "", username = "" } = {}) {
   if (![...ROUTE_VIEW_NAMES, "detail", "publish-success"].includes(viewName)) return;
+
+  const normalizedUsername = viewName === USER_PROFILE_VIEW
+    ? normalizeTelegramUsername(username || state.currentUserUsername || getRouteUserUsername())
+    : "";
+  if (viewName === USER_PROFILE_VIEW && !normalizedUsername) return;
 
   const shouldPushHistory = syncHistory && (
     state.currentView !== viewName ||
-    (viewName === "detail" && state.currentItemId !== itemId)
+    (viewName === "detail" && state.currentItemId !== itemId) ||
+    (viewName === USER_PROFILE_VIEW && state.currentUserUsername !== normalizedUsername)
   );
-  if (shouldPushHistory) pushViewHistory(viewName, itemId);
+  if (shouldPushHistory) pushViewHistory(viewName, itemId, normalizedUsername);
 
   state.currentView = viewName;
   state.currentItemId = itemId || "";
+  state.currentUserUsername = normalizedUsername;
   const isExplore = viewName === "explore";
   const isFavorites = viewName === "favorites";
   const isOffer = viewName === "offer";
   const isPosts = viewName === "posts";
+  const isUserProfile = viewName === USER_PROFILE_VIEW;
   const isDetail = viewName === "detail";
   const isSuccess = viewName === "publish-success";
+
+  if (isNotFoundPage) {
+    document.body.classList.toggle(
+      "not-found-page",
+      viewName === "not-found" || (isDetail && state.selectedItem?.status === "not_found"),
+    );
+  }
 
   if (!isDetail) closePhotoLightbox();
 
@@ -2277,6 +2503,7 @@ function setView(viewName, { syncHistory = true, itemId = "" } = {}) {
   if (favoritesView) favoritesView.hidden = !isFavorites;
   if (offerView) offerView.hidden = !isOffer;
   if (postsView) postsView.hidden = !isPosts;
+  if (userProfileView) userProfileView.hidden = !isUserProfile;
   if (detailView) detailView.hidden = !isDetail;
   if (publishSuccessView) publishSuccessView.hidden = !isSuccess;
   if (detailShare) {
@@ -2288,6 +2515,12 @@ function setView(viewName, { syncHistory = true, itemId = "" } = {}) {
   if (isOffer) configureOfferAuth();
   if (isFavorites) renderFavorites();
   if (isPosts) configurePostsView();
+  if (isUserProfile) {
+    renderUserProfile(normalizedUsername);
+    if (!state.profileCatalogLoaded || state.profileCatalogUsername !== normalizedUsername) {
+      void loadProfileCatalog(normalizedUsername);
+    }
+  }
   if ((isExplore || isFavorites) && state.catalogNeedsRefresh && !getRouteItemId()) {
     void loadCatalog();
   }
@@ -2314,9 +2547,11 @@ function setView(viewName, { syncHistory = true, itemId = "" } = {}) {
     }
   });
 
-  const viewKey = `${viewName}:${itemId || ""}`;
+  const viewKey = `${viewName}:${itemId || ""}:${normalizedUsername}`;
   if (lastTrackedViewKey !== viewKey) {
-    const pagePath = getViewRoute(viewName, itemId);
+    const pagePath = viewName === USER_PROFILE_VIEW
+      ? getUserProfileUrl(normalizedUsername, { absolute: false })
+      : getViewRoute(viewName, itemId);
     window.SecondaVidaAnalytics?.trackPageView(pagePath);
     lastTrackedViewKey = viewKey;
   }
@@ -2421,6 +2656,8 @@ async function loadCatalog() {
     if (requestVersion !== state.catalogRequestVersion) return;
     setServiceState(n8nStatus, n8nStatusLabel, "connected", "Conectado ✓");
     state.catalogNeedsRefresh = false;
+    state.catalogLoaded = true;
+    state.catalogItems = records;
     state.items = records.filter((item) => ["available", "reserved"].includes(item.status) && isNotExpired(item));
     if (LOCAL_AUTHOR_DEMO_MODE) {
       state.myItems = createLocalAuthorDemoItems(state.items);
@@ -2430,6 +2667,7 @@ async function loadCatalog() {
     renderItems();
     renderFavorites();
     renderMyItems();
+    renderUserProfile();
     renderRelatedItems(state.selectedItem);
     void openItemFromRoute();
     void openReportFromStartParam();
@@ -2446,6 +2684,40 @@ async function loadCatalog() {
     void openManageFromStartParam();
     void openReportDemo();
     void openItemFromRoute();
+  }
+}
+
+async function loadProfileCatalog(username = state.currentUserUsername) {
+  const normalizedUsername = normalizeTelegramUsername(username);
+  if (!normalizedUsername) return [];
+  if (state.profileCatalogLoaded && state.profileCatalogUsername === normalizedUsername) {
+    return state.profileCatalogItems;
+  }
+  if (state.profileCatalogUsername !== normalizedUsername) {
+    state.profileCatalogItems = [];
+    state.profileCatalogLoaded = false;
+    state.profileCatalogUsername = normalizedUsername;
+  }
+  if (!api?.isDataConfigured || typeof api.listItems !== "function") {
+    setUserProfileState("El catálogo todavía no está configurado.", "error");
+    return [];
+  }
+
+  try {
+    const records = await api.listItems({ scope: "all", ownerUsername: normalizedUsername });
+    if (state.profileCatalogUsername !== normalizedUsername) return records;
+    state.profileCatalogItems = records;
+    state.profileCatalogLoaded = true;
+    renderUserProfile();
+    return records;
+  } catch {
+    if (state.profileCatalogUsername === normalizedUsername) {
+      setUserProfileState(
+        "No hemos podido cargar las publicaciones. Inténtalo de nuevo en unos instantes.",
+        "error",
+      );
+    }
+    return [];
   }
 }
 
@@ -2596,14 +2868,24 @@ async function openItemFromRoute() {
 
 async function openReportFromStartParam() {
   const itemId = getReportStartItemId();
-  if (!itemId) return;
+  const userUsername = getReportStartUsername();
+  if (!itemId && !userUsername) return;
   if (reportStartInFlight) return reportStartInFlight;
 
   const request = (async () => {
-    const catalogItem = state.items.find((candidate) => candidate.id === itemId)
-      ?? state.myItems.find((candidate) => candidate.id === itemId && isOwnItem(candidate));
+    if (userUsername && (
+      !state.profileCatalogLoaded
+      || state.profileCatalogUsername !== userUsername
+    )) {
+      await loadProfileCatalog(userUsername);
+    }
+    const catalogItem = itemId
+      ? state.items.find((candidate) => candidate.id === itemId)
+        ?? state.myItems.find((candidate) => candidate.id === itemId && isOwnItem(candidate))
+        ?? state.catalogItems.find((candidate) => candidate.id === itemId)
+      : getUserProfileReportItem(userUsername);
     const initialItem = catalogItem ?? {
-      id: itemId,
+      id: itemId || "report-user",
       title: "Cargando publicación…",
       description: "",
       category: "Otros",
@@ -2616,6 +2898,12 @@ async function openReportFromStartParam() {
       imageUrls: [],
     };
 
+    if (!catalogItem && userUsername) {
+      detailActionState.textContent = "No se ha encontrado una publicación pública de este usuario.";
+      detailActionState.dataset.state = "error";
+      return;
+    }
+
     showDetail(initialItem, { syncHistory: false, live: Boolean(catalogItem) });
 
     if (!api?.isItemConfigured || typeof api.getItem !== "function") {
@@ -2625,9 +2913,11 @@ async function openReportFromStartParam() {
     }
 
     try {
-      const item = await api.getItem(itemId);
+      const item = catalogItem?.id && !itemId
+        ? await api.getItem(catalogItem.id)
+        : await api.getItem(itemId);
       showDetail(item, { syncHistory: false, live: true });
-      openReportDialog(item);
+      openReportDialog(item, reportProblemButton, { userUsername });
     } catch (error) {
       const message = error?.code === "not_found"
         ? "Esta publicación ya no está disponible."
@@ -2712,6 +3002,9 @@ function handleHistoryChange(event) {
   const routeView = routeItemId ? "detail" : getViewFromPath() || (isNotFoundPage ? "not-found" : "explore");
   const nextView = nextState?.svApp ? nextState.svView : routeView;
   const nextItemId = nextState?.svApp ? nextState.svItemId : routeItemId;
+  const nextUsername = nextState?.svApp
+    ? nextState.svUserUsername || getRouteUserUsername()
+    : getRouteUserUsername();
 
   if (![...ROUTE_VIEW_NAMES, "detail", "publish-success"].includes(nextView)) {
     return;
@@ -2727,7 +3020,7 @@ function handleHistoryChange(event) {
     return;
   }
 
-  setView(nextView, { syncHistory: false, itemId: nextItemId });
+  setView(nextView, { syncHistory: false, itemId: nextItemId, username: nextUsername });
 }
 
 async function checkIdentity() {
@@ -2747,6 +3040,7 @@ async function checkIdentity() {
       configurePostsView();
       await loadMineItems();
       refreshSelectedDetailForIdentity();
+      if (state.currentView === USER_PROFILE_VIEW) renderUserProfile();
       schedulePublishRetryIfReady();
       const firstName = result.first_name ? `Hola ${result.first_name}` : "Telegram";
       const identityName = identityStatus?.querySelector("span:nth-child(2)");
@@ -2760,6 +3054,7 @@ async function checkIdentity() {
     configureOfferAuth();
     configurePostsView();
     refreshSelectedDetailForIdentity();
+    if (state.currentView === USER_PROFILE_VIEW) renderUserProfile();
     setServiceState(identityStatus, identityStatusLabel, "error", "No verificada");
   } catch {
     state.telegramUser = null;
@@ -2767,6 +3062,7 @@ async function checkIdentity() {
     configureOfferAuth();
     configurePostsView();
     refreshSelectedDetailForIdentity();
+    if (state.currentView === USER_PROFILE_VIEW) renderUserProfile();
     setServiceState(identityStatus, identityStatusLabel, "error", "No disponible");
   }
 }
@@ -2793,6 +3089,7 @@ function configureOfferAuth(user = state.telegramUser) {
     : verified
       ? "Necesitas un nombre de usuario público"
       : "Publica desde Telegram";
+  telegramAuthGuidance.hidden = verified;
   telegramDownloadLink.hidden = verified;
   telegramOpenLink.hidden = verified;
   telegramAuthPrivacy.hidden = !verified || !username;
@@ -2816,8 +3113,8 @@ function configureOfferAuth(user = state.telegramUser) {
     return;
   }
 
-  telegramAuthMessage.textContent = "Abre esta aplicación dentro de Telegram para continuar.";
-  telegramAuthMessage.hidden = false;
+  telegramAuthMessage.textContent = "";
+  telegramAuthMessage.hidden = true;
   setOfferFormEnabled(false);
 }
 
@@ -4072,13 +4369,27 @@ function showReportSuccessView() {
   reportSuccessClose?.focus();
 }
 
-function openReportDialog(item = state.selectedItem, triggerButton = reportProblemButton) {
+function openReportDialog(
+  item = state.selectedItem,
+  triggerButton = reportProblemButton,
+  { userUsername = "" } = {},
+) {
   if (!item || !reportDialog || !reportForm) return;
 
   reportDialogTargetItem = item;
+  reportDialogTargetUser = normalizeTelegramUsername(userUsername);
   reportDialogTriggerButton = triggerButton;
   resetReportForm();
-  if (reportDialogItemTitle) reportDialogItemTitle.textContent = item.title || "Publicación seleccionada";
+  if (reportDialogCopy) {
+    reportDialogCopy.textContent = reportDialogTargetUser
+      ? `Cuéntanos qué ha ocurrido con @${reportDialogTargetUser}. El equipo de Aldea Pucela revisará el caso.`
+      : "Cuéntanos qué ha ocurrido con esta publicación. El equipo de Aldea Pucela revisará el caso.";
+  }
+  if (reportDialogItemTitle) {
+    reportDialogItemTitle.textContent = reportDialogTargetUser
+      ? `Perfil de @${reportDialogTargetUser}`
+      : item.title || "Publicación seleccionada";
+  }
 
   if (typeof reportDialog.showModal === "function") {
     reportDialog.showModal();
@@ -4101,6 +4412,7 @@ function closeReportDialog({ restoreFocus = true } = {}) {
 
   const triggerButton = reportDialogTriggerButton;
   reportDialogTargetItem = null;
+  reportDialogTargetUser = null;
   reportDialogTriggerButton = null;
   if (restoreFocus && triggerButton?.isConnected && !triggerButton.hidden) triggerButton.focus();
 }
@@ -4120,11 +4432,15 @@ function reportErrorMessage(error) {
   return messages[error?.code] || "No hemos podido enviar el problema. Inténtalo de nuevo.";
 }
 
-function openReportFlow(item = state.selectedItem, triggerButton = reportProblemButton) {
+function openReportFlow(
+  item = state.selectedItem,
+  triggerButton = reportProblemButton,
+  options = {},
+) {
   if (!item) return;
 
   if (LOCAL_REPORT_DEMO_MODE || (telegramRuntime.isTelegram && auth?.hasInitData())) {
-    openReportDialog(item, triggerButton);
+    openReportDialog(item, triggerButton, options);
     return;
   }
 
@@ -4136,6 +4452,25 @@ function openReportFlow(item = state.selectedItem, triggerButton = reportProblem
       : "No hemos podido abrir Telegram. Usa el enlace de nuevo para intentarlo.";
     detailActionState.dataset.state = opened ? "connected" : "error";
   }
+}
+
+function openUserProfileReportFlow(triggerButton = userProfileReportButton) {
+  const username = normalizeTelegramUsername(state.currentUserUsername);
+  const item = getUserProfileReportItem(username);
+  if (!username || !item) return;
+
+  if (!LOCAL_REPORT_DEMO_MODE && !(telegramRuntime.isTelegram && auth?.hasInitData())) {
+    const opened = openTelegramChat(getTelegramMiniAppUrl(`report_user_${username}`));
+    setUserProfileState(
+      opened
+        ? "Abre la Mini App desde Telegram para completar el reporte."
+        : "No hemos podido abrir Telegram. Inténtalo de nuevo.",
+      opened ? "connected" : "error",
+    );
+    return;
+  }
+
+  openReportFlow(item, triggerButton, { userUsername: username });
 }
 
 async function handleReportSubmit(event) {
@@ -4355,6 +4690,12 @@ interestButton?.addEventListener("click", () => {
   if (item?.id) window.SecondaVidaAnalytics?.trackEvent("interest", "click", item.id);
   openContactDialog(item);
 });
+detailOwnerLink?.addEventListener("click", (event) => {
+  const username = normalizeTelegramUsername(state.selectedItem?.ownerUsername);
+  if (!username) return;
+  event.preventDefault();
+  openUserProfile(username);
+});
 detailFavorite?.addEventListener("click", (event) => {
   event.preventDefault();
   toggleFavorite(state.selectedItem, detailFavorite);
@@ -4367,6 +4708,7 @@ postsOpenTelegramLink?.addEventListener("click", () => {
   window.SecondaVidaAnalytics?.trackEvent("telegram", "open-mini-app", "posts");
 });
 reportProblemButton?.addEventListener("click", () => openReportFlow(state.selectedItem, reportProblemButton));
+userProfileReportButton?.addEventListener("click", () => openUserProfileReportFlow(userProfileReportButton));
 contactDialogClose?.addEventListener("click", () => closeContactDialog());
 contactDialogCancel?.addEventListener("click", () => closeContactDialog());
 contactDialogConfirm?.addEventListener("click", confirmContactDialog);
@@ -4543,10 +4885,14 @@ state.favoriteEntries = readFavorites();
 state.staticItem = getStaticItem();
 prepareHistoryState();
 if (ROUTE_VIEW_NAMES.has(state.currentView) || state.currentView === "detail") {
-  lastTrackedViewKey = `${state.currentView}:${state.currentItemId}`;
-  setView(state.currentView, { syncHistory: false, itemId: state.currentItemId });
+  lastTrackedViewKey = `${state.currentView}:${state.currentItemId}:${state.currentUserUsername}`;
+  setView(state.currentView, {
+    syncHistory: false,
+    itemId: state.currentItemId,
+    username: state.currentUserUsername,
+  });
 }
-lastTrackedViewKey = `${state.currentView}:${state.currentItemId}`;
+lastTrackedViewKey = `${state.currentView}:${state.currentItemId}:${state.currentUserUsername}`;
 window.SecondaVidaAnalytics?.trackPageView();
 configureOfferAuth();
 void restorePublishDraft();
