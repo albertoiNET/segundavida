@@ -1,0 +1,1019 @@
+{
+  "name": "Editar publicación - Segunda Vida",
+  "nodes": [
+    {
+      "id": "240d7073-ce1f-4ef9-a36d-21f97c97b83e",
+      "name": "Edit Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -1120,
+        0
+      ],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "segundavida/edit",
+        "responseMode": "responseNode",
+        "options": {
+          "binaryData": true,
+          "binaryPropertyName": "data",
+          "allowedOrigins": "https://segundavida.aldeapucela.org,http://localhost:8000,http://127.0.0.1:8000"
+        }
+      },
+      "webhookId": "963aaa54-bb48-4797-8cfc-82065dd894a5"
+    },
+    {
+      "id": "366e946a-0630-4c54-9757-bab5fdfd0c63",
+      "name": "Validate edit payload",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -896,
+        0
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const crypto = require('crypto');\nconst incoming = $input.first() ?? {};\nconst input = incoming.json ?? {};\nconst binary = incoming.binary ?? {};\nconst categories = new Set('Hogar|Muebles|Electrodomésticos|Infantil|Ropa|Libros|Música y cine|Tecnología|Móviles y telefonía|Informática|Deportes y ocio|Bicicletas|Juegos y videojuegos|Manualidades y coleccionismo|Jardín y bricolaje|Otros'.split('|'));\nconst zones = new Set('Arcas Reales|Arturo Eyries|Barrio España|Batallas|Belén - Pilarica|Campo Grande|Caño Argales|Circular|Ciudad de la Comunicación|Coto de Simancas|Covaresa|Cuatro de Marzo|Delicias - Arco de Ladrillo|Delicias - Canterac|El Berrocal|El Peral|El Pinar|Girón|Hospital|Huerta del Rey|La Antigua - Santa Cruz|La Farola|La Overuela|La Rubia|La Victoria|Las Flores|Las Villas - Valparaíso|Pajarillos Altos|Pajarillos Bajos|Parque Alameda - Paula López|Parquesol|Pilarica - Los Santos|Pinar de Jalón|Plaza de Toros|Plaza España|Plaza Mayor|Polígono Argales|Polígono Industrial la Mora|Polígono San Cristóbal|Puente Duero|Puente Jardín|Rondilla|San Isidro|San Pablo - San Nicolás|San Pedro Regalado|Soto de Medinilla|Urbanización El Pichón|Urbanización El Plantío|Urbanización Entrepinos|Urbanización Las Aceñas|Vadillos|Villa del Prado|Aldeamayor de San Martín|Arroyo de la Encomienda|Boecillo|Cabezón de Pisuerga|Cigales|Ciguñuela|Cistérniga|Covaresa|Corcos|Cubillas de Santa Marta|Fuensaldaña|Geria|Laguna de Duero|La Pedraja de Portillo|Mucientes|Olmos de Esgueva|Piña de Esgueva|Quintanilla de Trigueros|Renedo de Esgueva|Robladillo|San Martín de Valvení|Santovenia de Pisuerga|Simancas|Trigueros del Valle|Tudela de Duero|Valdestillas|Valoria la Buena|Viana de Cega|Villabáñez|Villanubla|Villanueva de Duero|Villanueva de los Infantes|Villarmentero de Esgueva|Villavaquerín|Wamba|Zaratán|Aguilarejo|Granja Muedra|Herrera de Duero|La Flecha|San Andrés'.split('|'));\nfunction output(json) { return [{ json, binary }]; }\nfunction invalid(error) { return output({ ok: false, valid: false, error_code: error, error }); }\nlet body = input.body ?? input;\nif (typeof body === 'string') { try { body = JSON.parse(body); } catch { return invalid('invalid_json'); } }\nconst payload = body?.payload ?? input.payload;\nif (typeof payload === 'string') { try { body = JSON.parse(payload); } catch { return invalid('invalid_payload'); } }\nelse if (payload && typeof payload === 'object') body = payload;\nconst initData = typeof body.initData === 'string' ? body.initData.trim() : '';\nif (!initData) return invalid('telegram_init_data_missing');\nconst item = body.item && typeof body.item === 'object' ? body.item : {};\nconst itemId = String(body.item_id ?? '').trim();\nconst title = typeof item.title === 'string' ? item.title.trim() : '';\nconst description = typeof item.description === 'string' ? item.description.trim() : '';\nconst category = typeof item.category === 'string' ? item.category.trim() : '';\nconst zone = typeof item.zone === 'string' ? item.zone.trim() : '';\nconst keepPhotoKeys = Array.isArray(body.keep_photo_keys) ? body.keep_photo_keys.map((key) => String(key).trim()).filter(Boolean) : [];\nconst photoEntries = Object.entries(binary).filter(([name, file]) => /^photo_[01]$/.test(name) && file?.data);\nconst size = (file) => Number(file.fileSize ?? file.size ?? (typeof file.data === 'string' ? Math.floor(file.data.length * 3 / 4) : NaN));\nif (!itemId) return invalid('item_id_missing');\nif (title.length < 3 || title.length > 80) return invalid('title_invalid');\nif (!categories.has(category)) return invalid('category_invalid');\nif (!zones.has(zone)) return invalid('zone_invalid');\nif (description.length > 600) return invalid('description_too_long');\nif (/(?:https?:\\\\/\\\\/|ftp:\\\\/\\\\/|www\\\\.)[^\\\\s<>\"']+|(?:^|[\\\\s(])(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\\\\.)+[a-z]{2,}/iu.test(title + ' ' + description)) return invalid('url_not_allowed');\nif (photoEntries.length > 2) return invalid('too_many_photos');\nfor (const [, file] of photoEntries) { const mime = file.mimeType ?? file.mimetype ?? ''; if (!['image/jpeg', 'image/png', 'image/webp'].includes(mime)) return invalid('photo_type_invalid'); if (!Number.isFinite(size(file)) || size(file) <= 0 || size(file) > 20 * 1024 * 1024) return invalid('photo_too_large'); }\nreturn output({ ok: true, valid: true, mode: 'edit', initData, item_id: itemId, title, description, category, zone, expected_updated_at: String(body.expected_updated_at ?? '').trim(), keep_photo_keys: keepPhotoKeys, new_photo_count: photoEntries.length });"
+      }
+    },
+    {
+      "id": "a2e3ed6a-e844-4950-85a7-71987782ed0b",
+      "name": "Validate Telegram identity",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        -672,
+        0
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://tasks.nukeador.com/webhook/segundavida/whoami",
+        "sendHeaders": true,
+        "specifyHeaders": "keypair",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ initData: $json.initData }) }}",
+        "options": {},
+        "response": {
+          "response": {
+            "responseFormat": "json"
+          }
+        }
+      }
+    },
+    {
+      "id": "701c8a0f-6cbe-4d4a-9f5d-a2f1aafefaa1",
+      "name": "Attach validated identity",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -448,
+        0
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const source = $('Validate edit payload').first() ?? {};\nconst response = $input.first()?.json ?? {};\nif (response.valid !== true) return [{ json: { ok: false, valid: false, error_code: response.error_code ?? 'telegram_identity_invalid', error: response.error ?? 'No se ha podido validar Telegram.' }, binary: source.binary ?? {} }];\nreturn [{ json: { ...source.json, owner_telegram_id: String(response.telegram_id ?? response.user?.id ?? ''), is_admin: response.is_admin === true }, binary: source.binary ?? {} }];"
+      }
+    },
+    {
+      "id": "007ecbb8-f08e-4aed-8cda-8827462de561",
+      "name": "Search item and attachments",
+      "type": "n8n-nodes-base.nocoDb",
+      "typeVersion": 4,
+      "position": [
+        -224,
+        0
+      ],
+      "parameters": {
+        "resource": "row",
+        "operation": "search",
+        "authentication": "nocoDbApiToken",
+        "workspaceId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "wfrogvq8",
+          "cachedResultName": "Default Workspace"
+        },
+        "projectId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "p3amiucxfm0jzoc",
+          "cachedResultName": "Aldea Pucela"
+        },
+        "table": {
+          "__rl": true,
+          "mode": "list",
+          "value": "mwk20n0679wz5fr",
+          "cachedResultName": "Segunda Vida"
+        },
+        "returnAll": true,
+        "downloadAttachments": true,
+        "downloadFieldNames": [
+          "ch5e05viwhejny9"
+        ],
+        "options": {}
+      }
+    },
+    {
+      "id": "5a5c6843-b3cc-47bc-aa99-0e58d03f68ee",
+      "name": "Verify owner and version",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const request = $('Attach validated identity').first()?.json ?? {};\nconst source = $('Attach validated identity').first() ?? {};\nconst rows = $input.all();\nfunction output(json) { return [{ json, binary: source.binary ?? {} }]; }\nfunction invalid(error) { return output({ ok: false, valid: false, error_code: error, error: error === 'edit_conflict' ? 'La publicación ha cambiado. Recarga la ficha antes de volver a editarla.' : error }); }\nfunction list(value) { if (Array.isArray(value)) return value; if (value && typeof value === 'object') return [value]; if (typeof value !== 'string' || !value.trim()) return []; try { const parsed = JSON.parse(value); return Array.isArray(parsed) ? parsed : parsed && typeof parsed === 'object' ? [parsed] : []; } catch { return []; } }\nfunction key(value, index) { const item = typeof value === 'string' ? value : value ?? {}; return String(item.path ?? item.signedPath ?? item.url ?? item.signedUrl ?? item.title ?? 'index:' + index).trim(); }\nfunction url(value) { const item = typeof value === 'string' ? value : value ?? {}; const raw = String(item.url ?? item.signedUrl ?? item.path ?? item.signedPath ?? item.thumbnails?.small?.signedPath ?? '').trim(); if (/^https?:\\\\/\\\\//i.test(raw)) return raw; if (raw.startsWith('/')) return 'https://proyectos.aldeapucela.org' + raw; if (raw.startsWith('download/') || raw.startsWith('dltemp/')) return 'https://proyectos.aldeapucela.org/' + raw; return ''; }\nconst entry = rows.find((row) => { const fields = row.json?.fields ?? row.json ?? {}; return String(fields.public_id ?? fields['item-id'] ?? '') === String(request.item_id); });\nif (!entry) return invalid('not_found');\nconst fields = entry.json?.fields ?? entry.json ?? {};\nconst status = String(fields.status ?? '').toLowerCase();\nconst isAdmin = request.is_admin === true;\nif (!isAdmin && String(fields.owner_telegram_id ?? '') !== String(request.owner_telegram_id)) return invalid('not_owner');\nif (!['available', 'reserved', 'completed', 'expired'].includes(status) || (!isAdmin && status !== 'available')) return invalid('edit_not_available');\nconst expires = fields.expires_at ? Date.parse(String(fields.expires_at).replace(' ', 'T')) : NaN;\nif (!isAdmin && Number.isFinite(expires) && expires < Date.now()) return invalid('edit_expired');\nconst updatedAt = String(fields.updated_at ?? fields['Last modified time'] ?? fields.UpdatedAt ?? '').trim();\nif (request.expected_updated_at && updatedAt && request.expected_updated_at !== updatedAt) return invalid('edit_conflict');\nconst attachments = list(fields.photos ?? fields.Fotos ?? fields.fotos);\nconst indexed = attachments.map((photo, index) => ({ photo, key: key(photo, index), url: url(photo) }));\nconst keep = new Set(request.keep_photo_keys);\nconst kept = indexed.filter((photo) => keep.has(photo.key));\nconst finalCount = kept.length + Number(request.new_photo_count ?? 0);\nif (finalCount < 1) return invalid('photo_required');\nif (finalCount > 2) return invalid('too_many_photos');\nconst rowId = entry.json?.id ?? entry.json?.Id ?? fields.id ?? fields.Id ?? '';\nreturn output({ ...request, ok: true, valid: true, row_id: rowId, current_status: status, keep_photo_attachments: kept.map((entry) => entry.photo), current_photo_urls: kept.map((entry) => entry.url).filter(Boolean), current_photo_keys: kept.map((entry) => entry.key), final_photo_count: finalCount });"
+      }
+    },
+    {
+      "id": "d4a4afa6-a5ff-4e7f-88c8-a4f9b81e34d1",
+      "name": "Has replacement photos?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        224,
+        0
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.new_photo_count > 0 }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "id": "cf390b02-41fb-4bd4-a31c-e976feb9e8c4",
+      "name": "Prepare new photos for moderation",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        448,
+        160
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const source = $('Verify owner and version').first() ?? {};\nconst binary = source.binary ?? {};\nreturn Object.keys(binary).filter((name) => /^photo_[01]$/.test(name) && binary[name]).sort().map((name, index) => ({ json: { ...source.json, moderation_photo_index: index }, binary: { data: binary[name] } }));"
+      }
+    },
+    {
+      "id": "cd81349e-033d-4de1-af91-a101d8357bdb",
+      "name": "Moderate edited text and photos",
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        672,
+        160
+      ],
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ 'Título: ' + ($json.title || '(sin título)') + '\\nDescripción: ' + ($json.description || '(sin descripción)') + '\\nAnaliza también la imagen adjunta.' }}",
+        "hasOutputParser": true,
+        "messages": {
+          "messageValues": [
+            {
+              "type": "SystemMessagePromptTemplate",
+              "message": "Eres el moderador de contenido de SegundaVida. Es una web vecinal para regalar objetos físicos legales, seguros, de propiedad de quien publica y completamente gratis. Marca not_allowed=true para medicamentos sujetos a prescripción, armas, explosivos, drogas, animales, documentos o datos personales, dinero, servicios, publicidad, ventas, trueques, objetos ilegales, peligrosos o engañosos. Marca offensive=true para desnudez sexual explícita, violencia gráfica, odio o amenazas. Marca spam=true para spam, enlaces o direcciones web. No bloquees objetos domésticos, ropa, muebles, tecnología, libros, herramientas, juguetes o bicicletas sin una señal clara. safe solo es true cuando las tres banderas son false. Devuelve únicamente el JSON solicitado."
+            },
+            {
+              "type": "HumanMessagePromptTemplate",
+              "messageType": "imageBinary",
+              "binaryImageDataKey": "data",
+              "imageDetail": "low"
+            }
+          ]
+        },
+        "batching": {
+          "batchSize": 2,
+          "delayBetweenBatches": 0
+        }
+      }
+    },
+    {
+      "id": "b9cf7814-078f-4c37-91ff-c5182987943c",
+      "name": "OpenRouter moderation model (edit photo)",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        1808,
+        224
+      ],
+      "parameters": {
+        "model": "google/gemma-4-26b-a4b-it",
+        "options": {
+          "maxTokens": 120,
+          "responseFormat": "json_object",
+          "temperature": 0,
+          "timeout": 30000,
+          "maxRetries": 1
+        }
+      }
+    },
+    {
+      "id": "c16fc2e4-7af0-4dfd-8cc1-2805cddb9a73",
+      "name": "Moderation output parser (edit photo)",
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        1936,
+        224
+      ],
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\"type\":\"object\",\"properties\":{\"safe\":{\"type\":\"boolean\"},\"offensive\":{\"type\":\"boolean\"},\"spam\":{\"type\":\"boolean\"},\"not_allowed\":{\"type\":\"boolean\"},\"category\":{\"type\":\"string\"},\"reason\":{\"type\":\"string\"}},\"required\":[\"safe\",\"offensive\",\"spam\",\"not_allowed\",\"category\",\"reason\"]}"
+      }
+    },
+    {
+      "id": "94eb4980-cff4-429c-a22e-6fad4c924ed1",
+      "name": "Evaluate edit moderation",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        896,
+        0
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const results = $input.all().map((item) => { let value = item.json?.output ?? item.json?.response ?? item.json?.text ?? item.json; if (typeof value === 'string') { try { value = JSON.parse(value.replace(/^\\x60\\x60\\x60json\\\\s*|\\x60\\x60\\x60$/g, '').trim()); } catch { value = null; } } return value && typeof value === 'object' ? value : null; });\nconst base = $('Verify owner and version').first() ?? {};\nfunction output(json) { return [{ json, binary: base.binary ?? {} }]; }\nif (results.some((value) => !value)) return output({ ok: false, valid: false, error_code: 'photo_moderation_unavailable', error: 'No se ha podido comprobar el contenido. Inténtalo de nuevo en unos segundos.' });\nconst blocked = results.find((value) => value.not_allowed === true);\nif (blocked) return output({ ok: false, valid: false, error_code: 'publication_not_allowed', error: 'No se puede guardar esta publicación porque no está permitida en SegundaVida.' + (blocked.category && blocked.category !== 'ninguna' ? ' Motivo: ' + blocked.category + '.' : '') });\nif (results.some((value) => value.safe !== true || value.offensive === true || value.spam === true)) return output({ ok: false, valid: false, error_code: 'photo_moderation_rejected', error: 'La imagen, el título o la descripción pueden contener contenido ofensivo o spam.' });\nreturn output({ ...base.json, moderation_ok: true });"
+      }
+    },
+    {
+      "id": "dd2ed264-3539-4eb3-b913-772a37edd876",
+      "name": "Moderate edited text",
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        448,
+        -160
+      ],
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ 'Título: ' + ($json.title || '(sin título)') + '\\nDescripción: ' + ($json.description || '(sin descripción)') }}",
+        "hasOutputParser": true,
+        "messages": {
+          "messageValues": [
+            {
+              "type": "SystemMessagePromptTemplate",
+              "message": "Eres el moderador de contenido de SegundaVida. Es una web vecinal para regalar objetos físicos legales, seguros, de propiedad de quien publica y completamente gratis. Marca not_allowed=true para medicamentos sujetos a prescripción, armas, explosivos, drogas, animales, documentos o datos personales, dinero, servicios, publicidad, ventas, trueques, objetos ilegales, peligrosos o engañosos. Marca offensive=true para desnudez sexual explícita, violencia gráfica, odio o amenazas. Marca spam=true para spam, enlaces o direcciones web. No bloquees objetos domésticos, ropa, muebles, tecnología, libros, herramientas, juguetes o bicicletas sin una señal clara. safe solo es true cuando las tres banderas son false. Devuelve únicamente el JSON solicitado."
+            }
+          ]
+        },
+        "batching": {
+          "batchSize": 2,
+          "delayBetweenBatches": 0
+        }
+      }
+    },
+    {
+      "id": "f390508b-2a9f-42f0-9d0c-4bb30f3c372c",
+      "name": "OpenRouter moderation model (edit text)",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        1808,
+        1152
+      ],
+      "parameters": {
+        "model": "google/gemma-4-26b-a4b-it",
+        "options": {
+          "maxTokens": 120,
+          "responseFormat": "json_object",
+          "temperature": 0,
+          "timeout": 30000,
+          "maxRetries": 1
+        }
+      }
+    },
+    {
+      "id": "3c213b39-68d8-4675-a10b-e8cd97591290",
+      "name": "Moderation output parser (edit text)",
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        1936,
+        1152
+      ],
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\"type\":\"object\",\"properties\":{\"safe\":{\"type\":\"boolean\"},\"offensive\":{\"type\":\"boolean\"},\"spam\":{\"type\":\"boolean\"},\"not_allowed\":{\"type\":\"boolean\"},\"category\":{\"type\":\"string\"},\"reason\":{\"type\":\"string\"}},\"required\":[\"safe\",\"offensive\",\"spam\",\"not_allowed\",\"category\",\"reason\"]}"
+      }
+    },
+    {
+      "id": "7284361f-cacd-425f-a32a-86d67e3be621",
+      "name": "Edit moderation approved?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1120,
+        0
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.moderation_ok }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "id": "edfa35ee-f2d8-4812-a169-2f60cae2dff8",
+      "name": "Has photos to upload?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1344,
+        0
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.new_photo_count > 0 }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "id": "0243f250-939e-42e0-9c01-3070084a9072",
+      "name": "Update item before photo uploads",
+      "type": "n8n-nodes-base.nocoDb",
+      "typeVersion": 4,
+      "position": [
+        1568,
+        -160
+      ],
+      "parameters": {
+        "resource": "row",
+        "operation": "update",
+        "authentication": "nocoDbApiToken",
+        "workspaceId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "wfrogvq8",
+          "cachedResultName": "Default Workspace"
+        },
+        "projectId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "p3amiucxfm0jzoc",
+          "cachedResultName": "Aldea Pucela"
+        },
+        "table": {
+          "__rl": true,
+          "mode": "list",
+          "value": "mwk20n0679wz5fr",
+          "cachedResultName": "Segunda Vida"
+        },
+        "dataToSend": "mapWithFields",
+        "id": "={{ $json.row_id }}",
+        "fieldsMapper": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "title": "={{ $json.title }}",
+            "description": "={{ $json.description }}",
+            "category": "={{ $json.category }}",
+            "zone": "={{ $json.zone }}",
+            "updated_at": "={{ $now.toISO() }}",
+            "photos": "={{ JSON.stringify($json.keep_photo_attachments) }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "title",
+              "displayName": "title",
+              "type": "string"
+            },
+            {
+              "id": "description",
+              "displayName": "description",
+              "type": "string"
+            },
+            {
+              "id": "category",
+              "displayName": "category",
+              "type": "string"
+            },
+            {
+              "id": "zone",
+              "displayName": "zone",
+              "type": "string"
+            },
+            {
+              "id": "updated_at",
+              "displayName": "updated_at",
+              "type": "dateTime"
+            },
+            {
+              "id": "photos",
+              "displayName": "photos",
+              "type": "json"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "f34fb51e-e912-404a-9c18-dfa996640bea",
+      "name": "Prepare replacement photo uploads",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1792,
+        -160
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const source = $('Verify owner and version').first() ?? {};\nconst binary = source.binary ?? {};\nreturn Object.keys(binary).filter((name) => /^photo_[01]$/.test(name) && binary[name]).sort().map((name, index) => { const file = binary[name]; return { json: { ...source.json, photo_filename: file.fileName ?? ('photo_' + index + '.jpg'), photo_mime_type: file.mimeType ?? file.mimetype ?? 'image/jpeg' }, binary: { data: file } }; });"
+      }
+    },
+    {
+      "id": "aedaf7f7-5114-4ca6-9675-aca5abde1a59",
+      "name": "Normalize edited photo",
+      "type": "n8n-nodes-base.editImage",
+      "typeVersion": 1,
+      "position": [
+        2016,
+        -160
+      ],
+      "parameters": {
+        "operation": "resize",
+        "width": 1280,
+        "height": 1280,
+        "options": {
+          "destinationKey": "data",
+          "fileName": "={{ $json.photo_filename.replace(/.[^.]+$/, \"\") + \".jpg\" }}",
+          "format": "jpeg",
+          "quality": 78
+        }
+      }
+    },
+    {
+      "id": "5483496e-3f89-4359-9e53-5e88ba6623fe",
+      "name": "Prepare edited photo upload",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2240,
+        -160
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const input = $input.first() ?? {};\nconst file = input.binary?.data;\nif (!file?.data) throw new Error('No se encontró la imagen normalizada.');\nconst buffer = await this.helpers.getBinaryDataBuffer(0, 'data');\nconst baseName = String(input.json?.photo_filename ?? file.fileName ?? 'photo.jpg').replace(/\\\\.[^.]+$/, '') || 'photo';\nreturn [{ json: { ...(input.json ?? {}), photo_base64: buffer.toString('base64'), photo_filename: baseName + '.jpg', photo_mime_type: 'image/jpeg' } }];"
+      }
+    },
+    {
+      "id": "928253ab-6891-40a6-bdee-327b238648c0",
+      "name": "Upload normalized edited photo",
+      "type": "n8n-nodes-base.nocoDb",
+      "typeVersion": 4,
+      "position": [
+        2464,
+        -160
+      ],
+      "parameters": {
+        "resource": "row",
+        "operation": "upload",
+        "authentication": "nocoDbApiToken",
+        "workspaceId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "wfrogvq8",
+          "cachedResultName": "Default Workspace"
+        },
+        "projectId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "p3amiucxfm0jzoc",
+          "cachedResultName": "Aldea Pucela"
+        },
+        "table": {
+          "__rl": true,
+          "mode": "list",
+          "value": "mwk20n0679wz5fr",
+          "cachedResultName": "Segunda Vida"
+        },
+        "id": "={{ $json.row_id }}",
+        "uploadMode": "base64",
+        "uploadFieldName": {
+          "__rl": true,
+          "mode": "list",
+          "value": "ch5e05viwhejny9",
+          "cachedResultName": "photos"
+        },
+        "filename": "={{ $json.photo_filename }}",
+        "contentType": "={{ $json.photo_mime_type }}",
+        "base64value": "={{ $json.photo_base64 }}"
+      }
+    },
+    {
+      "id": "6c799d23-5b31-4880-b2ed-02ec2b4153cd",
+      "name": "Build edit response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2688,
+        0
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const base = $('Verify owner and version').first()?.json ?? {};\nconst urls = Array.isArray(base.current_photo_urls) ? base.current_photo_urls : [];\nreturn [{ json: { ok: true, item_id: base.item_id, public_id: base.item_id, title: base.title, description: base.description, category: base.category, zone: base.zone, status: base.current_status ?? 'available', updated_at: new Date().toISOString(), image_url: urls[0] ?? null, image_urls: urls, photo_keys: base.current_photo_keys, message: 'Publicación actualizada' } }];"
+      },
+      "executeOnce": true
+    },
+    {
+      "id": "4f0248d8-bbea-456d-8727-576fbb68b775",
+      "name": "Update item fields and kept photos",
+      "type": "n8n-nodes-base.nocoDb",
+      "typeVersion": 4,
+      "position": [
+        1568,
+        160
+      ],
+      "parameters": {
+        "resource": "row",
+        "operation": "update",
+        "authentication": "nocoDbApiToken",
+        "workspaceId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "wfrogvq8",
+          "cachedResultName": "Default Workspace"
+        },
+        "projectId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "p3amiucxfm0jzoc",
+          "cachedResultName": "Aldea Pucela"
+        },
+        "table": {
+          "__rl": true,
+          "mode": "list",
+          "value": "mwk20n0679wz5fr",
+          "cachedResultName": "Segunda Vida"
+        },
+        "dataToSend": "mapWithFields",
+        "id": "={{ $json.row_id }}",
+        "fieldsMapper": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "title": "={{ $json.title }}",
+            "description": "={{ $json.description }}",
+            "category": "={{ $json.category }}",
+            "zone": "={{ $json.zone }}",
+            "updated_at": "={{ $now.toISO() }}",
+            "photos": "={{ JSON.stringify($json.keep_photo_attachments) }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "title",
+              "displayName": "title",
+              "type": "string"
+            },
+            {
+              "id": "description",
+              "displayName": "description",
+              "type": "string"
+            },
+            {
+              "id": "category",
+              "displayName": "category",
+              "type": "string"
+            },
+            {
+              "id": "zone",
+              "displayName": "zone",
+              "type": "string"
+            },
+            {
+              "id": "updated_at",
+              "displayName": "updated_at",
+              "type": "dateTime"
+            },
+            {
+              "id": "photos",
+              "displayName": "photos",
+              "type": "json"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "dbfc45fb-5600-4297-8bde-784ce883f223",
+      "name": "Respond to edit webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        2912,
+        0
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      }
+    },
+    {
+      "id": "8aa3f78a-e465-494e-bebe-6de82b0c64f6",
+      "name": "Regenerate static pages",
+      "type": "n8n-nodes-base.github",
+      "typeVersion": 1.1,
+      "position": [
+        3136,
+        0
+      ],
+      "parameters": {
+        "resource": "workflow",
+        "operation": "dispatch",
+        "owner": {
+          "__rl": true,
+          "mode": "list",
+          "value": "aldeapucela",
+          "cachedResultName": "aldeapucela"
+        },
+        "repository": {
+          "__rl": true,
+          "mode": "list",
+          "value": "segundavida",
+          "cachedResultName": "segundavida"
+        },
+        "workflowId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "336174137",
+          "cachedResultName": "Generate SegundaVida static item pages"
+        },
+        "ref": {
+          "__rl": true,
+          "mode": "list",
+          "value": "main",
+          "cachedResultName": "main"
+        }
+      },
+      "webhookId": "bbfda0e9-6ae7-4588-b4f8-18580f33db4e"
+    }
+  ],
+  "connections": {
+    "Edit Webhook": {
+      "main": [
+        [
+          {
+            "node": "Validate edit payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate edit payload": {
+      "main": [
+        [
+          {
+            "node": "Validate Telegram identity",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Telegram identity": {
+      "main": [
+        [
+          {
+            "node": "Attach validated identity",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Attach validated identity": {
+      "main": [
+        [
+          {
+            "node": "Search item and attachments",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search item and attachments": {
+      "main": [
+        [
+          {
+            "node": "Verify owner and version",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verify owner and version": {
+      "main": [
+        [
+          {
+            "node": "Has replacement photos?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has replacement photos?": {
+      "main": [
+        [
+          {
+            "node": "Prepare new photos for moderation",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Moderate edited text",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare new photos for moderation": {
+      "main": [
+        [
+          {
+            "node": "Moderate edited text and photos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Moderate edited text and photos": {
+      "main": [
+        [
+          {
+            "node": "Evaluate edit moderation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenRouter moderation model (edit photo)": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Moderate edited text and photos",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Moderation output parser (edit photo)": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Moderate edited text and photos",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Moderate edited text": {
+      "main": [
+        [
+          {
+            "node": "Evaluate edit moderation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenRouter moderation model (edit text)": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Moderate edited text",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Moderation output parser (edit text)": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Moderate edited text",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit moderation approved?": {
+      "main": [
+        [
+          {
+            "node": "Has photos to upload?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond to edit webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has photos to upload?": {
+      "main": [
+        [
+          {
+            "node": "Update item before photo uploads",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Update item fields and kept photos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update item before photo uploads": {
+      "main": [
+        [
+          {
+            "node": "Prepare replacement photo uploads",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare replacement photo uploads": {
+      "main": [
+        [
+          {
+            "node": "Normalize edited photo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize edited photo": {
+      "main": [
+        [
+          {
+            "node": "Prepare edited photo upload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare edited photo upload": {
+      "main": [
+        [
+          {
+            "node": "Upload normalized edited photo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload normalized edited photo": {
+      "main": [
+        [
+          {
+            "node": "Build edit response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build edit response": {
+      "main": [
+        [
+          {
+            "node": "Respond to edit webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update item fields and kept photos": {
+      "main": [
+        [
+          {
+            "node": "Build edit response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Respond to edit webhook": {
+      "main": [
+        [
+          {
+            "node": "Regenerate static pages",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Evaluate edit moderation": {
+      "main": [
+        [
+          {
+            "node": "Edit moderation approved?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": true
+  },
+  "tags": []
+}

@@ -15,7 +15,9 @@ photo_1  = segunda foto optimizada en JPEG (opcional)
 
 El navegador conserva las selecciones sucesivas hasta dos fotos, permite quitar
 cualquiera de ellas y las redimensiona a un máximo de 1280 px por lado antes de
-enviarlas.
+enviarlas. El límite de entrada es de 20 MB por foto. Si el navegador o WebView
+no puede redimensionar una imagen, n8n la normaliza en servidor antes de
+guardarla en NocoDB.
 
 El formulario exige al menos una foto e informa y solicita aceptar que el texto
 y las fotos compartidos se publiquen bajo la licencia
@@ -31,7 +33,7 @@ nodo `Validate Telegram and item` para que:
 2. Parsee ese valor como JSON.
 3. Valide también `consent`.
 4. Valide que existan como máximo dos binarios `photo_0` y `photo_1`, con MIME
-   `image/jpeg`, `image/png` o `image/webp` y tamaño máximo de 5 MB.
+   `image/jpeg`, `image/png` o `image/webp` y tamaño máximo de 20 MB.
 5. Devuelva el binario original junto al JSON validado.
 
 Al principio del nodo, sustituye la función `result` y la lectura actual de
@@ -90,7 +92,7 @@ for (const [, file] of photoEntries) {
   if (!['image/jpeg', 'image/png', 'image/webp'].includes(mimeType)) {
     return invalid('photo_type_invalid');
   }
-  if (!Number.isFinite(size) || size <= 0 || size > 5 * 1024 * 1024) {
+  if (!Number.isFinite(size) || size <= 0 || size > 20 * 1024 * 1024) {
     return invalid('photo_too_large');
   }
 }
@@ -171,3 +173,15 @@ campo `Fotos` en:
 
 La web sigue usando `image_url` como portada y ya acepta `image_urls` para una
 galería futura.
+
+## Edición de publicaciones
+
+El workflow [`sv_edit_item.workflow.json`](./sv_edit_item.workflow.json) expone
+`POST /segundavida/edit`. Recibe un `payload` con `initData`, `item_id`,
+`expected_updated_at`, los campos editados y `keep_photo_keys`; las fotos nuevas
+llegan como `photo_0` y `photo_1`. El backend comprueba propietario o rol de
+administrador, estado y concurrencia optimista. El propietario solo edita una
+publicación disponible; un administrador puede editar cualquier publicación
+visible disponible, reservada, entregada o caducada. Modera siempre título y
+descripción y modera también cada foto nueva o sustituida. No cambia el
+identificador público, el estado ni la fecha de caducidad.

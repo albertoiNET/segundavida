@@ -18,7 +18,7 @@ const auth = window.SecondaVidaAuth;
 const api = window.SecondaVidaApi;
 const CONSENT_VERSION = "sv-publish-2026-08-17-v3";
 const MAX_OFFER_PHOTOS = 2;
-const MAX_PHOTO_BYTES = 5 * 1024 * 1024;
+const MAX_PHOTO_BYTES = 20 * 1024 * 1024;
 const PHOTO_OPTIMIZE_THRESHOLD = 1.5 * 1024 * 1024;
 const PHOTO_MAX_EDGE = 1280;
 const PHOTO_JPEG_QUALITY = 0.74;
@@ -69,6 +69,7 @@ const state = {
   selectedItem: null,
   offerFiles: [],
   photoPreviewUrls: [],
+  inlineEdit: null,
   telegramUser: null,
   myItems: [],
   favoriteEntries: [],
@@ -102,6 +103,7 @@ let reportDialogTriggerButton = null;
 let reserveDialogItem = null;
 let reserveDialogTriggerButton = null;
 let reserveDialogFeedbackElement = null;
+let cameraCaptureTarget = "offer";
 
 const runtimeName = document.querySelector("#runtime-name");
 const telegramSdkState = document.querySelector("#telegram-sdk-state");
@@ -131,6 +133,7 @@ const detailView = document.querySelector("#detail-view");
 const detailShare = document.querySelector("#detail-share");
 const shareFeedback = document.querySelector("#share-feedback");
 const detailMedia = document.querySelector("#detail-media");
+const editImages = document.querySelector("#edit-images");
 const photoLightbox = document.querySelector("#photo-lightbox");
 const photoLightboxTitle = document.querySelector("#photo-lightbox-title");
 const photoLightboxCounter = document.querySelector("#photo-lightbox-counter");
@@ -154,6 +157,11 @@ const interestButton = document.querySelector("#interest-button");
 const reportProblemButton = document.querySelector("#report-problem-button");
 const detailActionState = document.querySelector("#detail-action-state");
 const detailOwnerActions = document.querySelector("#detail-owner-actions");
+const detailOwnerEditRow = document.querySelector("#detail-owner-edit-row");
+const editItemButton = document.querySelector("#edit-item-button");
+const editSaveButton = document.querySelector("#edit-save-button");
+const editCancelButton = document.querySelector("#edit-cancel-button");
+const detailInlineEditActions = document.querySelector("#detail-inline-edit-actions");
 const manageStatusButton = document.querySelector("#manage-status-button");
 const markDeliveredButton = document.querySelector("#mark-delivered-button");
 const deleteItemButton = document.querySelector("#delete-item-button");
@@ -694,10 +702,12 @@ function configureStatusButton(button, status) {
   button.replaceChildren(createIconElement(actionIcon, fallback), document.createTextNode(actionLabel));
 }
 
-function configureDeleteButton(button) {
+function configureDeleteButton(button, { labelled = false } = {}) {
   if (!button) return;
   button.setAttribute("aria-label", "Borrar objeto");
-  button.replaceChildren(createIconElement("fa-trash-can", "⌫"));
+  const content = [createIconElement("fa-trash-can", "⌫")];
+  if (labelled) content.push(document.createTextNode("Borrar"));
+  button.replaceChildren(...content);
 }
 
 function normalizeTelegramUsername(value) {
@@ -1647,7 +1657,332 @@ function movePhotoLightbox(step) {
   updatePhotoLightbox();
 }
 
+function getEditPhotoEntries(item) {
+  const urls = getItemImageUrls(item);
+  const keys = Array.isArray(item?.photoKeys) ? item.photoKeys : [];
+  return urls.map((url, index) => ({
+    url,
+    key: String(keys[index] ?? `index:${index}`),
+  }));
+}
+
+function revokeInlineEditPreviewUrls() {
+  state.inlineEdit?.previewUrls?.forEach((url) => URL.revokeObjectURL(url));
+  if (state.inlineEdit) state.inlineEdit.previewUrls = [];
+}
+
+function setInlineEditMessage(message = "", stateName = "") {
+  if (!detailActionState) return;
+  detailActionState.textContent = message;
+  detailActionState.dataset.state = stateName;
+}
+
+function getInlineEditSelectOptions(selectId) {
+  const source = document.querySelector(`#${selectId}`);
+  return source
+    ? [...source.options].filter((option) => option.value).map((option) => ({
+        value: option.value,
+        label: option.textContent,
+      }))
+    : [];
+}
+
+function createInlineEditSelect(options, value, label) {
+  const select = document.createElement("select");
+  select.className = "detail-inline-edit__control";
+  select.setAttribute("aria-label", label);
+  options.forEach((optionData) => {
+    const option = document.createElement("option");
+    option.value = optionData.value;
+    option.textContent = optionData.label;
+    option.selected = optionData.value === value;
+    select.append(option);
+  });
+  return select;
+}
+
+function renderInlineEditMedia() {
+  const edit = state.inlineEdit;
+  if (!edit || !detailMedia) return;
+
+  revokeInlineEditPreviewUrls();
+  detailMedia.replaceChildren();
+  detailMedia.classList.add("detail-media--editing");
+
+  const editor = document.createElement("div");
+  editor.className = "detail-inline-edit__media-editor";
+  const grid = document.createElement("div");
+  grid.className = "detail-inline-edit__photos";
+
+  edit.existingPhotos.forEach((photo, index) => {
+    const tile = document.createElement("div");
+    tile.className = "detail-inline-edit__photo";
+    const image = document.createElement("img");
+    image.src = photo.url;
+    image.alt = `Foto ${index + 1}`;
+    tile.append(image);
+    const remove = document.createElement("button");
+    remove.className = "detail-inline-edit__photo-remove";
+    remove.type = "button";
+    remove.setAttribute("aria-label", `Quitar foto ${index + 1}`);
+    remove.title = "Quitar foto";
+    remove.innerHTML = '<i class="fa-solid fa-xmark fa-icon" data-fallback="×" aria-hidden="true"></i>';
+    remove.addEventListener("click", () => {
+      edit.existingPhotos.splice(index, 1);
+      renderInlineEditMedia();
+    });
+    tile.append(remove);
+    grid.append(tile);
+  });
+
+  edit.newFiles.forEach((file, index) => {
+    const tile = document.createElement("div");
+    tile.className = "detail-inline-edit__photo";
+    const image = document.createElement("img");
+    const previewUrl = URL.createObjectURL(file);
+    edit.previewUrls.push(previewUrl);
+    image.src = previewUrl;
+    image.alt = file.name;
+    tile.append(image);
+    const remove = document.createElement("button");
+    remove.className = "detail-inline-edit__photo-remove";
+    remove.type = "button";
+    remove.setAttribute("aria-label", `Quitar foto ${edit.existingPhotos.length + index + 1}`);
+    remove.title = "Quitar foto";
+    remove.innerHTML = '<i class="fa-solid fa-xmark fa-icon" data-fallback="×" aria-hidden="true"></i>';
+    remove.addEventListener("click", () => {
+      edit.newFiles.splice(index, 1);
+      renderInlineEditMedia();
+    });
+    tile.append(remove);
+    grid.append(tile);
+  });
+
+  if (!grid.children.length) {
+    const empty = document.createElement("p");
+    empty.className = "detail-inline-edit__photos-empty";
+    empty.textContent = "Añade al menos una foto.";
+    grid.append(empty);
+  }
+
+  const actions = document.createElement("div");
+  actions.className = "detail-inline-edit__photo-actions";
+  const galleryButton = document.createElement("button");
+  galleryButton.className = "secondary-button secondary-button--compact";
+  galleryButton.type = "button";
+  galleryButton.innerHTML = '<i class="fa-solid fa-images fa-icon" data-fallback="▧" aria-hidden="true"></i><span>Añadir foto</span>';
+  galleryButton.addEventListener("click", () => editImages?.click());
+  actions.append(galleryButton);
+
+  const cameraButton = document.createElement("button");
+  cameraButton.className = "secondary-button secondary-button--compact";
+  cameraButton.type = "button";
+  cameraButton.innerHTML = '<i class="fa-solid fa-camera fa-icon" data-fallback="◎" aria-hidden="true"></i><span>Hacer foto</span>';
+  cameraButton.addEventListener("click", () => {
+    cameraCaptureTarget = "edit";
+    void handleCameraRequest();
+  });
+  actions.append(cameraButton);
+
+  const note = document.createElement("p");
+  note.className = "detail-inline-edit__photo-note";
+  note.textContent = "Entre 1 y 2 fotos. Se optimizan en el navegador y n8n las normaliza si hiciera falta.";
+  editor.append(grid, actions, note);
+  detailMedia.append(editor);
+}
+
+function openInlineEdit(item = state.selectedItem) {
+  const source = state.myItems.find((candidate) => candidate.id === item?.id) ?? item;
+  const adminUser = isAdminUser();
+  const adminEditable = adminUser && ["available", "reserved", "completed", "expired"].includes(source?.status);
+  const ownerEditable = isOwnItem(source) && source?.status === "available" && isNotExpired(source);
+  if (!source?.id || (!adminEditable && !ownerEditable)) return;
+
+  state.inlineEdit = {
+    itemId: source.id,
+    baseUpdatedAt: source.updatedAt ?? null,
+    item: source,
+    title: String(source.title ?? ""),
+    description: String(source.description ?? ""),
+    category: String(source.category ?? "Otros"),
+    zone: String(source.zone ?? "Valladolid"),
+    existingPhotos: getEditPhotoEntries(source),
+    newFiles: [],
+    previewUrls: [],
+  };
+
+  detailTitle.replaceChildren();
+  const titleInput = document.createElement("input");
+  titleInput.className = "detail-inline-edit__control detail-inline-edit__title";
+  titleInput.type = "text";
+  titleInput.maxLength = 80;
+  titleInput.value = state.inlineEdit.title;
+  titleInput.setAttribute("aria-label", "Título");
+  titleInput.addEventListener("input", () => { state.inlineEdit.title = titleInput.value; });
+  detailTitle.append(titleInput);
+
+  detailCategory.replaceChildren(createInlineEditSelect(
+    getInlineEditSelectOptions("offer-category"),
+    state.inlineEdit.category,
+    "Categoría",
+  ));
+  detailCategory.firstElementChild.addEventListener("change", (event) => {
+    state.inlineEdit.category = event.target.value;
+  });
+
+  detailDescription.hidden = false;
+  detailDescription.replaceChildren();
+  const descriptionInput = document.createElement("textarea");
+  descriptionInput.className = "detail-inline-edit__control detail-inline-edit__description";
+  descriptionInput.maxLength = 600;
+  descriptionInput.rows = 4;
+  descriptionInput.value = state.inlineEdit.description;
+  descriptionInput.setAttribute("aria-label", "Descripción");
+  descriptionInput.addEventListener("input", () => { state.inlineEdit.description = descriptionInput.value; });
+  detailDescription.append(descriptionInput);
+
+  const zoneSelect = createInlineEditSelect(
+    getInlineEditSelectOptions("offer-zone"),
+    state.inlineEdit.zone,
+    "Zona aproximada",
+  );
+  detailZone.replaceChildren(zoneSelect);
+  zoneSelect.addEventListener("change", (event) => { state.inlineEdit.zone = event.target.value; });
+
+  renderInlineEditMedia();
+  editItemButton.hidden = true;
+  if (detailOwnerEditRow) detailOwnerEditRow.hidden = true;
+  detailInlineEditActions.hidden = false;
+  interestButton.hidden = true;
+  reportProblemButton.hidden = true;
+  manageStatusButton.disabled = true;
+  markDeliveredButton.disabled = true;
+  deleteItemButton.hidden = true;
+  deleteItemButton.disabled = true;
+  setInlineEditMessage("Puedes cambiar el título, el texto, la categoría, la zona y las fotos.");
+  titleInput.focus();
+}
+
+function cancelInlineEdit() {
+  const item = state.inlineEdit?.item ?? state.selectedItem;
+  revokeInlineEditPreviewUrls();
+  state.inlineEdit = null;
+  if (editImages) editImages.value = "";
+  if (item) renderDetail(item, { live: state.selectedItemLive });
+}
+
+function handleEditPhotoSelection(event, selectedFiles = null) {
+  const edit = state.inlineEdit;
+  if (!edit) return;
+  const files = selectedFiles ?? [...event.target.files];
+  event.target.value = "";
+  const invalidFiles = files.filter((file) => !ALLOWED_PHOTO_TYPES.has(file.type));
+  const existingKeys = new Set(edit.newFiles.map(photoKey));
+  const newFiles = files.filter((file) => ALLOWED_PHOTO_TYPES.has(file.type) && !existingKeys.has(photoKey(file)));
+  const availableSlots = Math.max(0, MAX_OFFER_PHOTOS - edit.existingPhotos.length - edit.newFiles.length);
+  const filesToAdd = newFiles.slice(0, availableSlots);
+  edit.newFiles.push(...filesToAdd);
+  renderInlineEditMedia();
+
+  if (filesToAdd.length < newFiles.length) {
+    setInlineEditMessage(`Puedes guardar hasta ${MAX_OFFER_PHOTOS} fotos.`, "error");
+  } else if (invalidFiles.length) {
+    setInlineEditMessage("Cada foto debe ser JPG, PNG o WebP.", "error");
+  } else {
+    setInlineEditMessage("");
+  }
+}
+
+async function saveInlineEdit() {
+  const edit = state.inlineEdit;
+  if (!edit || editSaveButton?.disabled) return;
+
+  const title = edit.title.trim();
+  const description = edit.description.trim();
+  const finalPhotoCount = edit.existingPhotos.length + edit.newFiles.length;
+  if (title.length < 3 || title.length > 80) {
+    setInlineEditMessage("El título debe tener entre 3 y 80 caracteres.", "error");
+    return;
+  }
+  if (!edit.category || !edit.zone || description.length > 600) {
+    setInlineEditMessage("Revisa la categoría, la zona y la descripción.", "error");
+    return;
+  }
+  if (finalPhotoCount < 1 || finalPhotoCount > MAX_OFFER_PHOTOS) {
+    setInlineEditMessage(`La publicación debe conservar entre 1 y ${MAX_OFFER_PHOTOS} fotos.`, "error");
+    return;
+  }
+  if (!auth?.hasInitData()) {
+    setInlineEditMessage("Abre la Mini App desde Telegram para guardar cambios.", "error");
+    return;
+  }
+  if (!api?.isEditConfigured || typeof api.editItem !== "function") {
+    setInlineEditMessage("La edición todavía no está conectada en n8n.", "error");
+    return;
+  }
+
+  editSaveButton.disabled = true;
+  editCancelButton.disabled = true;
+  editSaveButton.classList.add("button-loading");
+  editSaveButton.querySelector("span")?.replaceChildren(document.createTextNode("Guardando…"));
+  setInlineEditMessage("Comprobando contenido y guardando…", "pending");
+
+  try {
+    const optimizedFiles = await Promise.all(edit.newFiles.map(preparePhotoForUpload));
+    const result = await api.editItem({
+      initData: auth.getInitData(),
+      item_id: edit.itemId,
+      expected_updated_at: edit.baseUpdatedAt,
+      item: { title, description, category: edit.category, zone: edit.zone },
+      keep_photo_keys: edit.existingPhotos.map((photo) => photo.key),
+    }, optimizedFiles);
+
+    const returnedImageUrls = Array.isArray(result.image_urls)
+      ? result.image_urls.filter((url) => typeof url === "string" && url.trim())
+      : [];
+    const fallbackImages = [
+      ...edit.existingPhotos.map((photo) => photo.url),
+      ...optimizedFiles.map((file) => URL.createObjectURL(file)),
+    ];
+    const updatedItem = {
+      ...edit.item,
+      title: result.title || title,
+      description,
+      category: result.category || edit.category,
+      zone: result.zone || edit.zone,
+      updatedAt: result.updated_at ?? new Date().toISOString(),
+      imageUrls: returnedImageUrls.length ? returnedImageUrls : fallbackImages,
+      imageUrl: result.image_url || (returnedImageUrls[0] ?? fallbackImages[0] ?? null),
+      photoKeys: Array.isArray(result.photo_keys) ? result.photo_keys : edit.existingPhotos.map((photo) => photo.key),
+    };
+    state.items = state.items.map((candidate) => candidate.id === updatedItem.id ? updatedItem : candidate);
+    state.myItems = state.myItems.map((candidate) => candidate.id === updatedItem.id ? updatedItem : candidate);
+    rememberOwnItem(updatedItem);
+    api.invalidateCatalog?.();
+    api.invalidateMine?.();
+    state.catalogNeedsRefresh = true;
+    revokeInlineEditPreviewUrls();
+    state.inlineEdit = null;
+    if (editImages) editImages.value = "";
+    renderItems();
+    renderMyItems();
+    renderDetail(updatedItem);
+    setInlineEditMessage("Publicación actualizada.", "success");
+  } catch (error) {
+    editSaveButton.disabled = false;
+    editCancelButton.disabled = false;
+    setInlineEditMessage(error.message || "No se han podido guardar los cambios.", "error");
+  } finally {
+    editSaveButton.classList.remove("button-loading");
+    editSaveButton.querySelector("span")?.replaceChildren(document.createTextNode("Guardar cambios"));
+  }
+}
+
 function renderDetail(item, { live = true, error = "" } = {}) {
+  if (state.inlineEdit && state.inlineEdit.itemId !== item?.id) {
+    revokeInlineEditPreviewUrls();
+    state.inlineEdit = null;
+  }
   state.selectedItem = item;
   state.selectedItemLive = live;
   if (isNotFoundPage) {
@@ -1705,6 +2040,10 @@ function renderDetail(item, { live = true, error = "" } = {}) {
   const canManageItem = ownItem || adminUser;
   const ownerUsername = normalizeTelegramUsername(item.ownerUsername);
   const isAvailable = item.status === "available" && isNotExpired(item);
+  const canEditItem = live && (
+    (adminUser && ["available", "reserved", "completed", "expired"].includes(item.status))
+    || (ownItem && isAvailable)
+  );
   detailView.classList.toggle("detail-view--owner", canManageItem && live);
   interestButton.hidden = ownItem || !live || !isAvailable;
   interestButton.disabled = ownItem || !live || !isAvailable || !ownerUsername;
@@ -1746,15 +2085,21 @@ function renderDetail(item, { live = true, error = "" } = {}) {
   }
 
   if (detailOwnerActions) detailOwnerActions.hidden = !canManageItem || !live;
+  if (detailOwnerEditRow) detailOwnerEditRow.hidden = Boolean(state.inlineEdit);
+  if (editItemButton) {
+    editItemButton.hidden = !canEditItem || Boolean(state.inlineEdit);
+    editItemButton.disabled = !canEditItem;
+  }
+  if (detailInlineEditActions) detailInlineEditActions.hidden = !state.inlineEdit;
   if (markDeliveredButton) {
     markDeliveredButton.disabled = false;
     configureDeliveryButton(markDeliveredButton, item.status);
   }
   configureStatusButton(manageStatusButton, item.status);
   if (deleteItemButton) {
-    deleteItemButton.hidden = !canManageItem || !live;
+    deleteItemButton.hidden = !canManageItem || !live || Boolean(state.inlineEdit);
     deleteItemButton.disabled = false;
-    configureDeleteButton(deleteItemButton);
+    configureDeleteButton(deleteItemButton, { labelled: true });
   }
   renderRelatedItems(item);
 }
@@ -2717,17 +3062,27 @@ function closeCameraDialog() {
 }
 
 function addCapturedPhoto(blob) {
-  if (state.offerFiles.length >= MAX_OFFER_PHOTOS) {
-    setPhotoFieldError(true);
-    setFormState(`Puedes añadir hasta ${MAX_OFFER_PHOTOS} fotos.`, "error");
-    return false;
-  }
-
   const capturedAt = Date.now();
   const capturedFile = new File([blob], `camara-${capturedAt}.jpg`, {
     type: "image/jpeg",
     lastModified: capturedAt,
   });
+  if (cameraCaptureTarget === "edit" && state.inlineEdit) {
+    const edit = state.inlineEdit;
+    if (edit.existingPhotos.length + edit.newFiles.length >= MAX_OFFER_PHOTOS) {
+      setInlineEditMessage(`Puedes guardar hasta ${MAX_OFFER_PHOTOS} fotos.`, "error");
+      return false;
+    }
+    edit.newFiles.push(capturedFile);
+    renderInlineEditMedia();
+    setInlineEditMessage("");
+    return true;
+  }
+  if (state.offerFiles.length >= MAX_OFFER_PHOTOS) {
+    setPhotoFieldError(true);
+    setFormState(`Puedes añadir hasta ${MAX_OFFER_PHOTOS} fotos.`, "error");
+    return false;
+  }
   state.offerFiles = [...state.offerFiles, capturedFile];
   renderPhotoPreview(state.offerFiles);
   setPhotoFieldError(false);
@@ -2762,18 +3117,28 @@ async function captureCameraPhoto() {
 }
 
 async function handleCameraRequest() {
-  if (state.offerFiles.length >= MAX_OFFER_PHOTOS) {
-    setPhotoFieldError(true);
-    setFormState(`Puedes añadir hasta ${MAX_OFFER_PHOTOS} fotos.`, "error");
+  const currentPhotoCount = cameraCaptureTarget === "edit" && state.inlineEdit
+    ? state.inlineEdit.existingPhotos.length + state.inlineEdit.newFiles.length
+    : state.offerFiles.length;
+  if (currentPhotoCount >= MAX_OFFER_PHOTOS) {
+    if (cameraCaptureTarget === "edit") {
+      setInlineEditMessage(`Puedes guardar hasta ${MAX_OFFER_PHOTOS} fotos.`, "error");
+    } else {
+      setPhotoFieldError(true);
+      setFormState(`Puedes añadir hasta ${MAX_OFFER_PHOTOS} fotos.`, "error");
+    }
     return;
   }
 
   if (!cameraDialog || !cameraPreview || !navigator.mediaDevices?.getUserMedia) {
-    setFormState("La cámara no está disponible en este dispositivo. Elige una foto existente.", "error");
+    const message = "La cámara no está disponible en este dispositivo. Elige una foto existente.";
+    if (cameraCaptureTarget === "edit") setInlineEditMessage(message, "error");
+    else setFormState(message, "error");
     return;
   }
 
-  setFormState("");
+  if (cameraCaptureTarget === "edit") setInlineEditMessage("");
+  else setFormState("");
   setCameraDialogState("Preparando cámara…", "pending");
   if (typeof cameraDialog.showModal === "function") {
     cameraDialog.showModal();
@@ -2793,12 +3158,11 @@ async function handleCameraRequest() {
   } catch (error) {
     closeCameraDialog();
     const permissionDenied = ["NotAllowedError", "PermissionDeniedError", "SecurityError"].includes(error?.name);
-    setFormState(
-      permissionDenied
-        ? "No se ha concedido permiso para usar la cámara. Puedes elegir una foto existente."
-        : "No se ha podido abrir la cámara. Puedes elegir una foto existente.",
-      "error",
-    );
+    const message = permissionDenied
+      ? "No se ha concedido permiso para usar la cámara. Puedes elegir una foto existente."
+      : "No se ha podido abrir la cámara. Puedes elegir una foto existente.";
+    if (cameraCaptureTarget === "edit") setInlineEditMessage(message, "error");
+    else setFormState(message, "error");
   }
 }
 
@@ -2808,11 +3172,16 @@ function handleGalleryRequest() {
 
 function handlePhotoSelection(event) {
   const files = [...event.target.files];
+
+  // El límite efectivo de 20 MB se comprueba después de optimizar la imagen al enviar.
+  // En la selección solo rechazamos formatos que el navegador no puede tratar.
+  if (cameraCaptureTarget === "edit") {
+    handleEditPhotoSelection(event, files);
+    return;
+  }
   // Permite volver a seleccionar el mismo archivo en una selección posterior.
   event.target.value = "";
 
-  // El límite de 5 MB se comprueba después de optimizar la imagen al enviar.
-  // En la selección solo rechazamos formatos que el navegador no puede tratar.
   const invalidFiles = files.filter((file) => !ALLOWED_PHOTO_TYPES.has(file.type));
   const existingKeys = new Set(state.offerFiles.map(photoKey));
   const newFiles = files.filter((file) => (
@@ -2897,7 +3266,7 @@ async function optimizePhoto(file) {
   }
 
   // Una pasada normal y solo dos planes de emergencia. En la mayoría de los
-  // móviles la primera pasada ya deja la imagen por debajo de 5 MB.
+  // móviles la primera pasada ya deja la imagen por debajo de 20 MB.
   let blob = await render(PHOTO_MAX_EDGE, PHOTO_JPEG_QUALITY);
   if (blob && blob.size > MAX_PHOTO_BYTES) {
     blob = await render(960, 0.58);
@@ -2909,7 +3278,7 @@ async function optimizePhoto(file) {
   if (typeof image.close === "function") image.close();
   if (!blob) return file;
   if (blob.size > MAX_PHOTO_BYTES) {
-    throw new Error(`La foto ${file.name} no se puede reducir por debajo de 5 MB.`);
+    throw new Error(`La foto ${file.name} no se puede reducir por debajo de 20 MB.`);
   }
 
   const baseName = file.name.replace(/\.[^.]+$/, "") || "foto";
@@ -3973,8 +4342,18 @@ deleteItemDialog?.addEventListener("click", (event) => {
 });
 offerImages?.addEventListener("change", handlePhotoSelection);
 offerPhotoPicker?.addEventListener("click", handleGalleryRequest);
-offerCamera?.addEventListener("change", handlePhotoSelection);
-offerCameraButton?.addEventListener("click", handleCameraRequest);
+offerCamera?.addEventListener("change", (event) => {
+  cameraCaptureTarget = "offer";
+  handlePhotoSelection(event);
+});
+offerCameraButton?.addEventListener("click", () => {
+  cameraCaptureTarget = "offer";
+  void handleCameraRequest();
+});
+editImages?.addEventListener("change", handleEditPhotoSelection);
+editItemButton?.addEventListener("click", () => openInlineEdit(state.selectedItem));
+editSaveButton?.addEventListener("click", () => void saveInlineEdit());
+editCancelButton?.addEventListener("click", cancelInlineEdit);
 cameraDialogClose?.addEventListener("click", closeCameraDialog);
 cameraDialogCancel?.addEventListener("click", closeCameraDialog);
 cameraCaptureButton?.addEventListener("click", () => {

@@ -50,6 +50,12 @@ de nuevo la identidad, los datos y las condiciones de moderación.
   publicarlo si sigue disponible.
 - La persona propietaria puede borrar una publicación con confirmación. El
   borrado la oculta de la plataforma sin marcarla como entregada.
+- La persona propietaria puede editar en línea el título, la descripción, la
+  categoría, la zona y las fotos de una publicación disponible. Los cambios
+  pasan por la misma moderación automática que una publicación nueva.
+- Los administradores pueden editar esos mismos campos en cualquier ficha
+  visible, aunque pertenezca a otra persona, conservando su estado y pasando
+  también por moderación.
 - Las publicaciones sin nombre de usuario público se mantienen visibles, pero
   no habilitan el contacto directo.
 
@@ -108,6 +114,7 @@ publicar con fotografías, utiliza el workflow de fotos:
 | `GET /segundavida/item/<public_id>` | Ficha pública individual | [`sv_get_item.workflow.json`](docs/sv_get_item.workflow.json) |
 | `POST /segundavida/whoami` | Validación de identidad Telegram | [`sv_validate_telegram_user.workflow.json`](docs/sv_validate_telegram_user.workflow.json) |
 | `POST /segundavida/publish` | Publicación con fotos y consentimiento | [`sv_publish_item_photos.workflow.json`](docs/sv_publish_item_photos.workflow.json) |
+| `POST /segundavida/edit` | Edición inline autenticada y moderada de publicaciones propias o gestionadas por administración | [`sv_edit_item.workflow.json`](docs/sv_edit_item.workflow.json) |
 | `POST /segundavida/mine` | Publicaciones de la persona autenticada | [`sv_mine_items.workflow.json`](docs/sv_mine_items.workflow.json) |
 | `POST /segundavida/complete` | Reservar, liberar, marcar entregado, reabrir u ocultar | [`sv_complete_item.workflow.json`](docs/sv_complete_item.workflow.json) |
 | `POST /segundavida/interaction` | Incrementar interés o intento de contacto de una ficha | [`sv_record_interaction.workflow.json`](docs/sv_record_interaction.workflow.json) |

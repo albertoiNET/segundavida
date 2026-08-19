@@ -2,6 +2,7 @@
 const N8N_DATA_URL = "https://tasks.nukeador.com/webhook/segundavida/data";
 const N8N_ITEM_URL = "https://tasks.nukeador.com/webhook/c2b5eab6-9f26-48e9-9561-81dc6d3347ec/segundavida/item";
 const N8N_PUBLISH_URL = "https://tasks.nukeador.com/webhook/segundavida/publish";
+const N8N_EDIT_URL = "https://tasks.nukeador.com/webhook/segundavida/edit";
 const N8N_COMPLETE_URL = "https://tasks.nukeador.com/webhook/segundavida/complete";
 const N8N_MINE_URL = "https://tasks.nukeador.com/webhook/segundavida/mine";
 const N8N_REPORT_URL = "https://tasks.nukeador.com/webhook/segundavida/report";
@@ -74,12 +75,16 @@ function normalizeItem(record, { privateFields = false } = {}) {
     ownerTelegramId: privateFields ? fields.owner_telegram_id ?? "" : "",
     status: fields.status ?? "hidden",
     createdAt: fields.created_at ?? fields.CreatedAt ?? null,
+    updatedAt: fields.updated_at ?? fields["Last modified time"] ?? fields.UpdatedAt ?? null,
     completedAt: fields.completed_at ?? null,
     expiresAt: fields.expires_at ?? null,
     reservedAt: privateFields ? fields.reserved_at ?? null : null,
     reservationExpiresAt: privateFields ? fields.reservation_expires_at ?? null : null,
     imageUrl,
     imageUrls,
+    photoKeys: privateFields
+      ? [...new Set(asAttachmentList(fields.photo_keys ?? fields.photoKeys).map((key) => String(key).trim()).filter(Boolean))]
+      : [],
     interestCount: Number(fields.interest_count ?? 0),
   };
 }
@@ -300,6 +305,40 @@ async function completeItem(payload) {
   return result ?? { ok: false, error: "Respuesta vacía del endpoint de gestión." };
 }
 
+async function editItem(payload, files = []) {
+  if (!N8N_EDIT_URL) {
+    throw new Error("El endpoint de edición todavía no está configurado.");
+  }
+
+  const body = new FormData();
+  body.append("payload", JSON.stringify(payload));
+  files.forEach((file, index) => {
+    body.append(`photo_${index}`, file, file.name);
+  });
+
+  const response = await fetch(N8N_EDIT_URL, {
+    method: "POST",
+    headers: { Accept: "application/json" },
+    body,
+  });
+
+  let result = null;
+  try {
+    result = await response.json();
+  } catch {
+    result = null;
+  }
+  result = Array.isArray(result) ? result[0] ?? null : result;
+
+  if (!response.ok || result?.ok !== true) {
+    const error = new Error(result?.error ?? `n8n respondió con HTTP ${response.status}`);
+    error.code = result?.error_code ?? result?.error ?? `http_${response.status}`;
+    throw error;
+  }
+
+  return result;
+}
+
 async function reportProblem(payload) {
   if (!N8N_REPORT_URL) {
     throw new Error("El endpoint de reportes todavía no está configurado.");
@@ -368,6 +407,7 @@ window.SecondaVidaApi = Object.freeze({
   isDataConfigured: Boolean(N8N_DATA_URL),
   isItemConfigured: Boolean(N8N_ITEM_URL),
   isPublishConfigured: Boolean(N8N_PUBLISH_URL),
+  isEditConfigured: Boolean(N8N_EDIT_URL),
   isCompleteConfigured: Boolean(N8N_COMPLETE_URL),
   isMineConfigured: Boolean(N8N_MINE_URL),
   isReportConfigured: Boolean(N8N_REPORT_URL),
@@ -378,6 +418,7 @@ window.SecondaVidaApi = Object.freeze({
   invalidateCatalog,
   invalidateMine,
   publishItem,
+  editItem,
   completeItem,
   reportProblem,
   recordInteraction,

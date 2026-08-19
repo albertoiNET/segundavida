@@ -107,6 +107,29 @@ class StaticContractTests(unittest.TestCase):
         self.assertIn("interest_count", workflow_source)
         self.assertIn("contact_attempt_count", workflow_source)
 
+    def test_edit_workflow_contract_is_owner_scoped_moderated_and_normalized(self):
+        workflow = json.loads((ROOT / "docs" / "sv_edit_item.workflow.json").read_text(encoding="utf-8"))
+        webhook = next(node for node in workflow["nodes"] if node["name"] == "Edit Webhook")
+        self.assertEqual(webhook["parameters"]["httpMethod"], "POST")
+        self.assertEqual(webhook["parameters"]["path"], "segundavida/edit")
+
+        workflow_source = json.dumps(workflow, ensure_ascii=False)
+        for marker in (
+            "owner_telegram_id",
+            "is_admin",
+            "expected_updated_at",
+            "keep_photo_keys",
+            "current_status",
+            "['available', 'reserved', 'completed', 'expired']",
+            "Moderate edited text",
+            "Moderate edited text and photos",
+            "20 * 1024 * 1024",
+            "Normalize edited photo",
+            "publication_not_allowed",
+            "Regenerate static pages",
+        ):
+            self.assertIn(marker, workflow_source)
+
     def test_interest_signal_contract_is_live_and_discreet(self):
         index_source = self.template.read_text(encoding="utf-8")
         app_source = (ROOT / "js" / "app.js").read_text(encoding="utf-8")
@@ -194,7 +217,8 @@ class StaticContractTests(unittest.TestCase):
     def test_client_contract_keeps_old_endpoints_and_uses_clean_routes(self):
         api_source = (ROOT / "js" / "api.js").read_text(encoding="utf-8")
         app_source = (ROOT / "js" / "app.js").read_text(encoding="utf-8")
-        for endpoint in ("/data", "/publish", "/complete", "/mine"):
+        index_source = self.template.read_text(encoding="utf-8")
+        for endpoint in ("/data", "/publish", "/edit", "/complete", "/mine"):
             self.assertIn(endpoint, api_source)
         self.assertIn("N8N_ITEM_URL", api_source)
         self.assertIn("NOCODB_BASE_URL", api_source)
@@ -207,6 +231,15 @@ class StaticContractTests(unittest.TestCase):
         self.assertNotIn('url.hash = `item=', app_source)
         self.assertIn('body.append("payload"', api_source)
         self.assertIn('body.append(`photo_${index}`', api_source)
+        self.assertIn("N8N_EDIT_URL", api_source)
+        self.assertIn("keep_photo_keys", app_source)
+        self.assertIn('id="edit-item-button"', index_source)
+        self.assertIn('id="detail-owner-edit-row"', index_source)
+        self.assertIn("detail-owner-actions__status-row", index_source)
+        self.assertIn("detail-inline-edit-actions", index_source)
+        self.assertIn("detailOwnerEditRow", app_source)
+        self.assertIn("MAX_PHOTO_BYTES = 20 * 1024 * 1024", app_source)
+        self.assertIn("sv_edit_item.workflow.json", (ROOT / "README.md").read_text(encoding="utf-8"))
         self.assertIn("function handleCameraRequest", app_source)
         self.assertIn("navigator.mediaDevices.getUserMedia", app_source)
         self.assertIn("function captureCameraPhoto", app_source)
@@ -233,6 +266,8 @@ class StaticContractTests(unittest.TestCase):
         self.assertIn("function isAdminUser", app_source)
         self.assertIn("function refreshSelectedDetailForIdentity", app_source)
         self.assertIn("const canManageItem = ownItem || adminUser", app_source)
+        self.assertIn("adminUser && [\"available\", \"reserved\", \"completed\", \"expired\"]", app_source)
+        self.assertIn("const adminEditable = adminUser &&", app_source)
         self.assertIn('const actionLabel = reserved ? "Liberar reserva" : "Está reservado";', app_source)
         self.assertIn('const actionLabel = completed ? "Volver a publicar" : "Está entregado";', app_source)
         self.assertIn('createIconElement("fa-trash-can", "⌫")', app_source)

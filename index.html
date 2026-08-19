@@ -145,6 +145,7 @@
 
       <section class="detail-view" id="detail-view" hidden aria-labelledby="detail-title">
         <div class="detail-media" id="detail-media"></div>
+        <input id="edit-images" type="file" accept="image/jpeg,image/png,image/webp" multiple hidden aria-describedby="detail-action-state" />
         <div class="detail-content">
           <div class="detail-title-row">
             <h1 id="detail-title">Objeto</h1>
@@ -185,16 +186,32 @@
           <div class="action-state" id="detail-action-state" aria-live="polite"></div>
           <div class="detail-owner-actions" id="detail-owner-actions" hidden>
             <div class="detail-owner-actions__controls">
-              <button class="secondary-button delivery-action-button secondary-button--reserve" id="manage-status-button" type="button" hidden>
-                <i class="fa-solid fa-clock fa-icon" data-fallback="◷" aria-hidden="true"></i>
-                <span>Está reservado</span>
-              </button>
-              <button class="secondary-button delivery-action-button secondary-button--complete" id="mark-delivered-button" type="button">
+              <div class="detail-owner-actions__row detail-owner-actions__status-row">
+                <button class="secondary-button delivery-action-button secondary-button--reserve" id="manage-status-button" type="button" hidden>
+                  <i class="fa-solid fa-clock fa-icon" data-fallback="◷" aria-hidden="true"></i>
+                  <span>Está reservado</span>
+                </button>
+                <button class="secondary-button delivery-action-button secondary-button--complete" id="mark-delivered-button" type="button">
+                  <i class="fa-solid fa-check fa-icon" data-fallback="✓" aria-hidden="true"></i>
+                  <span>Está entregado</span>
+                </button>
+              </div>
+              <div class="detail-owner-actions__row detail-owner-actions__edit-row" id="detail-owner-edit-row">
+                <button class="quiet-action edit-item-button" id="edit-item-button" type="button" aria-label="Editar publicación" title="Editar publicación" hidden>
+                  <i class="fa-solid fa-pen fa-icon" data-fallback="✎" aria-hidden="true"></i>
+                  <span>Editar</span>
+                </button>
+                <button class="quiet-action quiet-action--delete" id="delete-item-button" type="button" aria-label="Borrar objeto">
+                  <i class="fa-solid fa-trash-can fa-icon" data-fallback="⌫" aria-hidden="true"></i>
+                  <span>Borrar</span>
+                </button>
+              </div>
+            </div>
+            <div class="detail-inline-edit-actions" id="detail-inline-edit-actions" hidden>
+              <button class="secondary-button secondary-button--compact" id="edit-cancel-button" type="button">Cancelar</button>
+              <button class="primary-button primary-button--compact" id="edit-save-button" type="button">
                 <i class="fa-solid fa-check fa-icon" data-fallback="✓" aria-hidden="true"></i>
-                <span>Está entregado</span>
-              </button>
-              <button class="quiet-action quiet-action--delete" id="delete-item-button" type="button" aria-label="Borrar objeto">
-                <i class="fa-solid fa-trash-can fa-icon" data-fallback="⌫" aria-hidden="true"></i>
+                <span>Guardar cambios</span>
               </button>
             </div>
           </div>
