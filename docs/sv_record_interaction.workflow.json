@@ -171,7 +171,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const input = $('Prepare interaction').first()?.json ?? {}; return [{ json: { response: { ok: true, item_id: input.item_id ?? '', action: input.action ?? '', count: input.count ?? 0, favorite_count: input.favorite_count ?? 0 }, http_status: 200 } }];"
+        "jsCode": "const input = $('Prepare interaction').first()?.json ?? {}; return [{ json: { response: { ok: true, item_id: input.item_id ?? '', action: input.action ?? '', count: input.count ?? 0, interest_count: input.interest_count ?? 0, contact_attempt_count: input.contact_attempt_count ?? 0, favorite_count: input.favorite_count ?? 0 }, http_status: 200 } }];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,

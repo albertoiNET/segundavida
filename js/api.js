@@ -87,6 +87,7 @@ function normalizeItem(record, { privateFields = false } = {}) {
       ? [...new Set(asAttachmentList(fields.photo_keys ?? fields.photoKeys).map((key) => String(key).trim()).filter(Boolean))]
       : [],
     interestCount: Number(fields.interest_count ?? 0),
+    contactAttemptCount: Number(fields.contact_attempt_count ?? 0),
     favoriteCount: Number.isFinite(favoriteCount) ? Math.max(0, favoriteCount) : 0,
   };
 }

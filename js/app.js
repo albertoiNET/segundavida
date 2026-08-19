@@ -774,7 +774,7 @@ function markInteractionRecorded(itemId, action) {
 function renderInterestSignal(item) {
   if (!detailInterestSignal) return;
 
-  const count = Number(item?.interestCount ?? 0);
+  const count = Number(item?.contactAttemptCount ?? 0);
   if (!Number.isFinite(count) || count < 1) {
     detailInterestSignal.hidden = true;
     detailInterestSignal.textContent = "";
@@ -783,16 +783,16 @@ function renderInterestSignal(item) {
 
   detailInterestSignal.hidden = false;
   detailInterestSignal.textContent = count === 1
-    ? "1 persona se ha interesado"
-    : `${count} personas se han interesado`;
+    ? "1 persona ha contactado"
+    : `${count} personas han contactado`;
 }
 
-function updateSelectedInterestCount(count) {
+function updateSelectedContactAttemptCount(count) {
   const normalizedCount = Number(count);
   if (!Number.isFinite(normalizedCount) || normalizedCount < 0) return;
 
   const update = (item) => item?.id === state.selectedItem?.id
-    ? { ...item, interestCount: normalizedCount }
+    ? { ...item, contactAttemptCount: normalizedCount }
     : item;
   state.selectedItem = update(state.selectedItem);
   state.items = state.items.map(update);
@@ -814,8 +814,8 @@ async function recordItemInteraction(item, action) {
       action,
     });
     markInteractionRecorded(item.id, action);
-    if (action === "interest") {
-      updateSelectedInterestCount(result.count ?? result.interest_count);
+    if (action === "contact_attempt") {
+      updateSelectedContactAttemptCount(result.count ?? result.contact_attempt_count);
     }
     return result;
   } catch {
@@ -2546,6 +2546,7 @@ async function openItemFromRoute() {
       imageUrl: null,
       favoriteCount: 0,
       interestCount: 0,
+      contactAttemptCount: 0,
     };
 
     if (demoCompletedItem) {
@@ -3538,6 +3539,7 @@ async function handleOfferSubmit(event) {
       imageUrls: publishedImageUrls,
       favoriteCount: 0,
       interestCount: 0,
+      contactAttemptCount: 0,
     };
 
     rememberOwnItem(publishedItem);
