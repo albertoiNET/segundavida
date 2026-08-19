@@ -2559,7 +2559,7 @@ body.photo-lightbox-open {
 .detail-contact-actions {
   display: grid;
   gap: 0.25rem;
-  margin-top: 1.05rem;
+  margin-top: 0;
 }
 
 .detail-contact-actions__meta {
@@ -2572,7 +2572,7 @@ body.photo-lightbox-open {
 }
 
 .detail-content .detail-contact-actions > #interest-button {
-  margin-top: 0;
+  margin-top: 1.125rem;
 }
 
 .detail-contact-actions .report-problem-button {
@@ -5050,11 +5050,4 @@ body.photo-lightbox-open {
     margin-top: 0.2rem;
   }
 
-  .detail-contact-actions {
-    margin-top: 0;
-  }
-
-  .detail-content .detail-contact-actions > #interest-button {
-    margin-top: 1.125rem;
-  }
 }
