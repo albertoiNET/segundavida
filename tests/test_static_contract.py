@@ -9,7 +9,13 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
 
-from generate_static_pages import ContractError, generate, normalize_item  # noqa: E402
+from generate_static_pages import (  # noqa: E402
+    ContractError,
+    generate,
+    normalize_item,
+    reconcile,
+    stable_image_identity,
+)
 from serve_static import resolve_request_path  # noqa: E402
 from sync_static_asset_urls import sync_asset_urls  # noqa: E402
 
@@ -233,6 +239,67 @@ class StaticContractTests(unittest.TestCase):
                 self.assertTrue((output / "i" / item["id"] / "index.html").exists())
             with self.assertRaises(ContractError):
                 normalize_item({**self.item(), "status": "hidden"})
+
+    def test_incremental_reconcile_preserves_pages_when_only_status_changes(self):
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory)
+            initial = [
+                normalize_item({**self.item(), "public_id": "safe-001", "status": "available"}),
+                normalize_item({**self.item(), "public_id": "safe-002", "status": "completed"}),
+            ]
+            first = reconcile(initial, output, self.template, self.site_url, force_full=True)
+            self.assertEqual(first["created"], 2)
+
+            original_page = (output / "i" / "safe-001" / "index.html").read_bytes()
+            changed_status = [
+                normalize_item({
+                    **self.item(),
+                    "public_id": "safe-001",
+                    "status": "completed",
+                    "favorite_count": 99,
+                    "interest_count": 42,
+                }),
+                normalize_item({**self.item(), "public_id": "safe-002", "status": "reserved"}),
+            ]
+            second = reconcile(changed_status, output, self.template, self.site_url)
+
+            self.assertEqual(second["created"], 0)
+            self.assertEqual(second["updated"], 0)
+            self.assertEqual(second["preserved"], 2)
+            self.assertEqual(second["removed"], 0)
+            self.assertEqual(original_page, (output / "i" / "safe-001" / "index.html").read_bytes())
+
+    def test_incremental_reconcile_adds_edits_and_removes_only_affected_pages(self):
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory)
+            initial = [
+                normalize_item({**self.item(), "public_id": "safe-001"}),
+                normalize_item({**self.item(), "public_id": "safe-002"}),
+            ]
+            reconcile(initial, output, self.template, self.site_url, force_full=True)
+            original_page = (output / "i" / "safe-002" / "index.html").read_bytes()
+
+            added = [
+                normalize_item({**self.item(), "public_id": "safe-001", "title": "Título editado"}),
+                normalize_item({**self.item(), "public_id": "safe-002"}),
+                normalize_item({**self.item(), "public_id": "safe-003"}),
+            ]
+            changed = reconcile(added, output, self.template, self.site_url)
+            self.assertEqual(changed["created"], 1)
+            self.assertEqual(changed["updated"], 1)
+            self.assertEqual(changed["preserved"], 1)
+            self.assertTrue((output / "i" / "safe-003" / "index.html").exists())
+            self.assertEqual(original_page, (output / "i" / "safe-002" / "index.html").read_bytes())
+
+            removed = reconcile(added[1:], output, self.template, self.site_url)
+            self.assertEqual(removed["removed"], 1)
+            self.assertFalse((output / "i" / "safe-001").exists())
+            self.assertNotIn("safe-001", (output / "sitemap.xml").read_text(encoding="utf-8"))
+
+    def test_rotating_dltemp_signature_does_not_change_static_identity(self):
+        first = "https://proyectos.example/dltemp/token-one/1234/wfrogvq8/folder/photo.jpg"
+        second = "https://proyectos.example/dltemp/token-two/5678/wfrogvq8/folder/photo.jpg"
+        self.assertEqual(stable_image_identity(first), stable_image_identity(second))
 
     def test_client_contract_keeps_old_endpoints_and_uses_clean_routes(self):
         api_source = (ROOT / "js" / "api.js").read_text(encoding="utf-8")
@@ -484,10 +551,17 @@ class StaticContractTests(unittest.TestCase):
         self.assertTrue((ROOT / "perfil" / "index.html").exists())
         workflow_source = (ROOT / ".github" / "workflows" / "generate-static-pages.yml").read_text(encoding="utf-8")
         self.assertIn("favoritos ofrecer perfil generated-site/", workflow_source)
+        self.assertIn("scope=all", workflow_source)
+        self.assertIn("force_full", workflow_source)
+        self.assertIn("actions/download-artifact@v5", workflow_source)
+        self.assertIn("--mode \"$mode\"", workflow_source)
+        self.assertIn("--stats-file", workflow_source)
+        self.assertIn("steps.changes.outputs.deploy", workflow_source)
         self.assertIn('  push:\n    branches:\n      - main', workflow_source)
         self.assertNotIn('      - "js/**"', workflow_source)
         shared_workflow_source = (ROOT / ".github" / "workflows" / "deploy-shared-assets.yml").read_text(encoding="utf-8")
         self.assertIn("segundavida-static-site", shared_workflow_source)
+        self.assertIn("actions/runs/$candidate/artifacts", shared_workflow_source)
         self.assertIn("sync_static_asset_urls.py", shared_workflow_source)
         self.assertTrue((ROOT / "scripts" / "sync_static_asset_urls.py").exists())
         for source in (

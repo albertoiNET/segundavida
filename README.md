@@ -161,9 +161,10 @@ Las fichas indexables se generan con
 
 ```bash
 python3 scripts/generate_static_pages.py \
-  --source-url https://tu-n8n.example/webhook/segundavida/data \
+  --source-url https://api.aldeapucela.org/segundavida/data?scope=all \
   --output-dir generated-site \
-  --site-url https://segundavida.example
+  --site-url https://segundavida.example \
+  --mode full
 ```
 
 El generador crea las rutas `/i/<public_id>/`, `sitemap.xml`, `feed.xml`,
@@ -174,9 +175,19 @@ la prepara como artefacto y la publica en GitHub Pages. Puede
 ejecutarse manualmente o con la programación incluida en
 [`.github/workflows/generate-static-pages.yml`](.github/workflows/generate-static-pages.yml).
 
+El workflow parte del último artefacto generado y usa el modo incremental por
+defecto en las ejecuciones disparadas por publicación. Conserva las fichas sin
+cambios, añade las nuevas, actualiza solo los metadatos sociales editados y
+elimina las ocultas. Los estados `reserved`, `completed` y `expired` se
+hidratan desde `/item/<id>` y no fuerzan una reescritura del HTML.
+
+Para reparar o migrar todas las fichas, ejecuta manualmente el workflow con
+`force_full=true`. La fuente debe incluir siempre `scope=all`; la respuesta
+ligera de la portada no puede utilizarse para podar el sitio.
+
 Para usar otra fuente de datos en GitHub Actions, define la variable de
 repositorio `SEGUNDAVIDA_PUBLIC_ITEMS_URL` o proporciona `source_url` al lanzar
-el workflow.
+el workflow. El workflow añade `scope=all` a las fuentes que no lo incluyen.
 
 ## Configuración opcional
 

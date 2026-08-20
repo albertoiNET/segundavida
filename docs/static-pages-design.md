@@ -126,26 +126,47 @@ de más nuevas a más antiguas cuando tienen `created_at`. Incluye las URLs
 canónicas, categorías, zonas, fechas de publicación válidas e imágenes
 `http(s)` disponibles.
 
-Contrato de invocación local:
+Contrato de invocación completa local:
 
 ```bash
 python3 scripts/generate_static_pages.py \
-  --source-url https://tasks.nukeador.com/webhook/segundavida/data \
+  --source-url https://api.aldeapucela.org/segundavida/data?scope=all \
   --output-dir .generated-site \
-  --site-url https://segundavida.aldeapucela.org
+  --site-url https://segundavida.aldeapucela.org \
+  --mode full
 ```
 
-Contrato para n8n después de `/publish`: enviar un JSON con `public_id` (o
-`item_id` durante la transición), los campos públicos ya proyectados y, si se
-quiere generar solo una ficha, `items` con un único elemento. La generación se
-ejecuta en un runner autorizado o mediante el workflow de GitHub Actions; no se
-guardan credenciales en el repositorio.
+El modo incremental reutiliza un `generated-site` anterior. Conserva las páginas
+cuyo título, descripción, categoría, zona, persona visible o primera imagen no
+han cambiado; los cambios de estado y contadores no modifican la página. Las
+fichas nuevas se crean, las fichas editadas se actualizan y las publicaciones
+que ya no aparecen en el inventario público se eliminan.
+
+```bash
+python3 scripts/generate_static_pages.py \
+  --source-url https://api.aldeapucela.org/segundavida/data?scope=all \
+  --output-dir .generated-site \
+  --site-url https://segundavida.aldeapucela.org \
+  --mode incremental \
+  --stats-file /tmp/segundavida-static-stats.json
+```
+
+El inventario debe usar siempre `scope=all`: la portada ligera no es una fuente
+válida para decidir qué fichas conservar o eliminar. La ficha estática es un
+snapshot para título, Open Graph, Twitter Cards y fallback sin JavaScript; al
+abrirse, la aplicación hidrata el estado operativo mediante `GET /item/<id>`.
+
+El workflow de publicación reutiliza el artefacto generado anterior. Por eso
+una publicación nueva añade una página sin borrar las entregadas. Un cambio
+solo de estado puede ejecutar la reconciliación y terminar sin desplegar Pages.
+La generación completa se reserva para la primera migración, cambios de
+plantilla o una ejecución manual de reparación.
 
 GitHub Pages se publica mediante `GitHub Actions` a partir del artefacto
 generado, sin commits periódicos de páginas. El workflow incluido permite
-ejecución manual y programada, usa por defecto la URL pública real de `/data` y
-acepta una variable de repositorio para sustituirla. El job es deliberadamente
-neutral respecto a secretos, NocoDB y n8n.
+ejecución incremental, completa y programada, usa por defecto la URL pública de
+`/data?scope=all` y acepta una variable de repositorio para sustituirla. El job
+es deliberadamente neutral respecto a secretos, NocoDB y n8n.
 
 ## Seguridad y límites
 

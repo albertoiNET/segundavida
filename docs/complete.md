@@ -59,8 +59,11 @@ Al borrar escribe:
 
 El borrado es una ocultación reversible para administración y auditoría: la
 fila no se elimina físicamente. Las publicaciones ocultas dejan de aparecer
-en el catálogo, en su ficha pública y en `Mis publicaciones`. El workflow
-dispara además la regeneración de las fichas estáticas mediante GitHub Actions.
+en el catálogo, en su ficha pública y en `Mis publicaciones`. El estado de una
+ficha pública se hidrata desde la API; marcarla como reservada, entregada o
+reabierta no requiere reescribir su HTML estático. La reconciliación elimina
+una ficha oculta cuando la publicación deja de aparecer en el inventario
+público completo.
 
 El nodo de validación lee `TELEGRAM_BOT_TOKEN` desde `$vars` y, como fallback,
 desde `$env`; no hay que repetir el secreto en cada nodo. La credencial
@@ -80,9 +83,10 @@ Después de importar:
    campos `Id`, `item-id`, `owner_telegram_id`, `status`, `completed_at`,
    `reserved_at` y `reservation_expires_at`.
    En `Update NocoDB row`, pon `{{ $json.Id }}` en **Row ID Value**.
-4. Comprueba que `Dispatch static page regeneration` usa la credencial
-   `GitHub account`. Si no quieres regenerar fichas estáticas desde este
-   workflow, puedes desactivar ese nodo y mantener la regeneración programada.
+4. La regeneración estática no es necesaria para cambios de estado. Si el
+   workflow importado conserva un nodo `Dispatch static page regeneration`,
+   puede desactivarse para este flujo; la reconciliación de publicación y la
+   ejecución programada mantienen el inventario de fichas.
 5. Activa el workflow.
 
 El frontend ya envía este cuerpo:

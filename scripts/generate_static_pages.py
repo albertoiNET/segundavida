@@ -4,9 +4,11 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import html
 import json
 import re
+import shutil
 import sys
 from datetime import datetime, timezone
 from email.utils import format_datetime
@@ -30,6 +32,12 @@ SENSITIVE_KEYS = {
 }
 PUBLIC_ID_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]{5,79}$")
 TELEGRAM_DERIVED_ID_PATTERN = re.compile(r"^(?:\d{6,80}|\d+(?:[-_]\d+)+)$")
+STATIC_ITEM_DATA_PATTERN = re.compile(
+    r'<script[^>]+id="static-item-data"[^>]*>(.*?)</script>',
+    re.DOTALL,
+)
+STATIC_PAGE_SCHEMA_VERSION = "2"
+STATIC_PAGE_SCHEMA_MARKER = f"STATIC_PAGE_SCHEMA_VERSION:{STATIC_PAGE_SCHEMA_VERSION}"
 
 
 class ContractError(ValueError):
@@ -149,6 +157,95 @@ def json_for_script(item: dict[str, object], site_url: str) -> str:
     )
     value = json.dumps(safe_item, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
     return value.replace("<", "\\u003c").replace(">", "\\u003e").replace("&", "\\u0026")
+
+
+def stable_image_identity(value: object) -> str:
+    """Return a comparable identity for public image URLs.
+
+    NocoDB's public download URLs can rotate their token and expiry prefix while
+    still referring to the same attachment. Those rotating values must not make
+    an otherwise unchanged static page regenerate on every reconciliation.
+    """
+
+    candidate = safe_image_url(value, "")
+    if not candidate:
+        return ""
+
+    parsed = urlparse(candidate)
+    path = parsed.path
+    dltemp_marker = "/dltemp/"
+    if dltemp_marker in path:
+        prefix, suffix = path.split(dltemp_marker, 1)
+        segments = suffix.split("/", 2)
+        if len(segments) == 3:
+            path = f"{prefix}{dltemp_marker}{segments[2]}"
+
+    return f"{parsed.scheme}://{parsed.netloc}{path}"
+
+
+def static_projection(item: dict[str, object]) -> dict[str, object]:
+    """Fields that affect social metadata or the initial no-JS snapshot."""
+
+    return {
+        "id": item["id"],
+        "title": item["title"],
+        "description": item["description"],
+        "category": item["category"],
+        "zone": item["zone"],
+        "owner_display_name": item["owner_display_name"],
+        "owner_username": item["owner_username"],
+        "image_identity": stable_image_identity(item.get("image_url")),
+    }
+
+
+def static_fingerprint(item: dict[str, object]) -> str:
+    value = json.dumps(
+        static_projection(item),
+        ensure_ascii=False,
+        sort_keys=True,
+        separators=(",", ":"),
+    ).encode("utf-8")
+    return hashlib.sha256(value).hexdigest()
+
+
+def extract_static_item(page_path: Path, site_url: str) -> dict[str, object] | None:
+    """Read the public snapshot embedded in an existing generated page."""
+
+    try:
+        page = page_path.read_text(encoding="utf-8")
+        if STATIC_PAGE_SCHEMA_MARKER not in page:
+            return None
+        match = STATIC_ITEM_DATA_PATTERN.search(page)
+        if not match:
+            return None
+        raw = json.loads(match.group(1))
+        if not isinstance(raw, dict):
+            return None
+        item = normalize_item(raw)
+        fallback = f"{site_url.rstrip('/')}/assets/segundavida-mark.png"
+        if item.get("image_url") == fallback:
+            item["image_url"] = None
+        return item
+    except (OSError, ValueError, json.JSONDecodeError):
+        return None
+
+
+def existing_static_pages(output_dir: Path, site_url: str) -> dict[str, tuple[Path, dict[str, object]]]:
+    pages: dict[str, tuple[Path, dict[str, object]]] = {}
+    item_root = output_dir / "i"
+    if not item_root.exists():
+        return pages
+
+    for item_dir in item_root.iterdir():
+        if not item_dir.is_dir():
+            continue
+        page_path = item_dir / "index.html"
+        if not page_path.is_file():
+            continue
+        item = extract_static_item(page_path, site_url)
+        if item:
+            pages[str(item["id"])] = (page_path, item)
+    return pages
 
 
 def canonical_url(site_url: str, public_id: str) -> str:
@@ -289,6 +386,7 @@ def render_page(template: str, item: dict[str, object], site_url: str) -> str:
     page = page.replace("<!-- STATIC_ITEM_METADATA -->", render_metadata(item, site_url))
     page = page.replace(
         "<!-- STATIC_ITEM_DATA -->",
+        f'<!-- {STATIC_PAGE_SCHEMA_MARKER} -->\n'
         f'<script type="application/json" id="static-item-data">{json_for_script(item, site_url)}</script>',
     )
     page = page.replace("<!-- STATIC_ITEM_FALLBACK -->", render_fallback(item, site_url))
@@ -300,24 +398,96 @@ def write_text(path: Path, value: str) -> None:
     path.write_text(value.replace("\r\n", "\n"), encoding="utf-8")
 
 
-def generate(items: list[dict[str, object]], output_dir: Path, template_path: Path, site_url: str) -> int:
-    template = template_path.read_text(encoding="utf-8")
-    output_dir.mkdir(parents=True, exist_ok=True)
-    for item in items:
-        page_path = output_dir / "i" / str(item["id"]) / "index.html"
-        write_text(page_path, render_page(template, item, site_url))
-
+def write_catalog_files(
+    items: list[dict[str, object]],
+    output_dir: Path,
+    site_url: str,
+    fallback_template: str,
+) -> None:
     urls = [f"{site_url.rstrip('/')}/"] + [canonical_url(site_url, str(item["id"])) for item in items]
     sitemap = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\">\n"
     sitemap += "".join(f"  <url><loc>{html.escape(url)}</loc></url>\n" for url in urls)
     sitemap += "</urlset>\n"
     write_text(output_dir / "sitemap.xml", sitemap)
     write_text(output_dir / "feed.xml", render_rss_feed(items, site_url))
-    write_text(output_dir / "robots.txt", "User-agent: *\nAllow: /\nSitemap: " + site_url.rstrip("/") + "/sitemap.xml\n")
+    write_text(
+        output_dir / "robots.txt",
+        "User-agent: *\nAllow: /\nSitemap: " + site_url.rstrip("/") + "/sitemap.xml\n",
+    )
+    write_text(output_dir / "404.html", fallback_template)
+
+
+def reconcile(
+    items: list[dict[str, object]],
+    output_dir: Path,
+    template_path: Path,
+    site_url: str,
+    *,
+    force_full: bool = False,
+) -> dict[str, int]:
+    """Reconcile generated pages while preserving unchanged snapshots.
+
+    The source inventory is authoritative for which public IDs exist, but live
+    operational fields such as status and counters are deliberately excluded
+    from the static fingerprint. The app hydrates those fields from /item/<id>.
+    """
+
+    template = template_path.read_text(encoding="utf-8")
+    output_dir.mkdir(parents=True, exist_ok=True)
+    current_items = {str(item["id"]): item for item in items}
+    current_ids = set(current_items)
+    existing = existing_static_pages(output_dir, site_url)
+    item_root = output_dir / "i"
+    removed = 0
+
+    if item_root.exists():
+        for item_dir in list(item_root.iterdir()):
+            if item_dir.is_dir() and item_dir.name not in current_ids:
+                shutil.rmtree(item_dir)
+                removed += 1
+
+    created = 0
+    updated = 0
+    preserved = 0
+    snapshots: list[dict[str, object]] = []
+    for item_id in sorted(current_items):
+        item = current_items[item_id]
+        page_path = output_dir / "i" / str(item["id"]) / "index.html"
+        previous = existing.get(item_id)
+        previous_item = previous[1] if previous else None
+        page_existed = page_path.is_file()
+        can_preserve = (
+            not force_full
+            and previous_item is not None
+            and page_existed
+            and static_fingerprint(previous_item) == static_fingerprint(item)
+        )
+        if can_preserve:
+            snapshots.append(previous_item)
+            preserved += 1
+            continue
+
+        write_text(page_path, render_page(template, item, site_url))
+        snapshots.append(item)
+        if previous_item is None or not page_existed:
+            created += 1
+        else:
+            updated += 1
+
     fallback_template_path = template_path.parent / "404.html"
     fallback_template = fallback_template_path.read_text(encoding="utf-8") if fallback_template_path.exists() else template
-    write_text(output_dir / "404.html", fallback_template)
-    return len(items)
+    write_catalog_files(snapshots, output_dir, site_url, fallback_template)
+    return {
+        "created": created,
+        "updated": updated,
+        "preserved": preserved,
+        "removed": removed,
+        "total": len(items),
+    }
+
+
+def generate(items: list[dict[str, object]], output_dir: Path, template_path: Path, site_url: str) -> int:
+    return reconcile(items, output_dir, template_path, site_url, force_full=True)["total"]
 
 
 def parse_args() -> argparse.Namespace:
@@ -328,6 +498,17 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--output-dir", required=True, type=Path)
     parser.add_argument("--template", type=Path, default=Path("index.html"))
     parser.add_argument("--site-url", default="https://segundavida.aldeapucela.org")
+    parser.add_argument(
+        "--mode",
+        choices=("full", "incremental"),
+        default="full",
+        help="Rebuild all pages or preserve unchanged pages in the output directory",
+    )
+    parser.add_argument(
+        "--stats-file",
+        type=Path,
+        help="Write reconciliation counters as JSON for CI decisions",
+    )
     return parser.parse_args()
 
 
@@ -335,11 +516,24 @@ def main() -> int:
     args = parse_args()
     try:
         items = load_items(args.input, args.source_url)
-        count = generate(items, args.output_dir, args.template, args.site_url)
+        stats = reconcile(
+            items,
+            args.output_dir,
+            args.template,
+            args.site_url,
+            force_full=args.mode == "full",
+        )
     except (ContractError, OSError, ValueError, json.JSONDecodeError) as error:
         print(f"generate_static_pages: {error}", file=sys.stderr)
         return 2
-    print(f"Generated {count} public item page(s) in {args.output_dir}")
+    print(
+        "Generated/reconciled "
+        f"{stats['total']} public item page(s) in {args.output_dir} "
+        f"(created={stats['created']}, updated={stats['updated']}, "
+        f"preserved={stats['preserved']}, removed={stats['removed']})"
+    )
+    if args.stats_file:
+        write_text(args.stats_file, json.dumps(stats, ensure_ascii=False, sort_keys=True) + "\n")
     return 0
 
 

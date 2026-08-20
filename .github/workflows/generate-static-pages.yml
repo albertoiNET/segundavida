@@ -15,10 +15,16 @@ on:
         description: "Public JSON endpoint override (optional)"
         required: false
         type: string
+      force_full:
+        description: "Regenerate every static item page"
+        required: false
+        type: boolean
+        default: false
   schedule:
     - cron: "17 4 * * *"
 
 permissions:
+  actions: read
   contents: read
   pages: write
   id-token: write
@@ -41,32 +47,122 @@ jobs:
         id: source
         env:
           INPUT_SOURCE_URL: ${{ inputs.source_url }}
+          INPUT_FORCE_FULL: ${{ inputs.force_full }}
           REPOSITORY_SOURCE_URL: ${{ vars.SEGUNDAVIDA_PUBLIC_ITEMS_URL }}
+          EVENT_NAME: ${{ github.event_name }}
         run: |
+          set -euo pipefail
           source_url="$INPUT_SOURCE_URL"
           if [ -z "$source_url" ]; then source_url="$REPOSITORY_SOURCE_URL"; fi
-          if [ -z "$source_url" ]; then source_url="https://tasks.nukeador.com/webhook/segundavida/data"; fi
-          echo "url=$source_url" >> "$GITHUB_OUTPUT"
+          if [ -z "$source_url" ]; then source_url="https://api.aldeapucela.org/segundavida/data"; fi
+          case "$source_url" in
+            *scope=*) ;;
+            *\?*) source_url="${source_url}&scope=all" ;;
+            *) source_url="${source_url}?scope=all" ;;
+          esac
 
-      - name: Generate pages
-        if: steps.source.outputs.url != ''
+          force_full="$INPUT_FORCE_FULL"
+          if [ "$EVENT_NAME" = "push" ]; then force_full="true"; fi
+
+          echo "url=$source_url" >> "$GITHUB_OUTPUT"
+          echo "force_full=$force_full" >> "$GITHUB_OUTPUT"
+
+      - name: Find previous generated-site artifact
+        id: source-run
         env:
-          SOURCE_URL: ${{ steps.source.outputs.url }}
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
         run: |
+          set -euo pipefail
+          previous_run_id=""
+          run_ids="$(gh run list --workflow generate-static-pages.yml --branch main --status success --limit 20 --json databaseId --jq '.[].databaseId')"
+          while IFS= read -r run_id; do
+            [ -z "$run_id" ] && continue
+            artifact_count="$(gh api "repos/$REPOSITORY/actions/runs/$run_id/artifacts" --jq '[.artifacts[] | select(.name == "segundavida-static-site" and .expired == false)] | length')"
+            if [ "$artifact_count" -gt 0 ]; then
+              previous_run_id="$run_id"
+              break
+            fi
+          done <<< "$run_ids"
+
+          if [ -n "$previous_run_id" ]; then
+            echo "found=true" >> "$GITHUB_OUTPUT"
+            echo "run_id=$previous_run_id" >> "$GITHUB_OUTPUT"
+          else
+            echo "found=false" >> "$GITHUB_OUTPUT"
+            echo "run_id=" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Reuse previous generated site
+        if: steps.source-run.outputs.found == 'true'
+        uses: actions/download-artifact@v5
+        with:
+          name: segundavida-static-site
+          path: generated-site
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: ${{ steps.source-run.outputs.run_id }}
+
+      - name: Prepare generated site
+        run: |
+          set -euo pipefail
           mkdir -p generated-site
           cp -R assets css js favoritos ofrecer perfil generated-site/
           cp index.html generated-site/
+          cp 404.html generated-site/
+
+      - name: Generate or reconcile pages
+        if: steps.source.outputs.url != ''
+        env:
+          SOURCE_URL: ${{ steps.source.outputs.url }}
+          FORCE_FULL: ${{ steps.source.outputs.force_full }}
+          PREVIOUS_FOUND: ${{ steps.source-run.outputs.found }}
+        run: |
+          set -euo pipefail
+          mode="incremental"
+          if [ "$FORCE_FULL" = "true" ] || [ "$PREVIOUS_FOUND" != "true" ]; then
+            mode="full"
+          fi
+          mkdir -p generated-site
           python3 scripts/generate_static_pages.py \
             --source-url "$SOURCE_URL" \
             --output-dir generated-site \
-            --site-url "https://segundavida.aldeapucela.org"
+            --site-url "https://segundavida.aldeapucela.org" \
+            --mode "$mode" \
+            --stats-file "$RUNNER_TEMP/segundavida-static-stats.json"
           python3 scripts/sync_static_asset_urls.py \
             --site generated-site \
             --template generated-site/index.html \
             --version "sv-${GITHUB_SHA}"
 
+      - name: Decide whether to deploy Pages
+        id: changes
+        env:
+          PREVIOUS_FOUND: ${{ steps.source-run.outputs.found }}
+        run: |
+          set -euo pipefail
+          created="$(jq -r '.created' "$RUNNER_TEMP/segundavida-static-stats.json")"
+          updated="$(jq -r '.updated' "$RUNNER_TEMP/segundavida-static-stats.json")"
+          removed="$(jq -r '.removed' "$RUNNER_TEMP/segundavida-static-stats.json")"
+          changed=$((created + updated + removed))
+          deploy="false"
+          if [ "$PREVIOUS_FOUND" != "true" ] || [ "$changed" -gt 0 ]; then deploy="true"; fi
+          echo "created=$created" >> "$GITHUB_OUTPUT"
+          echo "updated=$updated" >> "$GITHUB_OUTPUT"
+          echo "removed=$removed" >> "$GITHUB_OUTPUT"
+          echo "deploy=$deploy" >> "$GITHUB_OUTPUT"
+
+          {
+            echo "### Static pages reconciliation"
+            echo "- Created: $created"
+            echo "- Updated: $updated"
+            echo "- Preserved: $(jq -r '.preserved' "$RUNNER_TEMP/segundavida-static-stats.json")"
+            echo "- Removed: $removed"
+            echo "- Pages deployment: $deploy"
+          } >> "$GITHUB_STEP_SUMMARY"
+
       - name: Store generated site for shared asset deployments
-        if: steps.source.outputs.url != ''
+        if: steps.source.outputs.url != '' && steps.changes.outputs.deploy == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: segundavida-static-site
@@ -79,12 +175,12 @@ jobs:
           echo "No public source configured. Pass source_url or set the repository override variable."
 
       - name: Upload generated site for Pages
-        if: steps.source.outputs.url != ''
+        if: steps.source.outputs.url != '' && steps.changes.outputs.deploy == 'true'
         uses: actions/upload-pages-artifact@v3
         with:
           path: generated-site
 
       - name: Deploy to GitHub Pages
         id: deployment
-        if: steps.source.outputs.url != ''
+        if: steps.source.outputs.url != '' && steps.changes.outputs.deploy == 'true'
         uses: actions/deploy-pages@v4

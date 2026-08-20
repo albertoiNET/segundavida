@@ -147,13 +147,16 @@ Body JSON:
 {
   "ref": "main",
   "inputs": {
-    "source_url": "https://tasks.nukeador.com/webhook/segundavida/data"
+    "source_url": "https://api.aldeapucela.org/segundavida/data?scope=all"
   }
 }
 ```
 
-Configura el nodo para continuar aunque GitHub no esté disponible: la fila de
-NocoDB ya se ha publicado y la ejecución programada podrá recuperar el sitio.
+El workflow reutiliza el artefacto anterior y compara el inventario completo:
+añade la ficha recién publicada sin borrar las entregadas. No es necesario
+enviar `item_id` para esta reconciliación. Configura el nodo para continuar
+aunque GitHub no esté disponible: la fila de NocoDB ya se ha publicado y la
+ejecución programada podrá recuperar el sitio.
 El token debe tener permiso para ejecutar workflows y vivir solo en las
 credenciales de n8n.
 

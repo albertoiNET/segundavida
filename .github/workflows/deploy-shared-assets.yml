@@ -68,9 +68,19 @@ jobs:
         if: steps.scope.outputs.skip != 'true'
         env:
           GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
         run: |
           set -euo pipefail
-          run_id="$(gh run list --workflow generate-static-pages.yml --branch main --status success --limit 20 --json databaseId --jq '.[0].databaseId')"
+          run_id=""
+          run_ids="$(gh run list --workflow generate-static-pages.yml --branch main --status success --limit 20 --json databaseId --jq '.[].databaseId')"
+          while IFS= read -r candidate; do
+            [ -z "$candidate" ] && continue
+            artifact_count="$(gh api "repos/$REPOSITORY/actions/runs/$candidate/artifacts" --jq '[.artifacts[] | select(.name == "segundavida-static-site" and .expired == false)] | length')"
+            if [ "$artifact_count" -gt 0 ]; then
+              run_id="$candidate"
+              break
+            fi
+          done <<< "$run_ids"
           if [ -z "$run_id" ]; then
             echo "No generated-site artifact exists yet. Run generate-static-pages.yml once first." >&2
             exit 1
