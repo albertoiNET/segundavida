@@ -38,6 +38,7 @@
   }
 
   if (isTelegram) {
+    document.documentElement.classList.add("is-telegram-mini-app");
     if (typeof webApp.ready === "function") {
       webApp.ready();
     }

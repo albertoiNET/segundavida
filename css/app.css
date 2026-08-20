@@ -1399,6 +1399,28 @@ h2 {
   display: none !important;
 }
 
+:root.is-telegram-mini-app {
+  --sv-telegram-top-space: max(
+    7rem,
+    env(safe-area-inset-top, 0px),
+    var(--tg-content-safe-area-inset-top, 0px)
+  );
+}
+
+:root.is-telegram-mini-app .app-shell::before {
+  position: fixed;
+  z-index: 19;
+  inset: 0 0 auto;
+  height: var(--sv-telegram-top-space);
+  background: var(--bg-container);
+  content: "";
+  pointer-events: none;
+}
+
+:root.is-telegram-mini-app .app-header {
+  background: var(--bg-container);
+}
+
 body {
   background: var(--bg-body);
 }
@@ -1406,7 +1428,7 @@ body {
 .app-shell {
   width: min(100%, 42rem);
   padding: max(
-      env(safe-area-inset-top, 0px),
+      var(--sv-telegram-top-space, env(safe-area-inset-top, 0px)),
       var(--tg-content-safe-area-inset-top, 0px)
     )
     1rem
@@ -1415,7 +1437,7 @@ body {
 
 .app-header {
   top: max(
-    env(safe-area-inset-top, 0px),
+    var(--sv-telegram-top-space, env(safe-area-inset-top, 0px)),
     var(--tg-content-safe-area-inset-top, 0px)
   );
   min-height: 2.75rem;
