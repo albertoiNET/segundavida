@@ -1405,11 +1405,19 @@ body {
 
 .app-shell {
   width: min(100%, 42rem);
-  padding: env(safe-area-inset-top) 1rem
+  padding: max(
+      env(safe-area-inset-top, 0px),
+      var(--tg-content-safe-area-inset-top, 0px)
+    )
+    1rem
     calc(5.75rem + env(safe-area-inset-bottom));
 }
 
 .app-header {
+  top: max(
+    env(safe-area-inset-top, 0px),
+    var(--tg-content-safe-area-inset-top, 0px)
+  );
   min-height: 2.75rem;
   padding-bottom: 0.75rem;
   border-bottom: 1px solid var(--border-light);
