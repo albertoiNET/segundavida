@@ -4751,6 +4751,27 @@ body.photo-lightbox-open {
   font-size: 2.4rem;
 }
 
+.item-card__media[data-image-state="retrying"] {
+  background: linear-gradient(
+    105deg,
+    var(--bg-card-hover) 28%,
+    color-mix(in srgb, var(--bg-card-hover) 70%, var(--bg-card) 30%) 42%,
+    var(--bg-card-hover) 56%
+  );
+  background-size: 220% 100%;
+  animation: catalog-image-retry 1.2s linear infinite;
+}
+
+.item-card__media[data-image-state="retrying"] img {
+  visibility: hidden;
+}
+
+@keyframes catalog-image-retry {
+  to {
+    background-position: -220% 0;
+  }
+}
+
 .item-card__placeholder {
   display: grid;
 }

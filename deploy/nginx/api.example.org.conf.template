@@ -60,8 +60,8 @@ server {
         proxy_cache_valid 200 10s;
         proxy_cache_valid 404 5s;
         proxy_cache_lock on;
-        proxy_cache_background_update on;
-        proxy_cache_use_stale updating error timeout http_500 http_502 http_503 http_504;
+        proxy_cache_lock_timeout 30s;
+        proxy_cache_lock_age 30s;
         proxy_cache_bypass $http_authorization $http_cookie $http_cache_control;
         proxy_no_cache $http_authorization $http_cookie $http_cache_control $upstream_http_set_cookie;
         add_header X-Cache-Status $upstream_cache_status always;
@@ -94,8 +94,8 @@ server {
         proxy_cache_valid 200 15s;
         proxy_cache_valid 404 5s;
         proxy_cache_lock on;
-        proxy_cache_background_update on;
-        proxy_cache_use_stale updating error timeout http_500 http_502 http_503 http_504;
+        proxy_cache_lock_timeout 30s;
+        proxy_cache_lock_age 30s;
         proxy_cache_bypass $http_authorization $http_cookie $http_cache_control;
         proxy_no_cache $http_authorization $http_cookie $http_cache_control $upstream_http_set_cookie;
         add_header X-Cache-Status $upstream_cache_status always;

@@ -34,9 +34,11 @@ de n8n y aplica las reglas de caché y protección antes de abrir una ejecución
 | `/segundavida/interaction` | `POST` | No | — |
 
 La caché debe usar `proxy_cache_lock` para que varias peticiones simultáneas a
-la misma clave produzcan una sola consulta al upstream. Se puede servir una
-respuesta antigua durante un fallo temporal, pero no se deben cachear errores
-`500` o `503` como respuestas normales.
+la misma clave produzcan una sola consulta al upstream. En estos endpoints no
+se debe servir una respuesta `STALE`: el JSON contiene URLs temporales de las
+fotos y una copia antigua puede dejar imágenes caducadas. Cuando vence la
+entrada, la primera petición espera la actualización y el resto espera el
+bloqueo, con un máximo de 30 segundos.
 
 Las peticiones con `Cache-Control: no-cache` deben saltarse la caché y tampoco
 deben rellenarla. El frontend usa este mecanismo después de publicar o editar
@@ -78,8 +80,8 @@ restaurar la configuración sin tocar n8n.
 
 ```text
 GET /health                         -> 200 y no-store
-GET /segundavida/data               -> MISS y luego HIT
-GET /segundavida/item/<id>          -> MISS y luego HIT
+GET /segundavida/data               -> MISS/EXPIRED y luego HIT
+GET /segundavida/item/<id>          -> MISS/EXPIRED y luego HIT
 GET /segundavida/data?unknown=1     -> 400 sin llegar a n8n
 GET /segundavida/item/nope          -> 400 sin llegar a n8n
 POST /segundavida/publish           -> nunca se almacena en caché

@@ -16,6 +16,7 @@ const isNotFoundPage = document.body?.dataset.page === "not-found";
 
 const auth = window.SecondaVidaAuth;
 const api = window.SecondaVidaApi;
+const catalogResilience = window.SecondaVidaCatalogResilience;
 const CONSENT_VERSION = "sv-publish-2026-08-17-v3";
 const MAX_OFFER_PHOTOS = 2;
 const MAX_PHOTO_BYTES = 20 * 1024 * 1024;
@@ -26,7 +27,11 @@ const ALLOWED_PHOTO_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 const CATALOG_INITIAL_RENDER_COUNT = 24;
 const CATALOG_RENDER_BATCH_SIZE = 24;
 const CATALOG_LOAD_AHEAD_PX = 720;
-const CATALOG_RETRY_DELAYS_MS = Object.freeze([350, 1000]);
+const CATALOG_RETRY_DELAYS_MS = catalogResilience?.CATALOG_RETRY_DELAYS_MS
+  ?? Object.freeze([1000, 2000, 4000, 8000, 15000, 30000]);
+const IMAGE_RETRY_DELAY_MS = 500;
+const IMAGE_LOAD_TIMEOUT_MS = 10000;
+const IMAGE_REFRESH_INTERVAL_MS = 30000;
 const OWN_ITEMS_STORAGE_KEY = "segundavida:my-items:v1";
 const FAVORITES_STORAGE_KEY = "segundavida:favorites:v1";
 const INTERACTION_STORAGE_KEY = "segundavida:interaction-events:v1";
@@ -117,6 +122,14 @@ let catalogLoadMoreObserver = null;
 let catalogPaginationControls = null;
 let catalogLoadMoreButton = null;
 let catalogLoadMoreSentinel = null;
+const refreshCatalogImageUrls = catalogResilience?.createRefreshCoordinator(
+  async () => {
+    const records = await api.listItems({ fresh: true });
+    mergeFreshCatalogImageUrls(records);
+    return records;
+  },
+  { minIntervalMs: IMAGE_REFRESH_INTERVAL_MS },
+) ?? (async () => []);
 let deleteDialogItem = null;
 let deleteDialogTriggerButton = null;
 let contactDialogItem = null;
@@ -1256,16 +1269,20 @@ function createCatalogCardMedia(item, index) {
 
   const media = document.createElement("div");
   media.className = "item-card__media";
+  media.dataset.itemId = item.id;
+  media.dataset.imageState = "loading";
 
   const image = document.createElement("img");
   image.src = imageUrl;
   image.alt = item.title;
-  image.loading = "lazy";
+  image.loading = index < 4 ? "eager" : "lazy";
   image.decoding = "async";
   if (index < 2) image.fetchPriority = "high";
   image.addEventListener("error", () => {
-    media.classList.add("item-card__media--placeholder");
-    media.replaceChildren(createCategoryIcon(item.category));
+    void recoverCatalogImage(item, image, media, imageUrl);
+  }, { once: true });
+  image.addEventListener("load", () => {
+    media.dataset.imageState = "loaded";
   }, { once: true });
   media.append(image);
   return media;
@@ -1786,6 +1803,117 @@ function getItemImageUrls(item) {
   }
 
   return [...new Set(imageUrls)];
+}
+
+function mergeFreshCatalogImageUrls(records) {
+  const freshById = new Map((Array.isArray(records) ? records : []).map((item) => [item.id, item]));
+  const mergeItem = (item) => {
+    const freshItem = freshById.get(item?.id);
+    if (!freshItem) return item;
+    return {
+      ...item,
+      imageUrl: freshItem.imageUrl ?? null,
+      imageUrls: Array.isArray(freshItem.imageUrls) ? freshItem.imageUrls : [],
+    };
+  };
+
+  state.catalogItems = state.catalogItems.map(mergeItem);
+  state.items = state.items.map(mergeItem);
+  state.myItems = state.myItems.map(mergeItem);
+  state.selectedItem = mergeItem(state.selectedItem);
+  state.staticItem = mergeItem(state.staticItem);
+  return freshById;
+}
+
+function getCurrentCatalogItem(itemId) {
+  return state.items.find((item) => item.id === itemId)
+    ?? state.catalogItems.find((item) => item.id === itemId)
+    ?? null;
+}
+
+function loadCatalogImageUrl(image, url) {
+  return new Promise((resolve, reject) => {
+    let settled = false;
+    const timeoutId = window.setTimeout(() => finish(false), IMAGE_LOAD_TIMEOUT_MS);
+    const cleanup = () => {
+      window.clearTimeout(timeoutId);
+      image.removeEventListener("load", onLoad);
+      image.removeEventListener("error", onError);
+    };
+    const finish = (loaded) => {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      if (loaded) {
+        resolve();
+      } else {
+        reject(new Error("catalog_image_unavailable"));
+      }
+    };
+    const onLoad = () => finish(true);
+    const onError = () => finish(false);
+
+    image.addEventListener("load", onLoad, { once: true });
+    image.addEventListener("error", onError, { once: true });
+    image.src = url;
+    if (image.complete) {
+      window.queueMicrotask(() => finish(image.naturalWidth > 0));
+    }
+  });
+}
+
+function showCatalogImagePlaceholder(item, image, media) {
+  media.dataset.imageState = "placeholder";
+  media.replaceChildren(createCategoryIcon(item.category));
+  image.remove();
+}
+
+async function recoverCatalogImage(item, image, media, originalUrl) {
+  if (!image.isConnected) return;
+
+  media.dataset.imageState = "retrying";
+  image.hidden = true;
+
+  await catalogResilience?.wait?.(IMAGE_RETRY_DELAY_MS);
+  if (!image.isConnected) return;
+
+  try {
+    await loadCatalogImageUrl(image, originalUrl);
+    media.dataset.imageState = "loaded";
+    image.hidden = false;
+    return;
+  } catch {
+    // The URL may have expired while it was waiting in the lazy-loading queue.
+  }
+
+  let freshById;
+  try {
+    freshById = await refreshCatalogImageUrls();
+  } catch {
+    freshById = null;
+  }
+
+  if (!image.isConnected) return;
+  const freshItem = freshById?.get(item.id) ?? getCurrentCatalogItem(item.id) ?? item;
+  const freshUrls = getItemImageUrls(freshItem);
+  if (!freshUrls.length) {
+    showCatalogImagePlaceholder(freshItem, image, media);
+    return;
+  }
+
+  try {
+    await loadCatalogImageUrl(image, freshUrls[0]);
+    media.dataset.imageState = "loaded";
+    image.hidden = false;
+    return;
+  } catch {
+    media.dataset.imageState = "retrying";
+    image.hidden = true;
+  }
+
+  window.setTimeout(() => {
+    if (image.isConnected) void recoverCatalogImage(freshItem, image, media, freshUrls[0]);
+  }, IMAGE_REFRESH_INTERVAL_MS);
 }
 
 function updatePhotoLightbox() {
@@ -2769,10 +2897,6 @@ function isNotExpired(item) {
   return Number.isNaN(expiresAt.getTime()) || expiresAt.getTime() >= Date.now();
 }
 
-function waitForCatalogRetry(delayMs) {
-  return new Promise((resolve) => window.setTimeout(resolve, delayMs));
-}
-
 async function loadCatalog() {
   if (!api?.isDataConfigured) {
     setServiceState(n8nStatus, n8nStatusLabel, "error", "No configurado");
@@ -2787,35 +2911,20 @@ async function loadCatalog() {
 
   if (n8nStatusLabel) n8nStatusLabel.textContent = "Comprobando...";
   const requestVersion = state.catalogRequestVersion;
-  let records = null;
-
-  for (let attempt = 0; attempt <= CATALOG_RETRY_DELAYS_MS.length; attempt += 1) {
-    try {
-      records = await api.listItems({
-        fresh: state.catalogNeedsRefresh || attempt > 0,
-      });
-      break;
-    } catch {
-      if (requestVersion !== state.catalogRequestVersion) return;
-      const retryDelay = CATALOG_RETRY_DELAYS_MS[attempt];
-      if (retryDelay === undefined) break;
-      itemsState.textContent = "No hemos podido cargar los objetos. Reintentando…";
+  const records = await catalogResilience.retryUntilSuccess({
+    load: (attempt) => api.listItems({
+      fresh: state.catalogNeedsRefresh && attempt === 0,
+    }),
+    shouldStop: () => requestVersion !== state.catalogRequestVersion,
+    onFailure: () => {
+      itemsState.textContent = "Cargando objetos…";
       itemsState.dataset.state = "";
-      await waitForCatalogRetry(retryDelay);
-    }
-  }
+    },
+    delays: CATALOG_RETRY_DELAYS_MS,
+  });
 
   if (!records) {
     if (requestVersion !== state.catalogRequestVersion) return;
-    state.catalogNeedsRefresh = true;
-    setServiceState(n8nStatus, n8nStatusLabel, "error", "No disponible");
-    itemsState.textContent = "No hemos podido cargar los objetos. Inténtalo de nuevo en unos instantes.";
-    itemsState.dataset.state = "error";
-    itemsCount.textContent = "Sin datos";
-    void openReportFromStartParam();
-    void openManageFromStartParam();
-    void openReportDemo();
-    void openItemFromRoute();
     return;
   }
 
