@@ -1480,10 +1480,7 @@ function renderCompletedActionState(item) {
   const action = document.createElement("button");
   action.className = "secondary-button secondary-button--compact action-state__action";
   action.type = "button";
-  action.append(
-    createIconElement("fa-arrow-right", "→"),
-    document.createTextNode("Seguir explorando"),
-  );
+  action.textContent = "Seguir explorando";
   action.addEventListener("click", () => {
     const hasRelatedItems = getRelatedItems(item).length > 0;
     if (hasRelatedItems && relatedItemsSection) {
