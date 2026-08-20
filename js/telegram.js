@@ -13,8 +13,35 @@
   // El SDK también se carga en la web normal; initData solo existe al abrirse desde Telegram.
   const isTelegram = Boolean(webApp?.initData?.trim());
 
-  if (isTelegram && typeof webApp.ready === "function") {
-    webApp.ready();
+  function expandFallback() {
+    if (typeof webApp.expand === "function") {
+      webApp.expand();
+    }
+  }
+
+  function requestFullscreen() {
+    if (typeof webApp.requestFullscreen !== "function") {
+      expandFallback();
+      return;
+    }
+
+    const onFullscreenFailed = () => expandFallback();
+    if (typeof webApp.onEvent === "function") {
+      webApp.onEvent("fullscreenFailed", onFullscreenFailed);
+    }
+
+    try {
+      webApp.requestFullscreen();
+    } catch {
+      onFullscreenFailed();
+    }
+  }
+
+  if (isTelegram) {
+    if (typeof webApp.ready === "function") {
+      webApp.ready();
+    }
+    requestFullscreen();
   }
 
   window.SecondaVidaTelegram = Object.freeze({
