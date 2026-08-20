@@ -473,9 +473,15 @@ class StaticContractTests(unittest.TestCase):
             self.assertNotIn("SegundaVida", source)
 
     def test_api_nginx_contract_caches_reads_and_never_writes(self):
-        nginx_source = (ROOT / "deploy" / "nginx" / "api.aldeapucela.org.conf").read_text(encoding="utf-8")
+        nginx_source = (ROOT / "deploy" / "nginx" / "api.example.org.conf.template").read_text(encoding="utf-8")
         maps_source = (ROOT / "deploy" / "nginx" / "segundavida-api-maps.conf").read_text(encoding="utf-8")
         hardening_source = (ROOT / "deploy" / "nginx" / "segundavida-hardening.conf").read_text(encoding="utf-8")
+        docs_source = (ROOT / "docs" / "nginx-api-cache.md").read_text(encoding="utf-8")
+        self.assertIn("api.example.org", nginx_source + docs_source)
+        self.assertIn("__ITEM_WEBHOOK_UUID__", nginx_source)
+        self.assertNotIn("api.aldeapucela.org", nginx_source + docs_source)
+        self.assertNotIn("tasks.nukeador.com", nginx_source + docs_source)
+        self.assertNotIn("c2b5eab6-9f26-48e9-9561-81dc6d3347ec", nginx_source + docs_source)
         self.assertIn("proxy_cache_methods GET HEAD", nginx_source)
         self.assertIn("proxy_cache_valid 200 10s", nginx_source)
         self.assertIn("proxy_cache_valid 200 15s", nginx_source)

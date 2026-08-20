@@ -1,10 +1,12 @@
+# Template only. Replace api.example.org and __ITEM_WEBHOOK_UUID__ before use.
+# Do not commit the rendered server-specific file.
 server {
     listen 80;
     listen [::]:80;
-    server_name api.aldeapucela.org;
+    server_name api.example.org;
 
-    access_log /var/log/nginx/api.aldeapucela.org.access.log;
-    error_log /var/log/nginx/api.aldeapucela.org.error.log warn;
+    access_log /var/log/nginx/api.example.org.access.log;
+    error_log /var/log/nginx/api.example.org.error.log warn;
 
     return 301 https://$host$request_uri;
 }
@@ -12,14 +14,14 @@ server {
 server {
     listen 443 ssl http2;
     listen [::]:443 ssl http2;
-    server_name api.aldeapucela.org;
+    server_name api.example.org;
 
-    access_log /var/log/nginx/api.aldeapucela.org.access.log;
-    error_log /var/log/nginx/api.aldeapucela.org.error.log warn;
+    access_log /var/log/nginx/api.example.org.access.log;
+    error_log /var/log/nginx/api.example.org.error.log warn;
 
-    ssl_certificate /etc/letsencrypt/live/api.aldeapucela.org/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/api.aldeapucela.org/privkey.pem;
-    ssl_trusted_certificate /etc/letsencrypt/live/api.aldeapucela.org/chain.pem;
+    ssl_certificate /etc/letsencrypt/live/api.example.org/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/api.example.org/privkey.pem;
+    ssl_trusted_certificate /etc/letsencrypt/live/api.example.org/chain.pem;
 
     include global/security.conf;
 
@@ -29,10 +31,9 @@ server {
     location = /health {
         default_type application/json;
         add_header Cache-Control "no-store" always;
-        return 200 '{"status":"ok","service":"api.aldeapucela.org"}\n';
+        return 200 '{"status":"ok","service":"api.example.org"}\n';
     }
 
-    # Public catalog. Unknown query parameters are rejected by the server-level map.
     location = /segundavida/data {
         if ($segundavida_data_args_allowed = 0) {
             return 400 '{"ok":false,"error":"invalid_query"}\n';
@@ -65,13 +66,13 @@ server {
         add_header X-Cache-Status $upstream_cache_status always;
     }
 
-    # Stable public item URL -> current internal n8n route. The UUID stays private to Nginx.
+    # Replace __ITEM_WEBHOOK_UUID__ with the internal webhook UUID on the server.
     location ~ "^/segundavida/item/([A-Za-z0-9][A-Za-z0-9_-]{5,79})/?$" {
         if ($args != "") {
             return 400 '{"ok":false,"error":"invalid_query"}\n';
         }
 
-        proxy_pass http://127.0.0.1:5678/webhook/c2b5eab6-9f26-48e9-9561-81dc6d3347ec/segundavida/item/$1;
+        proxy_pass http://127.0.0.1:5678/webhook/__ITEM_WEBHOOK_UUID__/segundavida/item/$1;
         proxy_http_version 1.1;
         proxy_set_header Host $host;
         proxy_set_header Origin $http_origin;
@@ -98,7 +99,6 @@ server {
         add_header X-Cache-Status $upstream_cache_status always;
     }
 
-    # Malformed item routes are rejected at the edge and never reach n8n.
     location ~ ^/segundavida/item/ {
         limit_req zone=segundavida_api_read burst=10 nodelay;
         default_type application/json;
