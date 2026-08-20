@@ -2687,6 +2687,19 @@ body.photo-lightbox-open {
   font-weight: 700;
 }
 
+.detail-category a,
+.detail-category a:hover,
+.detail-category a:focus-visible {
+  color: inherit;
+  text-decoration: none;
+}
+
+.detail-category a:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 3px;
+  border-radius: 0.15rem;
+}
+
 .detail-description {
   margin: 1rem 0 0;
   color: var(--text-secondary);

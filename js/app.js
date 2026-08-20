@@ -2280,7 +2280,12 @@ function renderDetail(item, { live = true, error = "" } = {}) {
   }
   detailTitle.textContent = item.title;
   updateFavoriteButton(detailFavorite, item);
-  detailCategory.replaceChildren(createCategoryIcon(item.category), document.createTextNode(` ${item.category}`));
+  const categoryLink = document.createElement("a");
+  categoryLink.href = getHomeUrl();
+  categoryLink.dataset.category = item.category;
+  categoryLink.setAttribute("aria-label", `Ver más objetos de ${item.category}`);
+  categoryLink.append(createCategoryIcon(item.category), document.createTextNode(` ${item.category}`));
+  detailCategory.replaceChildren(categoryLink);
   detailDescription.textContent = item.description || "";
   detailDescription.hidden = !item.description;
   detailZone.textContent = item.zone || "Valladolid";
@@ -4833,6 +4838,12 @@ detailShare?.addEventListener("click", shareCurrentView);
 relatedItemsBrowse?.addEventListener("click", (event) => {
   event.preventDefault();
   showRelatedCategory(relatedItemsBrowse.dataset.category || state.selectedItem?.category || "Todo");
+});
+detailCategory?.addEventListener("click", (event) => {
+  const categoryLink = event.target.closest("a");
+  if (!categoryLink) return;
+  event.preventDefault();
+  showRelatedCategory(categoryLink.dataset.category || state.selectedItem?.category || "Todo");
 });
 interestButton?.addEventListener("click", () => {
   const item = state.selectedItem;
