@@ -1401,7 +1401,7 @@ h2 {
 
 :root.is-telegram-mini-app {
   --sv-telegram-top-space: max(
-    7rem,
+    5rem,
     env(safe-area-inset-top, 0px),
     var(--tg-content-safe-area-inset-top, 0px)
   );
