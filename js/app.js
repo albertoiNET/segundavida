@@ -101,6 +101,8 @@ const state = {
 let photoLightboxUrls = [];
 let photoLightboxIndex = 0;
 let photoLightboxReturnFocus = null;
+let photoLightboxTouchStartX = 0;
+let photoLightboxTouchStartY = 0;
 let lastTrackedViewKey = "";
 const trackedInterestTelegramItems = new Set();
 const pendingInteractions = new Set();
@@ -161,6 +163,7 @@ const photoLightboxTitle = document.querySelector("#photo-lightbox-title");
 const photoLightboxCounter = document.querySelector("#photo-lightbox-counter");
 const photoLightboxImage = document.querySelector("#photo-lightbox-image");
 const photoLightboxThumbs = document.querySelector("#photo-lightbox-thumbs");
+const photoLightboxStage = photoLightbox?.querySelector(".photo-lightbox__stage");
 const photoLightboxClose = document.querySelector("#photo-lightbox-close");
 const photoLightboxPrevious = document.querySelector("#photo-lightbox-previous");
 const photoLightboxNext = document.querySelector("#photo-lightbox-next");
@@ -1859,6 +1862,24 @@ function movePhotoLightbox(step) {
   if (photoLightboxUrls.length < 2) return;
   photoLightboxIndex = (photoLightboxIndex + step + photoLightboxUrls.length) % photoLightboxUrls.length;
   updatePhotoLightbox();
+}
+
+function handlePhotoLightboxTouchStart(event) {
+  if (photoLightboxUrls.length < 2) return;
+  const touch = event.changedTouches[0];
+  if (!touch) return;
+  photoLightboxTouchStartX = touch.clientX;
+  photoLightboxTouchStartY = touch.clientY;
+}
+
+function handlePhotoLightboxTouchEnd(event) {
+  if (photoLightboxUrls.length < 2) return;
+  const touch = event.changedTouches[0];
+  if (!touch) return;
+  const deltaX = touch.clientX - photoLightboxTouchStartX;
+  const deltaY = touch.clientY - photoLightboxTouchStartY;
+  if (Math.abs(deltaX) < 40 || Math.abs(deltaX) <= Math.abs(deltaY)) return;
+  movePhotoLightbox(deltaX < 0 ? 1 : -1);
 }
 
 function getEditPhotoEntries(item) {
@@ -4984,6 +5005,8 @@ if (photoLightbox) {
   photoLightboxClose.addEventListener("click", closePhotoLightbox);
   photoLightboxPrevious.addEventListener("click", () => movePhotoLightbox(-1));
   photoLightboxNext.addEventListener("click", () => movePhotoLightbox(1));
+  photoLightboxStage?.addEventListener("touchstart", handlePhotoLightboxTouchStart, { passive: true });
+  photoLightboxStage?.addEventListener("touchend", handlePhotoLightboxTouchEnd, { passive: true });
   photoLightbox.addEventListener("click", (event) => {
     if (event.target === photoLightbox) closePhotoLightbox();
   });
