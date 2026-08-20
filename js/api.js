@@ -1,12 +1,13 @@
-// Endpoint de producción del catálogo público en n8n.
-const N8N_DATA_URL = "https://tasks.nukeador.com/webhook/segundavida/data";
-const N8N_ITEM_URL = "https://tasks.nukeador.com/webhook/c2b5eab6-9f26-48e9-9561-81dc6d3347ec/segundavida/item";
-const N8N_PUBLISH_URL = "https://tasks.nukeador.com/webhook/segundavida/publish";
-const N8N_EDIT_URL = "https://tasks.nukeador.com/webhook/segundavida/edit";
-const N8N_COMPLETE_URL = "https://tasks.nukeador.com/webhook/segundavida/complete";
-const N8N_MINE_URL = "https://tasks.nukeador.com/webhook/segundavida/mine";
-const N8N_REPORT_URL = "https://tasks.nukeador.com/webhook/segundavida/report";
-const N8N_INTERACTION_URL = "https://tasks.nukeador.com/webhook/segundavida/interaction";
+// API pública estable; Nginx oculta las rutas internas de n8n.
+const API_BASE_URL = "https://api.aldeapucela.org/segundavida";
+const N8N_DATA_URL = `${API_BASE_URL}/data`;
+const N8N_ITEM_URL = `${API_BASE_URL}/item`;
+const N8N_PUBLISH_URL = `${API_BASE_URL}/publish`;
+const N8N_EDIT_URL = `${API_BASE_URL}/edit`;
+const N8N_COMPLETE_URL = `${API_BASE_URL}/complete`;
+const N8N_MINE_URL = `${API_BASE_URL}/mine`;
+const N8N_REPORT_URL = `${API_BASE_URL}/report`;
+const N8N_INTERACTION_URL = `${API_BASE_URL}/interaction`;
 const NOCODB_BASE_URL = "https://proyectos.aldeapucela.org";
 
 const catalogInFlight = new Map();
@@ -148,7 +149,7 @@ async function listMineItems(initData) {
   }
 }
 
-async function listItems({ scope = "active", ownerUsername = "" } = {}) {
+async function listItems({ scope = "active", ownerUsername = "", fresh = false } = {}) {
   if (!N8N_DATA_URL) {
     return [];
   }
@@ -162,12 +163,16 @@ async function listItems({ scope = "active", ownerUsername = "" } = {}) {
   }
   const queryString = params.toString();
   const requestUrl = queryString ? `${N8N_DATA_URL}?${queryString}` : N8N_DATA_URL;
-  if (catalogInFlight.has(requestUrl)) return catalogInFlight.get(requestUrl);
+  const requestKey = `${requestUrl}|${fresh ? "fresh" : "default"}`;
+  if (catalogInFlight.has(requestKey)) return catalogInFlight.get(requestKey);
 
   const request = (async () => {
+    const headers = { Accept: "application/json" };
+    if (fresh) headers["Cache-Control"] = "no-cache";
     const response = await fetch(requestUrl, {
       method: "GET",
-      headers: { Accept: "application/json" },
+      headers,
+      cache: fresh ? "no-store" : "default",
     });
 
     if (!response.ok) {
@@ -184,28 +189,32 @@ async function listItems({ scope = "active", ownerUsername = "" } = {}) {
     return records;
   })();
 
-  catalogInFlight.set(requestUrl, request);
+  catalogInFlight.set(requestKey, request);
   try {
     return await request;
   } finally {
-    if (catalogInFlight.get(requestUrl) === request) catalogInFlight.delete(requestUrl);
+    if (catalogInFlight.get(requestKey) === request) catalogInFlight.delete(requestKey);
   }
 }
 
-async function getItem(itemId) {
+async function getItem(itemId, { fresh = false } = {}) {
   const publicId = String(itemId ?? "").trim();
   if (!publicId) {
     throw new Error("Identificador público vacío");
   }
 
-  if (itemInFlight.has(publicId)) {
-    return itemInFlight.get(publicId);
+  const requestKey = `${publicId}|${fresh ? "fresh" : "default"}`;
+  if (itemInFlight.has(requestKey)) {
+    return itemInFlight.get(requestKey);
   }
 
   const request = (async () => {
+    const headers = { Accept: "application/json" };
+    if (fresh) headers["Cache-Control"] = "no-cache";
     const response = await fetch(`${N8N_ITEM_URL}/${encodeURIComponent(publicId)}`, {
       method: "GET",
-      headers: { Accept: "application/json" },
+      headers,
+      cache: fresh ? "no-store" : "default",
     });
 
     let payload = null;
@@ -228,12 +237,12 @@ async function getItem(itemId) {
     return normalizeItem(payload.item);
   })();
 
-  itemInFlight.set(publicId, request);
+  itemInFlight.set(requestKey, request);
   try {
     return await request;
   } finally {
-    if (itemInFlight.get(publicId) === request) {
-      itemInFlight.delete(publicId);
+    if (itemInFlight.get(requestKey) === request) {
+      itemInFlight.delete(requestKey);
     }
   }
 }

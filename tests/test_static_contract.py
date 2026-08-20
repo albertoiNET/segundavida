@@ -236,8 +236,14 @@ class StaticContractTests(unittest.TestCase):
 
     def test_client_contract_keeps_old_endpoints_and_uses_clean_routes(self):
         api_source = (ROOT / "js" / "api.js").read_text(encoding="utf-8")
+        auth_source = (ROOT / "js" / "auth.js").read_text(encoding="utf-8")
         app_source = (ROOT / "js" / "app.js").read_text(encoding="utf-8")
         index_source = self.template.read_text(encoding="utf-8")
+        self.assertIn('const API_BASE_URL = "https://api.aldeapucela.org/segundavida";', api_source)
+        self.assertNotIn("tasks.nukeador.com", api_source + auth_source)
+        self.assertIn('headers["Cache-Control"] = "no-cache"', api_source)
+        self.assertIn('cache: fresh ? "no-store" : "default"', api_source)
+        self.assertIn("fresh: state.catalogNeedsRefresh", app_source)
         for endpoint in ("/data", "/publish", "/edit", "/complete", "/mine"):
             self.assertIn(endpoint, api_source)
         self.assertIn("N8N_ITEM_URL", api_source)
@@ -465,6 +471,20 @@ class StaticContractTests(unittest.TestCase):
             (ROOT / "scripts" / "generate_static_pages.py").read_text(encoding="utf-8"),
         ):
             self.assertNotIn("SegundaVida", source)
+
+    def test_api_nginx_contract_caches_reads_and_never_writes(self):
+        nginx_source = (ROOT / "deploy" / "nginx" / "api.aldeapucela.org.conf").read_text(encoding="utf-8")
+        maps_source = (ROOT / "deploy" / "nginx" / "segundavida-api-maps.conf").read_text(encoding="utf-8")
+        hardening_source = (ROOT / "deploy" / "nginx" / "segundavida-hardening.conf").read_text(encoding="utf-8")
+        self.assertIn("proxy_cache_methods GET HEAD", nginx_source)
+        self.assertIn("proxy_cache_valid 200 10s", nginx_source)
+        self.assertIn("proxy_cache_valid 200 15s", nginx_source)
+        self.assertIn("proxy_cache_lock on", nginx_source)
+        self.assertIn("proxy_cache off", nginx_source)
+        self.assertNotIn("location ^~ /segundavida/", nginx_source)
+        self.assertIn("segundavida_data_args_allowed", maps_source)
+        self.assertIn("limit_req_zone $binary_remote_addr zone=segundavida_api_read", hardening_source)
+        self.assertIn("limit_req_zone $binary_remote_addr zone=segundavida_api_write", hardening_source)
 
     def test_favorite_counter_workflows_validate_and_update_aggregate(self):
         workflow_path = ROOT / "docs" / "sv_record_interaction.workflow.json"

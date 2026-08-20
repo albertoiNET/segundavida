@@ -2652,7 +2652,7 @@ async function loadCatalog() {
   const requestVersion = state.catalogRequestVersion;
 
   try {
-    const records = await api.listItems();
+    const records = await api.listItems({ fresh: state.catalogNeedsRefresh });
     if (requestVersion !== state.catalogRequestVersion) return;
     setServiceState(n8nStatus, n8nStatusLabel, "connected", "Conectado ✓");
     state.catalogNeedsRefresh = false;

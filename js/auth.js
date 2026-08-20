@@ -1,5 +1,5 @@
 // Cliente mínimo de identidad. La validación real ocurre siempre en n8n.
-const N8N_WHOAMI_URL = "https://tasks.nukeador.com/webhook/segundavida/whoami";
+const N8N_WHOAMI_URL = "https://api.aldeapucela.org/segundavida/whoami";
 
 function getWebApp() {
   return window.Telegram?.WebApp ?? null;
