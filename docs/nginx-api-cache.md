@@ -60,12 +60,15 @@ para que la persona que hizo la operación vea el cambio inmediatamente.
 
 1. Copiar `segundavida-hardening.conf` y `segundavida-api-maps.conf` al bloque
    `http` de Nginx, normalmente mediante `/etc/nginx/conf.d/`.
-2. Copiar `api.example.org.conf.template` a un fichero privado del servidor.
-3. Sustituir `api.example.org` por el dominio de la instalación.
-4. Sustituir `__ITEM_WEBHOOK_UUID__` por el UUID interno de la ficha. Ese valor
+2. Copiar `segundavida-cors.conf` a `/etc/nginx/snippets/` y mantener en el
+   mapa solo el dominio público y los orígenes locales de desarrollo que se
+   necesiten. No usar `*`.
+3. Copiar `api.example.org.conf.template` a un fichero privado del servidor.
+4. Sustituir `api.example.org` por el dominio de la instalación.
+5. Sustituir `__ITEM_WEBHOOK_UUID__` por el UUID interno de la ficha. Ese valor
    debe permanecer en el servidor y no versionarse.
-5. Configurar los certificados TLS del dominio real en el servidor.
-6. Ejecutar `nginx -t` y solo después `systemctl reload nginx`.
+6. Configurar los certificados TLS del dominio real en el servidor.
+7. Ejecutar `nginx -t` y solo después `systemctl reload nginx`.
 
 El fichero renderizado con datos reales debe permanecer fuera del repositorio.
 Conviene guardar una copia de seguridad antes de cada cambio para poder
@@ -80,6 +83,7 @@ GET /segundavida/item/<id>          -> MISS y luego HIT
 GET /segundavida/data?unknown=1     -> 400 sin llegar a n8n
 GET /segundavida/item/nope          -> 400 sin llegar a n8n
 POST /segundavida/publish           -> nunca se almacena en caché
+OPTIONS /segundavida/data           -> 204 para un origen permitido
 ```
 
 Las pruebas de carga deben hacerse contra un upstream de prueba o con una

@@ -48,6 +48,7 @@ server {
         proxy_set_header X-Forwarded-Proto $scheme;
         proxy_set_header X-Forwarded-Host $host;
         proxy_set_header X-Forwarded-Prefix /segundavida;
+        include /etc/nginx/snippets/segundavida-cors.conf;
         proxy_connect_timeout 3s;
         proxy_read_timeout 30s;
         proxy_send_timeout 30s;
@@ -81,6 +82,7 @@ server {
         proxy_set_header X-Forwarded-Proto $scheme;
         proxy_set_header X-Forwarded-Host $host;
         proxy_set_header X-Forwarded-Prefix /segundavida;
+        include /etc/nginx/snippets/segundavida-cors.conf;
         proxy_connect_timeout 3s;
         proxy_read_timeout 30s;
         proxy_send_timeout 30s;
@@ -116,6 +118,7 @@ server {
         proxy_set_header X-Forwarded-Proto $scheme;
         proxy_set_header X-Forwarded-Host $host;
         proxy_set_header X-Forwarded-Prefix /segundavida;
+        include /etc/nginx/snippets/segundavida-cors.conf;
         proxy_connect_timeout 3s;
         proxy_read_timeout 60s;
         proxy_send_timeout 60s;

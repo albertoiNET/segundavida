@@ -23,6 +23,10 @@ const PHOTO_OPTIMIZE_THRESHOLD = 1.5 * 1024 * 1024;
 const PHOTO_MAX_EDGE = 1280;
 const PHOTO_JPEG_QUALITY = 0.74;
 const ALLOWED_PHOTO_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
+const CATALOG_INITIAL_RENDER_COUNT = 24;
+const CATALOG_RENDER_BATCH_SIZE = 24;
+const CATALOG_LOAD_AHEAD_PX = 720;
+const CATALOG_RETRY_DELAYS_MS = Object.freeze([350, 1000]);
 const OWN_ITEMS_STORAGE_KEY = "segundavida:my-items:v1";
 const FAVORITES_STORAGE_KEY = "segundavida:favorites:v1";
 const INTERACTION_STORAGE_KEY = "segundavida:interaction-events:v1";
@@ -90,6 +94,7 @@ const state = {
   selectedItemLive: false,
   catalogNeedsRefresh: false,
   catalogRequestVersion: 0,
+  catalogVisibleCount: CATALOG_INITIAL_RENDER_COUNT,
   publishRetryAfterRefresh: false,
 };
 
@@ -105,6 +110,11 @@ let routeOpenInFlight = null;
 let routeOpenItemId = "";
 let reportStartInFlight = null;
 let manageStartInFlight = null;
+let catalogMatches = [];
+let catalogLoadMoreObserver = null;
+let catalogPaginationControls = null;
+let catalogLoadMoreButton = null;
+let catalogLoadMoreSentinel = null;
 let deleteDialogItem = null;
 let deleteDialogTriggerButton = null;
 let contactDialogItem = null;
@@ -1231,24 +1241,40 @@ function getInterestMessage(item) {
   return `Hola, he visto que has publicado «${item.title}» en Segunda Vida de @aldeapucela y estoy interesado/a.\n\n${getItemUrl(item)}`;
 }
 
+function createCatalogCardMedia(item, index) {
+  const imageUrl = getItemImageUrls(item)[0];
+  if (!imageUrl) {
+    const placeholder = document.createElement("div");
+    placeholder.className = "item-card__placeholder";
+    placeholder.append(createCategoryIcon(item.category));
+    placeholder.setAttribute("aria-hidden", "true");
+    return placeholder;
+  }
+
+  const media = document.createElement("div");
+  media.className = "item-card__media";
+
+  const image = document.createElement("img");
+  image.src = imageUrl;
+  image.alt = item.title;
+  image.loading = "lazy";
+  image.decoding = "async";
+  if (index < 2) image.fetchPriority = "high";
+  image.addEventListener("error", () => {
+    media.classList.add("item-card__media--placeholder");
+    media.replaceChildren(createCategoryIcon(item.category));
+  }, { once: true });
+  media.append(image);
+  return media;
+}
+
 function createItemCard(item, index) {
   const card = document.createElement("article");
   card.className = "item-card";
   card.style.animationDelay = `${Math.min(index * 60, 240)}ms`;
   card.dataset.itemId = item.id;
 
-  if (getItemImageUrls(item).length) {
-    card.append(createPhotoCarousel(item, {
-      className: "photo-carousel--card",
-      openLightbox: false,
-    }));
-  } else {
-    const placeholder = document.createElement("div");
-    placeholder.className = "item-card__placeholder";
-    placeholder.append(createCategoryIcon(item.category));
-    placeholder.setAttribute("aria-hidden", "true");
-    card.append(placeholder);
-  }
+  card.append(createCatalogCardMedia(item, index));
 
   const body = document.createElement("div");
   body.className = "item-card__body";
@@ -2598,6 +2624,84 @@ function sortNewestFirst(items) {
   });
 }
 
+function ensureCatalogPaginationControls() {
+  if (!itemsGrid) return null;
+  if (catalogPaginationControls) return catalogPaginationControls;
+
+  catalogPaginationControls = document.createElement("div");
+  catalogPaginationControls.className = "catalog-pagination";
+  catalogPaginationControls.hidden = true;
+
+  catalogLoadMoreButton = document.createElement("button");
+  catalogLoadMoreButton.className = "catalog-pagination__button";
+  catalogLoadMoreButton.type = "button";
+  catalogLoadMoreButton.textContent = "Cargar más";
+  catalogLoadMoreButton.addEventListener("click", () => appendCatalogBatch());
+
+  catalogLoadMoreSentinel = document.createElement("span");
+  catalogLoadMoreSentinel.className = "catalog-pagination__sentinel";
+  catalogLoadMoreSentinel.setAttribute("aria-hidden", "true");
+
+  catalogPaginationControls.append(catalogLoadMoreButton, catalogLoadMoreSentinel);
+  itemsGrid.insertAdjacentElement("afterend", catalogPaginationControls);
+  return catalogPaginationControls;
+}
+
+function disconnectCatalogLoadMoreObserver() {
+  catalogLoadMoreObserver?.disconnect();
+  catalogLoadMoreObserver = null;
+}
+
+function formatCatalogCount(count) {
+  return Number(count).toLocaleString("es-ES");
+}
+
+function updateCatalogPagination() {
+  const controls = ensureCatalogPaginationControls();
+  if (!controls || !itemsCount) return;
+
+  const totalCount = catalogMatches.length;
+  const visibleCount = Math.min(state.catalogVisibleCount, totalCount);
+  const hasMore = visibleCount < totalCount;
+  const totalLabel = `${formatCatalogCount(totalCount)} ${totalCount === 1 ? "cosa" : "cosas"}`;
+
+  itemsCount.textContent = hasMore
+    ? `Mostrando ${formatCatalogCount(visibleCount)} de ${totalLabel}`
+    : totalLabel;
+  controls.hidden = !hasMore;
+  catalogLoadMoreSentinel.hidden = !hasMore;
+
+  if (!hasMore) {
+    disconnectCatalogLoadMoreObserver();
+    return;
+  }
+
+  const supportsIntersectionObserver = typeof window.IntersectionObserver === "function";
+  catalogLoadMoreButton.hidden = supportsIntersectionObserver;
+  if (!supportsIntersectionObserver || catalogLoadMoreObserver || !catalogLoadMoreSentinel) return;
+
+  catalogLoadMoreObserver = new window.IntersectionObserver((entries) => {
+    if (entries.some((entry) => entry.isIntersecting)) appendCatalogBatch();
+  }, { rootMargin: `${CATALOG_LOAD_AHEAD_PX}px 0px` });
+  catalogLoadMoreObserver.observe(catalogLoadMoreSentinel);
+}
+
+function appendCatalogBatch() {
+  if (!itemsGrid || !catalogMatches.length) return;
+
+  const previousCount = Math.min(state.catalogVisibleCount, catalogMatches.length);
+  const nextCount = Math.min(previousCount + CATALOG_RENDER_BATCH_SIZE, catalogMatches.length);
+  if (nextCount <= previousCount) return;
+
+  const fragment = document.createDocumentFragment();
+  catalogMatches.slice(previousCount, nextCount).forEach((item, index) => {
+    fragment.append(createItemCard(item, previousCount + index));
+  });
+  itemsGrid.append(fragment);
+  state.catalogVisibleCount = nextCount;
+  updateCatalogPagination();
+}
+
 function renderItems() {
   const query = state.query.trim().toLocaleLowerCase("es");
   const matchingItems = sortNewestFirst(state.items.filter((item) => {
@@ -2607,15 +2711,21 @@ function renderItems() {
       .toLocaleLowerCase("es");
     return matchesCategory && matchesStatus && (!query || searchableText.includes(query));
   }));
-  const visibleItems = isNotFoundPage && !query ? matchingItems.slice(0, 4) : matchingItems;
+  catalogMatches = isNotFoundPage && !query ? matchingItems.slice(0, 4) : matchingItems;
+  state.catalogVisibleCount = Math.min(CATALOG_INITIAL_RENDER_COUNT, catalogMatches.length);
+  disconnectCatalogLoadMoreObserver();
 
   if (catalogTitle && isNotFoundPage) {
     catalogTitle.textContent = query ? "Resultados de búsqueda" : "Objetos recién añadidos";
   }
-  itemsCount.textContent = `${visibleItems.length} ${visibleItems.length === 1 ? "cosa" : "cosas"}`;
-  itemsGrid.replaceChildren(...visibleItems.map(createItemCard));
+  itemsGrid.replaceChildren(
+    ...catalogMatches
+      .slice(0, state.catalogVisibleCount)
+      .map((item, index) => createItemCard(item, index)),
+  );
+  updateCatalogPagination();
 
-  if (visibleItems.length > 0) {
+  if (catalogMatches.length > 0) {
     itemsState.textContent = "";
     itemsState.dataset.state = "";
     return;
@@ -2636,6 +2746,10 @@ function isNotExpired(item) {
   return Number.isNaN(expiresAt.getTime()) || expiresAt.getTime() >= Date.now();
 }
 
+function waitForCatalogRetry(delayMs) {
+  return new Promise((resolve) => window.setTimeout(resolve, delayMs));
+}
+
 async function loadCatalog() {
   if (!api?.isDataConfigured) {
     setServiceState(n8nStatus, n8nStatusLabel, "error", "No configurado");
@@ -2650,30 +2764,25 @@ async function loadCatalog() {
 
   if (n8nStatusLabel) n8nStatusLabel.textContent = "Comprobando...";
   const requestVersion = state.catalogRequestVersion;
+  let records = null;
 
-  try {
-    const records = await api.listItems({ fresh: state.catalogNeedsRefresh });
-    if (requestVersion !== state.catalogRequestVersion) return;
-    setServiceState(n8nStatus, n8nStatusLabel, "connected", "Conectado ✓");
-    state.catalogNeedsRefresh = false;
-    state.catalogLoaded = true;
-    state.catalogItems = records;
-    state.items = records.filter((item) => ["available", "reserved"].includes(item.status) && isNotExpired(item));
-    if (LOCAL_AUTHOR_DEMO_MODE) {
-      state.myItems = createLocalAuthorDemoItems(state.items);
+  for (let attempt = 0; attempt <= CATALOG_RETRY_DELAYS_MS.length; attempt += 1) {
+    try {
+      records = await api.listItems({
+        fresh: state.catalogNeedsRefresh || attempt > 0,
+      });
+      break;
+    } catch {
+      if (requestVersion !== state.catalogRequestVersion) return;
+      const retryDelay = CATALOG_RETRY_DELAYS_MS[attempt];
+      if (retryDelay === undefined) break;
+      itemsState.textContent = "No hemos podido cargar los objetos. Reintentando…";
+      itemsState.dataset.state = "";
+      await waitForCatalogRetry(retryDelay);
     }
-    renderCategories();
-    renderStatusFilters();
-    renderItems();
-    renderFavorites();
-    renderMyItems();
-    renderUserProfile();
-    renderRelatedItems(state.selectedItem);
-    void openItemFromRoute();
-    void openReportFromStartParam();
-    void openManageFromStartParam();
-    void openReportDemo();
-  } catch {
+  }
+
+  if (!records) {
     if (requestVersion !== state.catalogRequestVersion) return;
     state.catalogNeedsRefresh = true;
     setServiceState(n8nStatus, n8nStatusLabel, "error", "No disponible");
@@ -2684,7 +2793,29 @@ async function loadCatalog() {
     void openManageFromStartParam();
     void openReportDemo();
     void openItemFromRoute();
+    return;
   }
+
+  if (requestVersion !== state.catalogRequestVersion) return;
+  setServiceState(n8nStatus, n8nStatusLabel, "connected", "Conectado ✓");
+  state.catalogNeedsRefresh = false;
+  state.catalogLoaded = true;
+  state.catalogItems = records;
+  state.items = records.filter((item) => ["available", "reserved"].includes(item.status) && isNotExpired(item));
+  if (LOCAL_AUTHOR_DEMO_MODE) {
+    state.myItems = createLocalAuthorDemoItems(state.items);
+  }
+  renderCategories();
+  renderStatusFilters();
+  renderItems();
+  renderFavorites();
+  renderMyItems();
+  renderUserProfile();
+  renderRelatedItems(state.selectedItem);
+  void openItemFromRoute();
+  void openReportFromStartParam();
+  void openManageFromStartParam();
+  void openReportDemo();
 }
 
 async function loadProfileCatalog(username = state.currentUserUsername) {
