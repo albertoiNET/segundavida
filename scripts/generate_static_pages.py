@@ -30,7 +30,7 @@ SENSITIVE_KEYS = {
     "secret",
     "token",
 }
-PUBLIC_ID_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]{5,79}$")
+PUBLIC_ID_PATTERN = re.compile(r"^[A-Za-z0-9_-]{6,80}$")
 TELEGRAM_DERIVED_ID_PATTERN = re.compile(r"^(?:\d{6,80}|\d+(?:[-_]\d+)+)$")
 STATIC_ITEM_DATA_PATTERN = re.compile(
     r'<script[^>]+id="static-item-data"[^>]*>(.*?)</script>',
