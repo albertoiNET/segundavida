@@ -68,7 +68,7 @@ server {
     }
 
     # Replace __ITEM_WEBHOOK_UUID__ with the internal webhook UUID on the server.
-    location ~ "^/segundavida/item/([A-Za-z0-9][A-Za-z0-9_-]{5,79})/?$" {
+    location ~ "^/segundavida/item/([A-Za-z0-9_-]{6,80})/?$" {
         if ($args != "") {
             return 400 '{"ok":false,"error":"invalid_query"}\n';
         }
