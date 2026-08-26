@@ -1,5 +1,6 @@
 // Cliente mínimo de identidad. La validación real ocurre siempre en n8n.
 const N8N_WHOAMI_URL = "https://api.aldeapucela.org/segundavida/whoami";
+const TELEGRAM_INIT_DATA_MAX_AGE_SECONDS = 24 * 60 * 60;
 
 function getWebApp() {
   return window.Telegram?.WebApp ?? null;
@@ -24,7 +25,7 @@ function getInitDataAgeSeconds() {
 
 function isInitDataExpired() {
   const age = getInitDataAgeSeconds();
-  return age !== null && age > 600;
+  return age !== null && age > TELEGRAM_INIT_DATA_MAX_AGE_SECONDS;
 }
 
 async function whoAmI() {
@@ -64,5 +65,6 @@ window.SecondaVidaAuth = Object.freeze({
   getInitData,
   getInitDataAgeSeconds,
   isInitDataExpired,
+  maxInitDataAgeSeconds: TELEGRAM_INIT_DATA_MAX_AGE_SECONDS,
   whoAmI,
 });

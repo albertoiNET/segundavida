@@ -42,8 +42,6 @@ const PUBLISH_DRAFT_STORAGE_KEY = "segundavida:publish-draft:v1";
 const PUBLISH_DRAFT_VALUES_KEY = "segundavida:publish-draft-values:v1";
 const PUBLISH_ATTEMPT_STORAGE_KEY = "segundavida:publish-attempt:v1";
 const PUBLISH_ATTEMPT_MAX_AGE_MS = 30 * 60 * 1000;
-const AUTH_REFRESH_STORAGE_KEY = "segundavida:auth-refresh:v1";
-const AUTH_REFRESH_WINDOW_MS = 2 * 60 * 1000;
 const PUBLISH_DRAFT_DB_NAME = "segundavida-drafts-v1";
 const PUBLISH_DRAFT_STORE_NAME = "drafts";
 const LOCAL_AUTHOR_DEMO_MODE =
@@ -103,7 +101,6 @@ const state = {
   catalogNeedsRefresh: false,
   catalogRequestVersion: 0,
   catalogVisibleCount: CATALOG_INITIAL_RENDER_COUNT,
-  publishRetryAfterRefresh: false,
   publishAttempt: null,
 };
 
@@ -2297,10 +2294,7 @@ async function saveInlineEdit() {
     setInlineEditMessage(`La publicación debe conservar entre 1 y ${MAX_OFFER_PHOTOS} fotos.`, "error");
     return;
   }
-  if (!auth?.hasInitData()) {
-    setInlineEditMessage("Abre la Mini App desde Telegram para guardar cambios.", "error");
-    return;
-  }
+  if (!requireTelegramSession(detailActionState, "Abre la Mini App desde Telegram para guardar cambios.")) return;
   if (!api?.isEditConfigured || typeof api.editItem !== "function") {
     setInlineEditMessage("La edición todavía no está conectada en n8n.", "error");
     return;
@@ -2353,6 +2347,10 @@ async function saveInlineEdit() {
   } catch (error) {
     editSaveButton.disabled = false;
     editCancelButton.disabled = false;
+    if (isTelegramInitDataExpired(error)) {
+      showTelegramSessionExpired(detailActionState);
+      return;
+    }
     setInlineEditMessage(error.message || "No se han podido guardar los cambios.", "error");
   } finally {
     resetInlineEditButtons();
@@ -3309,7 +3307,6 @@ async function checkIdentity() {
       await loadMineItems();
       refreshSelectedDetailForIdentity();
       if (state.currentView === USER_PROFILE_VIEW) renderUserProfile();
-      schedulePublishRetryIfReady();
       if (state.publishAttempt?.phase === "checking") {
         void reconcilePendingPublish();
       } else if (state.publishAttempt?.phase === "retryable") {
@@ -3479,7 +3476,6 @@ function hidePublishRetryButton() {
 }
 
 function resetPublishedForm() {
-  removeSessionStorage(AUTH_REFRESH_STORAGE_KEY);
   removeSessionStorage(PUBLISH_DRAFT_STORAGE_KEY);
   removeSessionStorage(PUBLISH_DRAFT_VALUES_KEY);
   clearPublishAttempt();
@@ -3695,16 +3691,6 @@ function restoreDraftFile(entry) {
   });
 }
 
-function schedulePublishRetryIfReady() {
-  if (!state.publishRetryAfterRefresh || !state.telegramUser?.valid) return;
-  if (!normalizeTelegramUsername(state.telegramUser?.username)) return;
-
-  state.publishRetryAfterRefresh = false;
-  window.setTimeout(() => {
-    void handleOfferSubmit({ preventDefault() {} });
-  }, 350);
-}
-
 async function restorePublishDraft() {
   const draft = await consumePublishDraft();
   if (!draft?.values) return;
@@ -3757,18 +3743,7 @@ async function restorePublishDraft() {
     };
   }
 
-  let refreshState = null;
-  try {
-    refreshState = JSON.parse(readSessionStorage(AUTH_REFRESH_STORAGE_KEY) || "null");
-  } catch {
-    refreshState = null;
-  }
-  state.publishRetryAfterRefresh = refreshState?.retry === true;
-
-  if (state.publishRetryAfterRefresh) {
-    setFormState("Actualizando la sesión…", "pending");
-    schedulePublishRetryIfReady();
-  } else if (restoredFiles.length > 0) {
+  if (restoredFiles.length > 0) {
     setFormState("Hemos recuperado el borrador de tu publicación.", "connected");
   }
 }
@@ -3783,6 +3758,40 @@ function isTelegramInitDataExpired(value) {
   return candidates.includes("telegram_init_data_expired");
 }
 
+function showTelegramSessionExpired(target) {
+  if (!target) return;
+
+  target.replaceChildren(document.createTextNode("La sesión de Telegram ha caducado. "));
+  const reopenLink = document.createElement("a");
+  reopenLink.className = "inline-action-link";
+  reopenLink.href = telegramRuntime.miniAppUrl;
+  reopenLink.target = "_blank";
+  reopenLink.rel = "noopener noreferrer";
+  reopenLink.textContent = "Vuelve a abrir la Mini App";
+  reopenLink.addEventListener("click", (event) => {
+    if (openTelegramChat(telegramRuntime.miniAppUrl)) event.preventDefault();
+  });
+  target.append(reopenLink);
+  target.dataset.state = "error";
+}
+
+function requireTelegramSession(target, missingMessage) {
+  if (!auth?.hasInitData()) {
+    if (target) {
+      target.textContent = missingMessage;
+      target.dataset.state = "error";
+    }
+    return false;
+  }
+
+  if (auth?.isInitDataExpired?.()) {
+    showTelegramSessionExpired(target);
+    return false;
+  }
+
+  return true;
+}
+
 function isPhotoRequiredError(value) {
   const candidates = [
     typeof value === "string" ? value : "",
@@ -3791,31 +3800,6 @@ function isPhotoRequiredError(value) {
     value?.code,
   ];
   return candidates.some((candidate) => String(candidate).trim().toLowerCase().replace(/[\s-]+/g, "_") === "photo_required");
-}
-
-async function refreshTelegramSession() {
-  if (!telegramRuntime.isTelegram || typeof window.location?.reload !== "function") {
-    return false;
-  }
-
-  let previous = null;
-  try {
-    previous = JSON.parse(readSessionStorage(AUTH_REFRESH_STORAGE_KEY) || "null");
-  } catch {
-    previous = null;
-  }
-  if (previous?.requestedAt && Date.now() - previous.requestedAt < AUTH_REFRESH_WINDOW_MS) {
-    return false;
-  }
-
-  writeSessionStorage(AUTH_REFRESH_STORAGE_KEY, JSON.stringify({
-    requestedAt: Date.now(),
-    retry: true,
-  }));
-  await savePublishDraft();
-  setFormState("Actualizando la sesión…", "pending");
-  window.setTimeout(() => window.location.reload(), 150);
-  return true;
 }
 
 function revokePhotoPreviewUrls() {
@@ -4167,10 +4151,7 @@ async function handleOfferSubmit(event) {
   }
 
   if (auth?.isInitDataExpired?.()) {
-    const refreshed = await refreshTelegramSession();
-    if (!refreshed) {
-      setFormState("La sesión de Telegram ha caducado. Cierra y vuelve a abrir esta mini app para continuar.", "error");
-    }
+    showTelegramSessionExpired(offerFormState);
     return;
   }
 
@@ -4227,10 +4208,7 @@ async function handleOfferSubmit(event) {
     }
 
     if (isTelegramInitDataExpired(result)) {
-      const refreshed = await refreshTelegramSession();
-      if (!refreshed) {
-        setFormState("La sesión de Telegram ha caducado. Cierra y vuelve a abrir esta mini app para continuar.", "error");
-      }
+      showTelegramSessionExpired(offerFormState);
       return;
     }
 
@@ -4295,10 +4273,7 @@ async function handleOfferSubmit(event) {
       return;
     }
     if (isTelegramInitDataExpired(error)) {
-      const refreshed = await refreshTelegramSession();
-      if (!refreshed) {
-        setFormState("La sesión de Telegram ha caducado. Cierra y vuelve a abrir esta mini app para continuar.", "error");
-      }
+      showTelegramSessionExpired(offerFormState);
       return;
     }
     if (publishResilience?.isTransportError(error)) {
@@ -4451,11 +4426,7 @@ async function hideItem() {
   const item = deleteDialogItem;
   if (!item?.id || !deleteItemDialogConfirm) return;
 
-  if (!auth?.hasInitData()) {
-    deleteItemDialogState.textContent = "Abre la Mini App desde Telegram para gestionar esta publicación.";
-    deleteItemDialogState.dataset.state = "error";
-    return;
-  }
+  if (!requireTelegramSession(deleteItemDialogState, "Abre la Mini App desde Telegram para gestionar esta publicación.")) return;
 
   if (!api?.isCompleteConfigured || typeof api.completeItem !== "function") {
     deleteItemDialogState.textContent = "La opción de borrar todavía no está conectada en n8n.";
@@ -4477,7 +4448,9 @@ async function hideItem() {
     });
 
     if (!result.ok) {
-      throw new Error(result.error || "No se ha podido borrar la publicación.");
+      const error = new Error(result.error || "No se ha podido borrar la publicación.");
+      error.code = result.error_code || result.error;
+      throw error;
     }
 
     api.invalidateMine?.();
@@ -4499,6 +4472,10 @@ async function hideItem() {
     deleteItemDialogConfirm.disabled = false;
     deleteItemDialogCancel.disabled = false;
     deleteItemDialogConfirm.textContent = "Borrar publicación";
+    if (isTelegramInitDataExpired(error)) {
+      showTelegramSessionExpired(deleteItemDialogState);
+      return;
+    }
     deleteItemDialogState.textContent = error.message || "No se ha podido borrar la publicación.";
     deleteItemDialogState.dataset.state = "error";
   }
@@ -4513,11 +4490,7 @@ async function manageItemAction(
 ) {
   if (!item?.id) return;
 
-  if (!auth?.hasInitData()) {
-    feedbackElement.textContent = "Abre la Mini App desde Telegram para gestionar esta publicación.";
-    feedbackElement.dataset.state = "error";
-    return;
-  }
+  if (!requireTelegramSession(feedbackElement, "Abre la Mini App desde Telegram para gestionar esta publicación.")) return;
 
   if (!api?.isCompleteConfigured || typeof api.completeItem !== "function") {
     feedbackElement.textContent = "La gestión de estados todavía no está conectada en n8n.";
@@ -4542,7 +4515,9 @@ async function manageItemAction(
     });
 
     if (!result.ok) {
-      throw new Error(result.error || "No se ha podido actualizar la publicación.");
+      const error = new Error(result.error || "No se ha podido actualizar la publicación.");
+      error.code = result.error_code || result.error;
+      throw error;
     }
 
     api.invalidateMine?.();
@@ -4582,6 +4557,10 @@ async function manageItemAction(
       configureStatusButton(triggerButton, item.status);
     } else {
       configureDeliveryButton(triggerButton, item.status);
+    }
+    if (isTelegramInitDataExpired(error)) {
+      showTelegramSessionExpired(feedbackElement);
+      return;
     }
     feedbackElement.textContent = error.message || "No se ha podido actualizar la publicación.";
     feedbackElement.dataset.state = "error";
@@ -4947,6 +4926,10 @@ async function handleReportSubmit(event) {
     openReportFlow(item, reportDialogTriggerButton);
     return;
   }
+  if (auth?.isInitDataExpired?.()) {
+    showTelegramSessionExpired(reportFormState);
+    return;
+  }
   if (!api?.isReportConfigured || typeof api.reportProblem !== "function") {
     setReportFormState("El envío de problemas todavía no está configurado.", "error");
     return;
@@ -4979,6 +4962,10 @@ async function handleReportSubmit(event) {
     });
     reportSubmitButton.disabled = false;
     reportSubmitButton.textContent = "Enviar problema";
+    if (isTelegramInitDataExpired(error)) {
+      showTelegramSessionExpired(reportFormState);
+      return;
+    }
     setReportFormState(reportErrorMessage(error), "error");
   }
 }

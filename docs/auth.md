@@ -87,8 +87,9 @@ El nodo de backend debe:
 4. Calcular la firma HMAC-SHA-256 siguiendo el procedimiento oficial de
    Telegram, usando el token del bot en el servidor, y compararla en tiempo
    constante con `hash`.
-5. Rechazar datos antiguos comprobando `auth_date` con una tolerancia corta
-   (por ejemplo, 10 minutos para este endpoint).
+5. Rechazar datos antiguos comprobando `auth_date` con una tolerancia de 24
+   horas para permitir que una Mini App permanezca abierta durante una sesión
+   normal sin convertir `initData` en una credencial indefinida.
 6. Devolver únicamente `telegram_id`, `first_name`, el campo técnico `username`
    (nombre de usuario) y el booleano `is_admin` después de validar. No devolver
    el `initData` ni el token.
