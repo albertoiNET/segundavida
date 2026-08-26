@@ -4,15 +4,10 @@ const js = (source) => JSON.stringify(source);
 
 const validateCallbackJs = String.raw`const incoming = $input.first() ?? {};
 const input = incoming.json ?? {};
-const headers = input.headers ?? {};
 const body = input.body && typeof input.body === 'object' ? input.body : input;
-const token = String(headers['x-segundavida-pages-token'] ?? headers['X-SegundaVida-Pages-Token'] ?? '').trim();
-const expectedToken = String($vars.SEGUNDAVIDA_N8N_CALLBACK_TOKEN ?? '').trim();
 const itemId = String(body.item_id ?? '').trim();
-const validToken = Boolean(expectedToken && token && token === expectedToken);
 const validItemId = /^[A-Za-z0-9_-]{6,80}$/.test(itemId);
-const responseCode = !validToken ? 401 : !validItemId ? 400 : 200;
-return [{ json: { ok: validToken && validItemId, item_id: itemId, response_code: responseCode, error: !validToken ? 'callback_unauthorized' : !validItemId ? 'item_id_invalid' : null } }];`;
+return [{ json: { ok: validItemId, item_id: itemId, response_code: validItemId ? 200 : 400, error: validItemId ? null : 'item_id_invalid' } }];`;
 
 const normalizeRowJs = String.raw`const source = $input.first()?.json ?? {};
 const fields = source.fields ?? source;
@@ -62,7 +57,7 @@ const code = `import { workflow, node, trigger, ifElse, newCredential, expr } fr
 const noco = ${js(noco)};
 const nocoCredential = { nocoDbApiToken: newCredential('NocoDB Token account') };
 const telegramCredential = { telegramApi: newCredential('Pucelo Bot') };
-const webhook = trigger({ type: 'n8n-nodes-base.webhook', version: 2.1, config: { name: 'Pages ready webhook', position: [-2016, 0], parameters: { httpMethod: 'POST', path: 'segundavida/pages-ready', responseMode: 'responseNode', options: {} } } });
+const webhook = trigger({ type: 'n8n-nodes-base.webhook', version: 2.1, config: { name: 'Pages ready webhook', position: [-2016, 0], credentials: { httpHeaderAuth: newCredential('Header Auth account') }, parameters: { httpMethod: 'POST', path: 'segundavida/pages-ready', authentication: 'headerAuth', responseMode: 'responseNode', options: {} } } });
 const validateCallback = node({ type: 'n8n-nodes-base.code', version: 2, config: { name: 'Validate Pages callback', position: [-1792, 0], parameters: { mode: 'runOnceForAllItems', jsCode: ${js(validateCallbackJs)} } } });
 const callbackValid = ifElse({ version: 2.2, config: { name: 'Callback valid?', position: [-1568, 0], parameters: { conditions: { options: { caseSensitive: true, leftValue: '', typeValidation: 'strict', version: 2 }, conditions: [{ leftValue: expr('={{ $json.ok === true }}'), rightValue: true, operator: { type: 'boolean', operation: 'equals' } }], combinator: 'and' } } } });
 const respondInvalid = node({ type: 'n8n-nodes-base.respondToWebhook', version: 1.5, config: { name: 'Respond invalid callback', position: [-1344, 224], parameters: ${responseParameters('$json.response_code ?? 400')} } });

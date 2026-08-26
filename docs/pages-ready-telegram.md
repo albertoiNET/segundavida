@@ -17,10 +17,16 @@ idempotente. No requiere columnas nuevas.
 
 ## Configuración necesaria
 
-Usa el mismo valor secreto en ambos sitios:
+Configura una credencial de tipo `Header Auth` en n8n y úsala en el nodo
+`Pages ready webhook`:
 
-- n8n, variable de proyecto: `SEGUNDAVIDA_N8N_CALLBACK_TOKEN`;
-- GitHub, secret del repositorio: `SEGUNDAVIDA_N8N_CALLBACK_TOKEN`.
+- nombre del header: `X-SegundaVida-Pages-Token`;
+- valor: un secreto generado para este callback.
+
+Guarda exactamente ese mismo valor en GitHub como secret del repositorio:
+`SEGUNDAVIDA_N8N_CALLBACK_TOKEN`. La credencial del Webhook hace la
+autenticación directamente en n8n; no depende de variables de proyecto ni de
+una licencia de pago.
 
 El webhook de producción es:
 

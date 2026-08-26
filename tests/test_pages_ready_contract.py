@@ -24,7 +24,8 @@ class PagesReadyContractTests(unittest.TestCase):
             text=True,
         )
         source = result.stdout
-        self.assertIn("SEGUNDAVIDA_N8N_CALLBACK_TOKEN", source)
+        self.assertIn("Header Auth account", source)
+        self.assertIn("authentication: 'headerAuth'", source)
         self.assertIn(".add(normalizeRow).to(itemFound", source)
         self.assertIn("telegram_message_id", source)
         self.assertNotIn("resumeUrl", source)
