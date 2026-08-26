@@ -69,12 +69,6 @@ jobs:
           force_full="$INPUT_FORCE_FULL"
           if [ "$EVENT_NAME" = "push" ]; then force_full="true"; fi
 
-          cache_bust="${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
-          case "$source_url" in
-            *\?*) source_url="${source_url}&sv_run=${cache_bust}" ;;
-            *) source_url="${source_url}?sv_run=${cache_bust}" ;;
-          esac
-
           echo "url=$source_url" >> "$GITHUB_OUTPUT"
           echo "force_full=$force_full" >> "$GITHUB_OUTPUT"
           echo "item_id=$INPUT_ITEM_ID" >> "$GITHUB_OUTPUT"
