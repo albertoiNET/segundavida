@@ -24,7 +24,7 @@ class PagesReadyContractTests(unittest.TestCase):
             text=True,
         )
         source = result.stdout
-        self.assertIn("Header Auth account", source)
+        self.assertIn("Segunda Vida Pages callback", source)
         self.assertIn("authentication: 'headerAuth'", source)
         self.assertIn(".add(normalizeRow).to(itemFound", source)
         self.assertIn("telegram_message_id", source)
