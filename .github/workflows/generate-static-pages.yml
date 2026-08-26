@@ -20,6 +20,10 @@ on:
         required: false
         type: boolean
         default: false
+      item_id:
+        description: "Public item ID that must be verified after deployment"
+        required: false
+        type: string
   schedule:
     - cron: "17 4 * * *"
 
@@ -48,6 +52,7 @@ jobs:
         env:
           INPUT_SOURCE_URL: ${{ inputs.source_url }}
           INPUT_FORCE_FULL: ${{ inputs.force_full }}
+          INPUT_ITEM_ID: ${{ inputs.item_id }}
           REPOSITORY_SOURCE_URL: ${{ vars.SEGUNDAVIDA_PUBLIC_ITEMS_URL }}
           EVENT_NAME: ${{ github.event_name }}
         run: |
@@ -64,8 +69,15 @@ jobs:
           force_full="$INPUT_FORCE_FULL"
           if [ "$EVENT_NAME" = "push" ]; then force_full="true"; fi
 
+          cache_bust="${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          case "$source_url" in
+            *\?*) source_url="${source_url}&sv_run=${cache_bust}" ;;
+            *) source_url="${source_url}?sv_run=${cache_bust}" ;;
+          esac
+
           echo "url=$source_url" >> "$GITHUB_OUTPUT"
           echo "force_full=$force_full" >> "$GITHUB_OUTPUT"
+          echo "item_id=$INPUT_ITEM_ID" >> "$GITHUB_OUTPUT"
 
       - name: Find previous generated-site artifact
         id: source-run
@@ -135,6 +147,12 @@ jobs:
             --template generated-site/index.html \
             --version "sv-${GITHUB_SHA}"
 
+          if [ -n "${{ steps.source.outputs.item_id }}" ]; then
+            python3 scripts/verify_static_item.py \
+              --site-dir generated-site \
+              --item-id "${{ steps.source.outputs.item_id }}"
+          fi
+
       - name: Decide whether to deploy Pages
         id: changes
         env:
@@ -184,3 +202,56 @@ jobs:
         id: deployment
         if: steps.source.outputs.url != '' && steps.changes.outputs.deploy == 'true'
         uses: actions/deploy-pages@v4
+
+      - name: Verify requested item is live
+        if: steps.source.outputs.item_id != ''
+        env:
+          ITEM_ID: ${{ steps.source.outputs.item_id }}
+        run: |
+          set -euo pipefail
+          python3 scripts/verify_static_item.py \
+            --url "https://segundavida.aldeapucela.org/i/${ITEM_ID}/" \
+            --item-id "$ITEM_ID" \
+            --attempts 18 \
+            --interval 10
+
+      - name: Notify n8n that Pages is ready
+        if: steps.source.outputs.item_id != ''
+        env:
+          CALLBACK_URL: https://tasks.nukeador.com/webhook/segundavida/pages-ready
+          CALLBACK_TOKEN: ${{ secrets.SEGUNDAVIDA_N8N_CALLBACK_TOKEN }}
+          ITEM_ID: ${{ steps.source.outputs.item_id }}
+          RUN_ID: ${{ github.run_id }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          if [ -z "$CALLBACK_TOKEN" ]; then
+            echo "SEGUNDAVIDA_N8N_CALLBACK_TOKEN is not configured"
+            exit 1
+          fi
+
+          payload="$(jq -nc \
+            --arg item_id "$ITEM_ID" \
+            --arg run_id "$RUN_ID" \
+            --arg run_url "$RUN_URL" \
+            '{item_id:$item_id,github_run_id:$run_id,github_run_url:$run_url}')"
+          response_file="$RUNNER_TEMP/segundavida-n8n-callback-response.json"
+          callback_status="000"
+          for attempt in 1 2 3; do
+            callback_status="$(curl -sS \
+              -o "$response_file" \
+              -w '%{http_code}' \
+              -X POST "$CALLBACK_URL" \
+              -H 'Content-Type: application/json' \
+              -H "X-SegundaVida-Pages-Token: $CALLBACK_TOKEN" \
+              --data "$payload")" || callback_status="000"
+            if [ "$callback_status" -ge 200 ] && [ "$callback_status" -lt 300 ]; then
+              echo "n8n callback accepted the publication"
+              exit 0
+            fi
+            if [ "$attempt" -lt 3 ]; then sleep 5; fi
+          done
+
+          echo "n8n callback failed with HTTP $callback_status"
+          if [ -f "$response_file" ]; then cat "$response_file"; fi
+          exit 1

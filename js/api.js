@@ -267,13 +267,23 @@ async function publishItem(payload, files = []) {
     body.append(`photo_${index}`, file, file.name);
   });
 
-  const response = await fetch(N8N_PUBLISH_URL, {
-    method: "POST",
-    headers: {
-      Accept: "application/json",
-    },
-    body,
-  });
+  let response;
+  try {
+    response = await fetch(N8N_PUBLISH_URL, {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+      },
+      body,
+    });
+  } catch (cause) {
+    const error = new Error("No se pudo conectar con el servicio de publicación.");
+    error.name = "PublishTransportError";
+    error.code = "network_error";
+    error.kind = "transport";
+    error.cause = cause;
+    throw error;
+  }
 
   let result = null;
   try {

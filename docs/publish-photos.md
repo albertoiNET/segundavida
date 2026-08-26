@@ -8,7 +8,7 @@ La web envía ahora la publicación como `multipart/form-data`. El campo
 independientes:
 
 ```text
-payload  = { initData, item, consent }
+payload  = { initData, item: { public_id, ... }, consent }
 photo_0  = primera foto optimizada en JPEG
 photo_1  = segunda foto optimizada en JPEG (opcional)
 ```
@@ -109,10 +109,15 @@ consent_at: new Date().toISOString(),
 photo_count: photoEntries.length,
 ```
 
-El `itemId` debe usarse para `public_id` y `item-id`:
+`public_id` llega dentro de `item` y debe usarse para `public_id` y `item-id`.
+Si no llega, el workflow conserva el fallback de compatibilidad:
 
 ```javascript
-const itemId = crypto.randomBytes(6).toString('base64url');
+const requestedId = typeof item.public_id === 'string' ? item.public_id.trim() : '';
+const publicIdPattern = /^[A-Za-z0-9_-]{6,80}$/;
+const itemId = publicIdPattern.test(requestedId)
+  ? requestedId
+  : crypto.randomBytes(6).toString('base64url');
 ```
 
 ## Subir las fotos con el nodo nativo de NocoDB

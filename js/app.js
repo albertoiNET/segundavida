@@ -17,6 +17,7 @@ const isNotFoundPage = document.body?.dataset.page === "not-found";
 const auth = window.SecondaVidaAuth;
 const api = window.SecondaVidaApi;
 const catalogResilience = window.SecondaVidaCatalogResilience;
+const publishResilience = window.SecondaVidaPublishResilience;
 const CONSENT_VERSION = "sv-publish-2026-08-17-v3";
 const MAX_OFFER_PHOTOS = 2;
 const MAX_PHOTO_BYTES = 20 * 1024 * 1024;
@@ -39,6 +40,8 @@ const FAVORITE_ACTOR_STORAGE_KEY = "segundavida:favorite-actor:v1";
 const THEME_STORAGE_KEY = "segundavida:theme:v1";
 const PUBLISH_DRAFT_STORAGE_KEY = "segundavida:publish-draft:v1";
 const PUBLISH_DRAFT_VALUES_KEY = "segundavida:publish-draft-values:v1";
+const PUBLISH_ATTEMPT_STORAGE_KEY = "segundavida:publish-attempt:v1";
+const PUBLISH_ATTEMPT_MAX_AGE_MS = 30 * 60 * 1000;
 const AUTH_REFRESH_STORAGE_KEY = "segundavida:auth-refresh:v1";
 const AUTH_REFRESH_WINDOW_MS = 2 * 60 * 1000;
 const PUBLISH_DRAFT_DB_NAME = "segundavida-drafts-v1";
@@ -101,6 +104,7 @@ const state = {
   catalogRequestVersion: 0,
   catalogVisibleCount: CATALOG_INITIAL_RENDER_COUNT,
   publishRetryAfterRefresh: false,
+  publishAttempt: null,
 };
 
 let photoLightboxUrls = [];
@@ -290,6 +294,7 @@ const cameraDialogCancel = document.querySelector("#camera-dialog-cancel");
 const cameraCaptureButton = document.querySelector("#camera-capture-button");
 const offerPreview = document.querySelector("#offer-preview");
 const offerFormState = document.querySelector("#offer-form-state");
+const offerPublishRetryButton = document.querySelector("#offer-publish-retry-button");
 const offerConsent = document.querySelector("#offer-consent");
 const postsContent = document.querySelector("#posts-content");
 const postsAuthGate = document.querySelector("#posts-auth-gate");
@@ -3305,6 +3310,12 @@ async function checkIdentity() {
       refreshSelectedDetailForIdentity();
       if (state.currentView === USER_PROFILE_VIEW) renderUserProfile();
       schedulePublishRetryIfReady();
+      if (state.publishAttempt?.phase === "checking") {
+        void reconcilePendingPublish();
+      } else if (state.publishAttempt?.phase === "retryable") {
+        setFormState("Error de conexión. Comprueba tus datos móviles o Wi‑Fi. Puedes reintentar sin duplicar la publicación.", "error");
+        showPublishRetryButton("Reintentar publicación");
+      }
       const firstName = result.first_name ? `Hola ${result.first_name}` : "Telegram";
       const identityName = identityStatus?.querySelector("span:nth-child(2)");
       if (identityName) identityName.textContent = firstName;
@@ -3409,6 +3420,106 @@ function setFormState(message, stateName = "") {
   offerFormState.dataset.state = stateName;
 }
 
+function readPublishAttempt() {
+  try {
+    const stored = JSON.parse(readSessionStorage(PUBLISH_ATTEMPT_STORAGE_KEY) || "null");
+    if (!stored?.publicId || !stored?.fingerprint || !stored?.createdAt) return null;
+    if (Date.now() - Number(stored.createdAt) > PUBLISH_ATTEMPT_MAX_AGE_MS) {
+      removeSessionStorage(PUBLISH_ATTEMPT_STORAGE_KEY);
+      return null;
+    }
+    return stored;
+  } catch {
+    removeSessionStorage(PUBLISH_ATTEMPT_STORAGE_KEY);
+    return null;
+  }
+}
+
+function persistPublishAttempt(attempt) {
+  state.publishAttempt = attempt;
+  writeSessionStorage(PUBLISH_ATTEMPT_STORAGE_KEY, JSON.stringify(attempt));
+}
+
+function clearPublishAttempt() {
+  state.publishAttempt = null;
+  removeSessionStorage(PUBLISH_ATTEMPT_STORAGE_KEY);
+}
+
+function getOrCreatePublishAttempt(draftItem) {
+  const currentFingerprint = publishResilience?.fingerprint(draftItem);
+  const stored = state.publishAttempt ?? readPublishAttempt();
+  if (
+    stored &&
+    stored.fingerprint === currentFingerprint &&
+    publishResilience?.PUBLISH_ID_PATTERN.test(stored.publicId)
+  ) {
+    persistPublishAttempt({ ...stored, phase: "submitting" });
+    return stored.publicId;
+  }
+
+  const publicId = publishResilience?.createPublicId?.();
+  if (!publicId) throw new Error("secure_random_unavailable");
+  persistPublishAttempt({
+    publicId,
+    fingerprint: currentFingerprint,
+    createdAt: Date.now(),
+    phase: "submitting",
+  });
+  return publicId;
+}
+
+function showPublishRetryButton(label = "Comprobar de nuevo") {
+  if (!offerPublishRetryButton) return;
+  offerPublishRetryButton.textContent = label;
+  offerPublishRetryButton.hidden = false;
+}
+
+function hidePublishRetryButton() {
+  if (offerPublishRetryButton) offerPublishRetryButton.hidden = true;
+}
+
+function resetPublishedForm() {
+  removeSessionStorage(AUTH_REFRESH_STORAGE_KEY);
+  removeSessionStorage(PUBLISH_DRAFT_STORAGE_KEY);
+  removeSessionStorage(PUBLISH_DRAFT_VALUES_KEY);
+  clearPublishAttempt();
+  void clearPublishDraftDatabase();
+  offerForm.reset();
+  resetOfferPhotos();
+  hidePublishRetryButton();
+}
+
+async function reconcilePendingPublish() {
+  const attempt = state.publishAttempt ?? readPublishAttempt();
+  if (!attempt?.publicId || !auth?.hasInitData() || !api?.listMineItems) return null;
+
+  await savePublishDraft();
+  persistPublishAttempt({ ...attempt, phase: "checking" });
+  if (offerSubmitButton) offerSubmitButton.disabled = true;
+  setOfferSubmitLoading("Comprobando…");
+  setFormState("No hemos podido confirmar la publicación. Estamos comprobando si se ha creado…", "pending");
+  hidePublishRetryButton();
+
+  const found = await publishResilience.reconcile({
+    publicId: attempt.publicId,
+    load: async () => (await loadMineItems()) ?? [],
+    isComplete: (item) => ["available", "reserved", "completed", "expired"].includes(String(item?.status ?? "").toLowerCase()),
+  });
+
+  if (found) {
+    const publishedItem = state.myItems.find((item) => item.id === attempt.publicId) ?? found;
+    rememberOwnItem(publishedItem);
+    resetPublishedForm();
+    showPublishSuccess(publishedItem);
+    return publishedItem;
+  }
+
+  persistPublishAttempt({ ...attempt, phase: "retryable" });
+  setFormState("Error de conexión. Comprueba tus datos móviles o Wi‑Fi. No hemos podido confirmar si la publicación terminó.", "error");
+  showPublishRetryButton("Reintentar publicación");
+  return null;
+}
+
 function setOfferSubmitLoading(label) {
   if (!offerSubmitButton) return;
 
@@ -3470,6 +3581,7 @@ function getPublishDraftValues() {
     description: String(formData.get("description") ?? ""),
     duration: String(formData.get("duration") ?? "14"),
     consent: offerConsent.checked,
+    public_id: state.publishAttempt?.publicId ?? "",
   };
 }
 
@@ -3490,6 +3602,22 @@ function openPublishDraftDatabase() {
   });
 }
 
+async function clearPublishDraftDatabase() {
+  try {
+    const db = await openPublishDraftDatabase();
+    await new Promise((resolve, reject) => {
+      const transaction = db.transaction(PUBLISH_DRAFT_STORE_NAME, "readwrite");
+      transaction.objectStore(PUBLISH_DRAFT_STORE_NAME).delete("publish");
+      transaction.oncomplete = resolve;
+      transaction.onerror = () => reject(transaction.error || new Error("indexeddb_delete_failed"));
+      transaction.onabort = () => reject(transaction.error || new Error("indexeddb_delete_aborted"));
+    });
+    db.close();
+  } catch {
+    // El borrador solo es una red de seguridad; no bloquea una publicación confirmada.
+  }
+}
+
 async function savePublishDraft() {
   const values = getPublishDraftValues();
   writeSessionStorage(PUBLISH_DRAFT_STORAGE_KEY, "pending");
@@ -3501,6 +3629,7 @@ async function savePublishDraft() {
       const transaction = db.transaction(PUBLISH_DRAFT_STORE_NAME, "readwrite");
       const draft = {
         values,
+        publicId: state.publishAttempt?.publicId ?? values.public_id ?? "",
         files: state.offerFiles.map((file) => ({
           blob: file,
           name: file.name,
@@ -3604,6 +3733,29 @@ async function restorePublishDraft() {
     .slice(0, MAX_OFFER_PHOTOS);
   state.offerFiles = restoredFiles;
   renderPhotoPreview(state.offerFiles);
+
+  const restoredPublicId = String(draft.publicId ?? values.public_id ?? "").trim();
+  const storedAttempt = readPublishAttempt();
+  const restoredFingerprint = publishResilience?.fingerprint({
+    title: values.title,
+    category: values.category,
+    zone: values.zone,
+    description: values.description,
+    duration_days: values.duration,
+  });
+  if (
+    restoredPublicId &&
+    publishResilience?.PUBLISH_ID_PATTERN.test(restoredPublicId) &&
+    (!storedAttempt || storedAttempt.publicId === restoredPublicId) &&
+    (!storedAttempt || storedAttempt.fingerprint === restoredFingerprint)
+  ) {
+    state.publishAttempt = storedAttempt ?? {
+      publicId: restoredPublicId,
+      fingerprint: restoredFingerprint,
+      createdAt: Date.now(),
+      phase: "retryable",
+    };
+  }
 
   let refreshState = null;
   try {
@@ -4036,9 +4188,21 @@ async function handleOfferSubmit(event) {
     description: String(formData.get("description") ?? "").trim(),
     duration_days: Number(formData.get("duration") ?? 14),
   };
+  let publicId;
+  try {
+    publicId = getOrCreatePublishAttempt(draftItem);
+  } catch (error) {
+    setFormState(
+      error?.message === "secure_random_unavailable"
+        ? "No se puede generar un identificador seguro en este navegador. Actualiza Telegram e inténtalo de nuevo."
+        : "No se puede preparar la publicación. Inténtalo de nuevo.",
+      "error",
+    );
+    return;
+  }
   const payload = {
     initData: auth.getInitData(),
-    item: draftItem,
+    item: { ...draftItem, public_id: publicId },
     consent: {
       accepted: offerConsent.checked,
       version: CONSENT_VERSION,
@@ -4046,11 +4210,13 @@ async function handleOfferSubmit(event) {
   };
 
   setFormState("");
+  hidePublishRetryButton();
 
   try {
     const optimizedFiles = await Promise.all(state.offerFiles.map(preparePhotoForUpload));
     setOfferSubmitLoading("Publicando…");
     setFormState("");
+    await savePublishDraft();
     const result = await api.publishItem(payload, optimizedFiles);
 
     if (isPhotoRequiredError(result)) {
@@ -4068,8 +4234,14 @@ async function handleOfferSubmit(event) {
       return;
     }
 
-    if (!result.ok || !result.item_id) {
-      setFormState(result.error ?? "No se ha podido publicar.", "error");
+    if (result?.error_code === "publication_pending" || result?.error === "publication_pending") {
+      await reconcilePendingPublish();
+      return;
+    }
+
+    if (!result?.ok || !result?.item_id) {
+      clearPublishAttempt();
+      setFormState(result?.error ?? "No se ha podido publicar.", "error");
       return;
     }
 
@@ -4103,9 +4275,7 @@ async function handleOfferSubmit(event) {
     };
 
     rememberOwnItem(publishedItem);
-    removeSessionStorage(AUTH_REFRESH_STORAGE_KEY);
-    offerForm.reset();
-    resetOfferPhotos();
+    resetPublishedForm();
     api.invalidateCatalog?.();
     state.catalogRequestVersion += 1;
     state.catalogNeedsRefresh = true;
@@ -4131,9 +4301,17 @@ async function handleOfferSubmit(event) {
       }
       return;
     }
+    if (publishResilience?.isTransportError(error)) {
+      await reconcilePendingPublish();
+      return;
+    }
+    clearPublishAttempt();
     setFormState(error.message || "No se ha podido publicar.", "error");
   } finally {
-    if (offerSubmitButton) {
+    if (offerSubmitButton && state.publishAttempt?.phase === "checking") {
+      offerSubmitButton.disabled = true;
+      setOfferSubmitLoading("Comprobando…");
+    } else if (offerSubmitButton) {
       offerSubmitButton.disabled = false;
       resetOfferSubmitButton();
     }
@@ -5101,6 +5279,10 @@ cameraDialog?.addEventListener("cancel", (event) => {
   closeCameraDialog();
 });
 offerForm?.addEventListener("submit", handleOfferSubmit);
+offerPublishRetryButton?.addEventListener("click", () => {
+  if (state.publishAttempt?.phase === "checking") return;
+  void handleOfferSubmit({ preventDefault() {} });
+});
 telegramUsernameHelp?.addEventListener("click", openTelegramUsernameDialog);
 telegramUsernameDialogClose?.addEventListener("click", closeTelegramUsernameDialog);
 telegramUsernameRetry?.addEventListener("click", retryTelegramUsername);

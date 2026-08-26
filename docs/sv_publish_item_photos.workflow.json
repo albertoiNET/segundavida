@@ -57,6 +57,95 @@
     },
     {
       "parameters": {
+        "jsCode": "const validated = $input.first()?.json ?? {};\nconst source = $('Validate Telegram and item').first() ?? {};\nif (validated.valid !== true) return [{ json: validated, binary: source.binary ?? {} }];\nconst webhook = $('Webhook').first()?.json ?? {};\nlet body = webhook.body ?? webhook;\nif (typeof body === 'string') { try { body = JSON.parse(body); } catch { body = {}; } }\nconst multipartPayload = body?.payload ?? webhook.payload;\nif (typeof multipartPayload === 'string') { try { body = JSON.parse(multipartPayload); } catch { body = {}; } } else if (multipartPayload && typeof multipartPayload === 'object') { body = multipartPayload; }\nconst requestedPublicId = typeof body?.item?.public_id === 'string' ? body.item.public_id.trim() : '';\nconst publicIdPattern = /^[A-Za-z0-9_-]{6,80}$/;\nconst publicItemId = publicIdPattern.test(requestedPublicId) ? requestedPublicId : validated.public_id ?? validated.item_id;\nreturn [{ json: { ...validated, public_id: publicItemId, item_id: publicItemId }, binary: source.binary ?? {} }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -296,
+        96
+      ],
+      "id": "7f6a5c4d-3b2a-4918-8c7d-6e5f4a3b2c1d",
+      "name": "Reuse client publish id"
+    },
+    {
+      "parameters": {
+        "authentication": "nocoDbApiToken",
+        "operation": "search",
+        "workspaceId": {
+          "__rl": true,
+          "value": "wfrogvq8",
+          "mode": "list",
+          "cachedResultName": "Default Workspace"
+        },
+        "projectId": {
+          "__rl": true,
+          "value": "p3amiucxfm0jzoc",
+          "mode": "list",
+          "cachedResultName": "Aldea Pucela"
+        },
+        "table": {
+          "__rl": true,
+          "value": "mwk20n0679wz5fr",
+          "mode": "list",
+          "cachedResultName": "Segunda Vida"
+        },
+        "returnAll": true,
+        "options": {},
+        "resource": "row",
+        "downloadAttachments": false
+      },
+      "type": "n8n-nodes-base.nocoDb",
+      "typeVersion": 3,
+      "position": [
+        -64,
+        96
+      ],
+      "id": "8e7f6a5b-4c3d-4928-9d7e-6f5a4b3c2d1e",
+      "name": "Find existing publish id",
+      "credentials": {
+        "nocoDbApiToken": {
+          "id": "t0BGosFerj8egJ4y",
+          "name": "NocoDB Token account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const request = $('Reuse client publish id').first()?.json ?? {};\nconst source = $('Reuse client publish id').first() ?? {};\nconst requestedId = String(request.public_id ?? request.item_id ?? '').trim();\nconst rows = $input.all();\nconst found = rows.map(({ json }) => ({ json, fields: json.fields ?? json })).find(({ fields }) => String(fields.public_id ?? fields['item-id'] ?? '') === requestedId);\nif (!found) return [{ json: { ...request, create_new: true }, binary: source.binary ?? {} }];\nconst fields = found.fields;\nif (String(fields.owner_telegram_id ?? '') !== String(request.owner_telegram_id ?? '')) return [{ json: { ok: false, valid: false, error: 'publish_id_conflict', error_code: 'publish_id_conflict', create_new: false }, binary: source.binary ?? {} }];\nconst status = String(fields.status ?? 'hidden').toLowerCase();\nif (status === 'hidden') return [{ json: { ok: false, valid: false, error: 'publication_pending', error_code: 'publication_pending', item_id: requestedId, public_id: requestedId, retryable: true, create_new: false }, binary: source.binary ?? {} }];\nreturn [{ json: { ok: true, valid: true, deduplicated: true, item_id: requestedId, public_id: requestedId, title: fields.title ?? request.title ?? '', status, message: 'Publicado correctamente', create_new: false }, binary: source.binary ?? {} }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        160,
+        96
+      ],
+      "id": "9f8e7d6c-5b4a-4938-2d1e-0f6a5b4c3d2e",
+      "name": "Resolve publish idempotency"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.create_new }}",
+              "operation": "isTrue"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        384,
+        96
+      ],
+      "id": "0a9b8c7d-6e5f-4a3b-2c1d-0e9f8a7b6c5d",
+      "name": "Create new publication?"
+    },
+    {
+      "parameters": {
         "conditions": {
           "boolean": [
             {
@@ -555,6 +644,57 @@
       ]
     },
     "Valid request?": {
+      "main": [
+        [
+          {
+            "node": "Reuse client publish id",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reuse client publish id": {
+      "main": [
+        [
+          {
+            "node": "Find existing publish id",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find existing publish id": {
+      "main": [
+        [
+          {
+            "node": "Resolve publish idempotency",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Resolve publish idempotency": {
+      "main": [
+        [
+          {
+            "node": "Create new publication?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create new publication?": {
       "main": [
         [
           {

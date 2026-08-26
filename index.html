@@ -512,6 +512,7 @@
           </div>
           <button class="primary-button" type="submit">Publicar</button>
           <p class="form-state" id="offer-form-state" aria-live="polite"></p>
+          <button class="secondary-button" id="offer-publish-retry-button" type="button" hidden>Comprobar de nuevo</button>
         </form>
       </section>
 
@@ -920,6 +921,7 @@
     <script src="/js/api.js?v=sv-20260820-progressive-v1"></script>
     <script src="/js/analytics.js?v=sv-20260817-41"></script>
     <script src="/js/catalog-resilience.js?v=sv-20260821-resilience-v1"></script>
-    <script src="/js/app.js?v=sv-20260821-resilience-v1"></script>
+    <script src="/js/publish-resilience.js?v=sv-20260823-idempotency-v1"></script>
+    <script src="/js/app.js?v=sv-20260823-idempotency-v1"></script>
   </body>
 </html>

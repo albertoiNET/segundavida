@@ -38,6 +38,7 @@ multipart `payload`:
 {
   "initData": "<Telegram.WebApp.initData>",
   "item": {
+    "public_id": "k2vT7M4mX9qL3aBc",
     "title": "Mesa auxiliar",
     "category": "Hogar",
     "zone": "Delicias - Canterac",
@@ -64,11 +65,19 @@ y de que deben cumplir las condiciones de SegundaVida. La moderación de n8n
 comprueba el título, la descripción y las imágenes para rechazar publicaciones
 no permitidas, además de contenido ofensivo o spam.
 
-El identificador público se genera en un nodo separado con bytes aleatorios:
-`crypto.randomBytes(6).toString('base64url')`. Nunca se construye a partir
-del Telegram user ID. El valor se escribe en `item-id`, que es el único campo
-de identificador público existente en la tabla actual; la respuesta mantiene
-`public_id` como alias temporal para clientes antiguos.
+El frontend genera un identificador opaco seguro antes del primer envío y lo
+reutiliza si la conexión falla. El servidor valida su formato y lo escribe en
+`item-id`, que es el único campo de identificador público existente en la tabla
+actual. Si un cliente antiguo no envía `public_id`, n8n conserva el fallback
+actual con `crypto.randomBytes(6).toString('base64url')`.
+
+El identificador no autentica a nadie ni concede permisos. Antes de crear una
+fila, n8n busca ese valor y comprueba que la fila existente pertenece al
+`owner_telegram_id` validado por Telegram. Una repetición del mismo intento
+devuelve la publicación existente y no vuelve a subir fotos, notificar ni
+disparar la regeneración estática. Si la fila aún está oculta porque se están
+procesando fotos, responde `publication_pending` para que el frontend siga
+comprobando `/mine`.
 
 Las filas antiguas que tengan un `item-id` como
 `sv-2191395-1786900112374` deben editarse una vez en NocoDB y recibir un valor

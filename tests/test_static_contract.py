@@ -18,6 +18,7 @@ from generate_static_pages import (  # noqa: E402
 )
 from serve_static import resolve_request_path  # noqa: E402
 from sync_static_asset_urls import sync_asset_urls  # noqa: E402
+from verify_static_item import page_is_ready, validate_item_id  # noqa: E402
 
 
 class StaticContractTests(unittest.TestCase):
@@ -59,6 +60,22 @@ class StaticContractTests(unittest.TestCase):
             normalize_item({**self.item(), "public_id": "1786900112374"})
         with self.assertRaises(ContractError):
             normalize_item({**self.item(), "owner_telegram_id": "123456789"})
+
+    def test_base64url_public_id_may_start_with_urlsafe_punctuation(self):
+        for public_id in ("_pfpxAnq", "-pfpxAnq"):
+            self.assertEqual(normalize_item({**self.item(), "public_id": public_id})["id"], public_id)
+
+    def test_static_item_verifier_requires_matching_item_and_metadata(self):
+        item_id = "_pfpxAnq"
+        page = '<script id="static-item-data">{"id":"_pfpxAnq"}</script><meta property="og:image">'
+        self.assertEqual(validate_item_id(item_id), item_id)
+        self.assertTrue(page_is_ready(item_id, page, 200))
+        self.assertFalse(page_is_ready("other-id", page, 200))
+        self.assertFalse(page_is_ready(item_id, page, 404))
+
+    def test_static_item_verifier_rejects_invalid_ids(self):
+        with self.assertRaises(ValueError):
+            validate_item_id("not valid")
 
     def test_generates_pages_metadata_fallback_sitemap_and_safe_html(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -662,6 +679,45 @@ class StaticContractTests(unittest.TestCase):
         self.assertEqual(upload["parameters"]["uploadMode"], "base64")
         self.assertEqual(upload["parameters"]["uploadFieldName"]["value"], "photos")
         self.assertEqual(upload["credentials"]["nocoDbApiToken"]["name"], "NocoDB Token account")
+
+    def test_publish_workflow_reuses_client_id_before_creating_or_dispatching(self):
+        workflow_path = ROOT / "docs" / "sv_publish_item_photos.workflow.json"
+        workflow = json.loads(workflow_path.read_text(encoding="utf-8"))
+        node_names = {node["name"] for node in workflow["nodes"]}
+        self.assertTrue({
+            "Reuse client publish id",
+            "Find existing publish id",
+            "Resolve publish idempotency",
+            "Create new publication?",
+        }.issubset(node_names))
+
+        resolve_code = next(
+            node["parameters"]["jsCode"]
+            for node in workflow["nodes"]
+            if node["name"] == "Resolve publish idempotency"
+        )
+        self.assertIn("publish_id_conflict", resolve_code)
+        self.assertIn("publication_pending", resolve_code)
+        self.assertIn("owner_telegram_id", resolve_code)
+        self.assertIn("create_new: true", resolve_code)
+
+        connections = workflow["connections"]
+        self.assertEqual(connections["Valid request?"]["main"][0][0]["node"], "Reuse client publish id")
+        self.assertEqual(connections["Resolve publish idempotency"]["main"][0][0]["node"], "Create new publication?")
+        self.assertEqual(connections["Create new publication?"]["main"][0][0]["node"], "Prepare photo uploads")
+        self.assertEqual(connections["Create new publication?"]["main"][1][0]["node"], "Respond to Webhook")
+
+    def test_frontend_publish_resilience_is_loaded_and_does_not_use_raw_fetch_error(self):
+        index = (ROOT / "index.html").read_text(encoding="utf-8")
+        api = (ROOT / "js/api.js").read_text(encoding="utf-8")
+        app = (ROOT / "js/app.js").read_text(encoding="utf-8")
+        resilience = (ROOT / "js/publish-resilience.js").read_text(encoding="utf-8")
+        self.assertIn("publish-resilience.js", index)
+        self.assertIn("network_error", api)
+        self.assertIn("getOrCreatePublishAttempt", app)
+        self.assertIn("reconcilePendingPublish", app)
+        self.assertIn("Error de conexión", app)
+        self.assertIn("crypto.getRandomValues", resilience)
 
     def test_complete_workflow_supports_owner_only_hide_without_deleting_rows(self):
         workflow_path = ROOT / "docs" / "sv_complete_item.workflow.json"
