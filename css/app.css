@@ -4152,6 +4152,83 @@ body.photo-lightbox-open {
   font-weight: 750;
 }
 
+.delete-item-dialog__reasons {
+  display: grid;
+  gap: 0.55rem;
+  min-width: 0;
+  margin: 0;
+  margin-top: 0.25rem;
+  padding: 0;
+  border: 0;
+}
+
+.delete-item-dialog__reasons legend {
+  margin-bottom: 0.05rem;
+  padding: 0;
+  color: var(--text-main);
+  font-size: 0.84rem;
+  font-weight: 750;
+}
+
+.delete-item-dialog__reasons legend.sr-only {
+  margin: 0;
+  padding: 0;
+}
+
+.delete-item-dialog__reason {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+  gap: 0.65rem;
+  min-width: 0;
+  padding: 0.7rem 0.75rem;
+  border: 1px solid var(--border-light);
+  border-radius: 0.75rem;
+  background: var(--bg-card);
+  color: var(--text-main);
+  cursor: pointer;
+  transition: border-color 160ms ease, background 160ms ease, box-shadow 160ms ease;
+}
+
+.delete-item-dialog__reason:hover,
+.delete-item-dialog__reason:has(input:focus-visible) {
+  border-color: var(--border-strong);
+}
+
+.delete-item-dialog__reason.is-selected {
+  border-color: var(--color-primary);
+  background: color-mix(in srgb, var(--color-secondary-soft) 52%, var(--bg-container));
+  box-shadow: 0 0.35rem 0.9rem rgb(39 39 42 / 7%);
+}
+
+.delete-item-dialog__reason input {
+  width: 1.05rem;
+  height: 1.05rem;
+  margin: 0.1rem 0 0;
+  accent-color: var(--color-primary);
+}
+
+.delete-item-dialog__reason-copy {
+  display: grid;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.delete-item-dialog__reason-copy strong {
+  font-size: 0.82rem;
+  line-height: 1.25;
+}
+
+.delete-item-dialog__reason-copy small {
+  color: var(--text-secondary);
+  font-size: 0.74rem;
+  line-height: 1.4;
+}
+
+.delete-item-dialog__reason[hidden] {
+  display: none;
+}
+
 .delete-item-dialog__state {
   min-height: 1.2rem;
 }
@@ -4173,6 +4250,12 @@ body.photo-lightbox-open {
 .delete-item-dialog__actions button {
   width: auto;
   flex: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .delete-item-dialog__reason {
+    transition: none;
+  }
 }
 
 .camera-dialog {

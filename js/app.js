@@ -133,6 +133,7 @@ const refreshCatalogImageUrls = catalogResilience?.createRefreshCoordinator(
 ) ?? (async () => []);
 let deleteDialogItem = null;
 let deleteDialogTriggerButton = null;
+let deleteDialogReason = "";
 let contactDialogItem = null;
 let contactDialogTriggerButton = null;
 let reportDialogTargetItem = null;
@@ -213,11 +214,11 @@ const relatedItemsEmpty = document.querySelector("#related-items-empty");
 const relatedItemsBrowse = document.querySelector("#related-items-browse");
 const deleteItemDialog = document.querySelector("#delete-item-dialog");
 const deleteItemDialogTitle = document.querySelector("#delete-item-dialog-title");
-const deleteItemDialogCopy = document.querySelector("#delete-item-dialog-copy");
 const deleteItemDialogState = document.querySelector("#delete-item-dialog-state");
 const deleteItemDialogClose = document.querySelector("#delete-item-dialog-close");
 const deleteItemDialogCancel = document.querySelector("#delete-item-dialog-cancel");
 const deleteItemDialogConfirm = document.querySelector("#delete-item-dialog-confirm");
+const deleteItemDialogReasonOptions = [...document.querySelectorAll('input[name="delete-item-reason"]')];
 const contactDialog = document.querySelector("#contact-dialog");
 const contactDialogOwner = document.querySelector("#contact-dialog-owner");
 const contactDialogClose = document.querySelector("#contact-dialog-close");
@@ -4306,13 +4307,16 @@ function openDeleteItemDialog(item, triggerButton = deleteItemButton) {
   deleteDialogItem = item;
   deleteDialogTriggerButton = triggerButton;
   deleteItemDialogTitle.textContent = item.title || "esta publicación";
-  deleteItemDialogCopy.textContent = item.status === "reserved"
-    ? `«${item.title || "Esta publicación"}» dejará de aparecer en Segunda Vida y se cancelará su reserva. No se marcará como entregada.`
-    : `«${item.title || "Esta publicación"}» dejará de aparecer en Segunda Vida. No se marcará como entregada.`;
+  deleteDialogReason = "";
+  deleteItemDialogReasonOptions.forEach((option) => {
+    option.checked = false;
+    option.closest(".delete-item-dialog__reason")?.classList.remove("is-selected");
+  });
+  const deliveredReason = deleteItemDialog?.querySelector('[data-delete-reason-option="delivered"]');
+  if (deliveredReason) deliveredReason.hidden = item.status === "completed";
   deleteItemDialogState.textContent = "";
   deleteItemDialogState.dataset.state = "";
-  deleteItemDialogConfirm.disabled = false;
-  deleteItemDialogConfirm.textContent = "Borrar publicación";
+  updateDeleteItemDialogSelection();
 
   if (typeof deleteItemDialog.showModal === "function") {
     deleteItemDialog.showModal();
@@ -4320,6 +4324,20 @@ function openDeleteItemDialog(item, triggerButton = deleteItemButton) {
     deleteItemDialog.setAttribute("open", "");
   }
   deleteItemDialogCancel?.focus();
+}
+
+function updateDeleteItemDialogSelection() {
+  deleteDialogReason = deleteItemDialogReasonOptions.find((option) => option.checked)?.value || "";
+  deleteItemDialogReasonOptions.forEach((option) => {
+    option.closest(".delete-item-dialog__reason")?.classList.toggle("is-selected", option.checked);
+  });
+  if (!deleteItemDialogConfirm) return;
+  deleteItemDialogConfirm.disabled = !deleteDialogReason;
+  deleteItemDialogConfirm.textContent = deleteDialogReason === "delivered"
+    ? "Marcar como entregado"
+    : deleteDialogReason === "delete"
+      ? "Borrar publicación"
+      : "Continuar";
 }
 
 function getReservationDurationDays() {
@@ -4479,6 +4497,27 @@ async function hideItem() {
     deleteItemDialogState.textContent = error.message || "No se ha podido borrar la publicación.";
     deleteItemDialogState.dataset.state = "error";
   }
+}
+
+async function confirmDeleteItemDialog() {
+  const item = deleteDialogItem;
+  const reason = deleteDialogReason;
+  if (!item || !reason) {
+    updateDeleteItemDialogSelection();
+    return;
+  }
+
+  if (reason === "delivered") {
+    await completeItem(item, deleteItemDialogConfirm, deleteItemDialogState);
+    if (state.selectedItem?.id === item.id && state.selectedItem.status === "completed") {
+      closeDeleteItemDialog({ restoreFocus: false });
+    } else {
+      updateDeleteItemDialogSelection();
+    }
+    return;
+  }
+
+  await hideItem();
 }
 
 async function manageItemAction(
@@ -5220,6 +5259,9 @@ reserveItemDurationOptions.forEach((option) => {
   option.addEventListener("change", updateReservationDurationCopy);
 });
 reserveItemCustomDays?.addEventListener("input", updateReservationDurationCopy);
+deleteItemDialogReasonOptions.forEach((option) => {
+  option.addEventListener("change", updateDeleteItemDialogSelection);
+});
 manageStatusButton?.addEventListener("click", () => {
   const item = state.selectedItem;
   if (!item) return;
@@ -5234,7 +5276,7 @@ markDeliveredButton?.addEventListener("click", () => completeItem(state.selected
 deleteItemButton?.addEventListener("click", () => openDeleteItemDialog(state.selectedItem));
 deleteItemDialogClose?.addEventListener("click", () => closeDeleteItemDialog());
 deleteItemDialogCancel?.addEventListener("click", () => closeDeleteItemDialog());
-deleteItemDialogConfirm?.addEventListener("click", () => void hideItem());
+deleteItemDialogConfirm?.addEventListener("click", () => void confirmDeleteItemDialog());
 deleteItemDialog?.addEventListener("cancel", (event) => {
   event.preventDefault();
   closeDeleteItemDialog();

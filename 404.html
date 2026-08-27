@@ -41,7 +41,7 @@
     />
     <link rel="stylesheet" href="/css/icon-fallback.css?v=sv-20260817-40" />
     <link rel="stylesheet" href="/css/tokens.css?v=sv-20260817-41" />
-    <link rel="stylesheet" href="/css/app.css?v=sv-20260820-detail-category-link-v1" />
+    <link rel="stylesheet" href="/css/app.css?v=sv-20260827-delete-reason-v2" />
     <script src="https://telegram.org/js/telegram-web-app.js?63"></script>
   </head>
   <body data-page="not-found" class="not-found-page">
@@ -722,23 +722,39 @@
         </div>
       </dialog>
 
-      <dialog class="delete-item-dialog" id="delete-item-dialog" aria-labelledby="delete-item-dialog-heading" aria-describedby="delete-item-dialog-copy">
+      <dialog class="delete-item-dialog" id="delete-item-dialog" aria-labelledby="delete-item-dialog-heading" aria-describedby="delete-item-dialog-title">
         <div class="delete-item-dialog__panel">
           <div class="delete-item-dialog__topline">
             <div>
               <span class="eyebrow">Tu publicación</span>
-              <h2 id="delete-item-dialog-heading">¿Borrar esta publicación?</h2>
+              <h2 id="delete-item-dialog-heading">¿Por qué quieres borrar este elemento?</h2>
             </div>
             <button class="icon-button" id="delete-item-dialog-close" type="button" aria-label="Cancelar borrado" title="Cancelar borrado">
               <i class="fa-solid fa-xmark fa-icon" data-fallback="×" aria-hidden="true"></i>
             </button>
           </div>
           <p class="delete-item-dialog__item" id="delete-item-dialog-title"></p>
-          <p id="delete-item-dialog-copy"></p>
+          <fieldset class="delete-item-dialog__reasons">
+            <legend class="sr-only">Motivo del borrado</legend>
+            <label class="delete-item-dialog__reason" data-delete-reason-option="delivered">
+              <input type="radio" name="delete-item-reason" value="delivered" />
+              <span class="delete-item-dialog__reason-copy">
+                <strong>Ya lo he entregado</strong>
+                <small>Se marcará como entregado y dejará de aparecer entre los anuncios activos.</small>
+              </span>
+            </label>
+            <label class="delete-item-dialog__reason" data-delete-reason-option="delete">
+              <input type="radio" name="delete-item-reason" value="delete" />
+              <span class="delete-item-dialog__reason-copy">
+                <strong>Ya no quiero publicar este anuncio</strong>
+                <small>Se borrará de Segunda Vida.</small>
+              </span>
+            </label>
+          </fieldset>
           <p class="delete-item-dialog__state" id="delete-item-dialog-state" aria-live="polite"></p>
           <div class="delete-item-dialog__actions">
             <button class="secondary-button" id="delete-item-dialog-cancel" type="button">Cancelar</button>
-            <button class="primary-button delete-item-dialog__confirm" id="delete-item-dialog-confirm" type="button">Borrar publicación</button>
+            <button class="primary-button delete-item-dialog__confirm" id="delete-item-dialog-confirm" type="button" disabled>Continuar</button>
           </div>
         </div>
       </dialog>
