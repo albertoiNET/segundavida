@@ -14,6 +14,10 @@ const telegramRuntime = window.SecondaVidaTelegram ?? {
 };
 const isNotFoundPage = document.body?.dataset.page === "not-found";
 
+if ("scrollRestoration" in window.history) {
+  window.history.scrollRestoration = "manual";
+}
+
 const auth = window.SecondaVidaAuth;
 const api = window.SecondaVidaApi;
 const catalogResilience = window.SecondaVidaCatalogResilience;
@@ -416,6 +420,21 @@ function getHistoryIndex(historyState = window.history.state) {
   return Number.isInteger(historyState?.svIndex) ? historyState.svIndex : 0;
 }
 
+function getHistoryScrollY(historyState = window.history.state) {
+  const scrollY = Number(historyState?.svScrollY);
+  return Number.isFinite(scrollY) && scrollY >= 0 ? scrollY : 0;
+}
+
+function restoreHistoryScroll(historyState = window.history.state) {
+  const scrollY = getHistoryScrollY(historyState);
+  const restore = () => window.scrollTo({ top: scrollY, left: 0, behavior: "auto" });
+  if (typeof window.requestAnimationFrame === "function") {
+    window.requestAnimationFrame(restore);
+    return;
+  }
+  restore();
+}
+
 function updateNavigationControls() {
   const currentIndex = getHistoryIndex();
   const canGoBack = Boolean(window.history.state?.svApp && currentIndex > 0);
@@ -458,7 +477,14 @@ function getViewFromPath(path = window.location.pathname) {
 }
 
 function pushViewHistory(viewName, itemId = "", username = state.currentUserUsername) {
-  const currentState = window.history.state ?? {};
+  let currentState = window.history.state ?? {};
+  if (currentState.svApp) {
+    currentState = {
+      ...currentState,
+      svScrollY: Math.max(0, window.scrollY),
+    };
+    window.history.replaceState(currentState, "", window.location.href);
+  }
   const nextIndex = getHistoryIndex(currentState) + 1;
   const url = new URL(window.location.href);
   url.search = LOCAL_AUTHOR_DEMO_MODE ? "?demo=author" : "";
@@ -476,6 +502,7 @@ function pushViewHistory(viewName, itemId = "", username = state.currentUserUser
     svItemId: itemId || null,
     svUserUsername: viewName === USER_PROFILE_VIEW ? username : null,
     svIndex: nextIndex,
+    svScrollY: 0,
   }, "", url);
   state.historyMaxIndex = nextIndex;
 }
@@ -678,6 +705,7 @@ function prepareHistoryState() {
     svItemId: itemId || null,
     svUserUsername: view === USER_PROFILE_VIEW ? username : null,
     svIndex: index,
+    svScrollY: Math.max(0, window.scrollY),
   }, "", canonicalUrl);
   state.currentView = view;
   state.currentItemId = itemId;
@@ -2642,7 +2670,12 @@ function getUserProfileReportItem(username = state.currentUserUsername) {
     ?? null;
 }
 
-function setView(viewName, { syncHistory = true, itemId = "", username = "" } = {}) {
+function setView(viewName, {
+  syncHistory = true,
+  itemId = "",
+  username = "",
+  scrollBehavior = "top",
+} = {}) {
   if (![...ROUTE_VIEW_NAMES, "detail", "publish-success"].includes(viewName)) return;
 
   const normalizedUsername = viewName === USER_PROFILE_VIEW
@@ -2737,7 +2770,11 @@ function setView(viewName, { syncHistory = true, itemId = "", username = "" } = 
     lastTrackedViewKey = viewKey;
   }
   updateRouteMetadata(viewName, itemId);
-  window.scrollTo({ top: 0, behavior: "smooth" });
+  if (scrollBehavior === "restore") {
+    restoreHistoryScroll(window.history.state);
+  } else {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
   updateNavigationControls();
 }
 
@@ -3287,7 +3324,12 @@ function handleHistoryChange(event) {
     return;
   }
 
-  setView(nextView, { syncHistory: false, itemId: nextItemId, username: nextUsername });
+  setView(nextView, {
+    syncHistory: false,
+    itemId: nextItemId,
+    username: nextUsername,
+    scrollBehavior: "restore",
+  });
 }
 
 async function checkIdentity() {
